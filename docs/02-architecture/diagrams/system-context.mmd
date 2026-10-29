@@ -1,0 +1,30 @@
+flowchart TD
+    %% System Context Diagram (C4 Level 1) for FSD-SDG-4 Quality Education SaaS
+
+    subgraph Stakeholders [Primary Platform Personas]
+        SA[Platform Super Admin<br>Global SaaS Operator]
+        ADM[School Administrator<br>Principal / Registrar]
+        TCH[Teacher<br>Classroom Educator & Advisor]
+        STU[Student<br>Learner & Coursework Submitter]
+        PAR[Parent / Guardian P1<br>Family Collaborator]
+    end
+
+    subgraph SystemBoundary [System Context Boundary: FSD-SDG-4 Platform]
+        PLAT[FSD-SDG-4 Quality Education SaaS<br>Multi-Tenant Web Application & REST API<br>Closed-Loop Student Support System]
+    end
+
+    subgraph ExternalServices [External Cloud Infrastructure]
+        OBJ[Cloud Object Storage<br>S3-Compatible Blob Store for Coursework Attachments]
+        NOTIF[Notification Service P1<br>Transactional Email / SMS Delivery]
+        BKP[Cloud Backup Service<br>Automated Daily Database Snapshots & WAL]
+    end
+
+    SA -->|Manages global tenants & system health| PLAT
+    ADM -->|Configures academic years, rosters, courses| PLAT
+    TCH -->|Records attendance, grades, creates support plans| PLAT
+    STU -->|Accesses resources, submits homework, views grades| PLAT
+    PAR -->|Views student attendance & support milestones| PLAT
+
+    PLAT -->|Persists document attachments| OBJ
+    PLAT -->|Dispatches guardian alerts & reset tokens| NOTIF
+    PLAT -->|Replicates continuous WAL & snapshots| BKP

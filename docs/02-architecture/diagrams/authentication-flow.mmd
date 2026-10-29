@@ -1,0 +1,44 @@
+sequenceDiagram
+    %% Authentication & Session Management Sequence Flow for FSD-SDG-4
+    autonumber
+    actor Browser as User Browser / Mobile
+    participant Express as Express API Server (/api/v1/auth)
+    participant AuthService as Identity Domain Service
+    participant Prisma as Prisma Data Layer
+    participant DB as PostgreSQL Database
+
+    Note over Browser,DB: 1. Login & Session Creation Flow
+    Browser->>Express: POST /api/v1/auth/login { email, password }
+    Express->>AuthService: authenticateUser(email, password, clientMeta)
+    AuthService->>Prisma: findUnique(User by email)
+    Prisma->>DB: SELECT * FROM users WHERE email = $1
+    DB-->>Prisma: User record (with password_hash, role, school_id)
+    Prisma-->>AuthService: User entity
+    AuthService->>AuthService: Verify password using Argon2id
+    AuthService->>AuthService: Generate cryptographically random 256-bit session token
+    AuthService->>Prisma: create(Session { tokenHash, userId, schoolId, expiresAt })
+    Prisma->>DB: INSERT INTO sessions (...) VALUES (...)
+    DB-->>Prisma: Session record created
+    Prisma-->>AuthService: Success
+    AuthService-->>Express: Return user profile & session token
+    Express-->>Browser: 200 OK + Set-Cookie: sid=<token>; HttpOnly; Secure; SameSite=Lax; Path=/
+
+    Note over Browser,DB: 2. Authenticated Request Flow with Tenant Context
+    Browser->>Express: GET /api/v1/attendance/rosters (Cookie: sid=<token>)
+    Express->>Prisma: findUnique(Session where tokenHash = hash(token) AND expiresAt > NOW())
+    Prisma->>DB: SELECT * FROM sessions WHERE token_hash = $1
+    DB-->>Prisma: Valid Session { userId, schoolId, role }
+    Prisma-->>Express: Session populated in req.sessionContext
+    Express->>Express: requireRole('TEACHER') verification passes
+    Express->>Prisma: Query attendance with WHERE school_id = sessionContext.schoolId
+    Prisma->>DB: SELECT * FROM attendance_records WHERE school_id = $1 ...
+    DB-->>Prisma: Scoped records
+    Prisma-->>Express: Data
+    Express-->>Browser: 200 OK { data: [...] }
+
+    Note over Browser,DB: 3. Session Termination Flow
+    Browser->>Express: POST /api/v1/auth/logout (Cookie: sid=<token>)
+    Express->>Prisma: delete(Session where tokenHash = hash(token))
+    Prisma->>DB: DELETE FROM sessions WHERE token_hash = $1
+    DB-->>Prisma: Deleted
+    Express-->>Browser: 200 OK + Set-Cookie: sid=; Max-Age=0; Path=/

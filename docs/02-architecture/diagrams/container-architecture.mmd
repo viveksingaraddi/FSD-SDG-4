@@ -1,0 +1,33 @@
+flowchart TD
+    %% Container Architecture Diagram (C4 Level 2) for FSD-SDG-4
+
+    subgraph ClientContainer [Client Container: Browser / Mobile Web]
+        SPA[Single Page Application<br>React 18+, TypeScript, Vite, Tailwind CSS<br>TanStack Query, React Router, Headless UI]
+    end
+
+    subgraph BackendContainer [Backend Application Container: Node.js LTS]
+        API[Express Application Server<br>RESTful API Gateway /api/v1<br>Strict Zod Validation, Pino Logging, Helmet]
+        
+        subgraph InternalModules [Domain Modules]
+            M_ID[Identity & Sessions]
+            M_SCH[Schools & Setup]
+            M_USR[Users & Rosters]
+            M_ATT[Attendance Engine]
+            M_CWK[Coursework & Grading]
+            M_SUP[Support Intervention]
+            M_AUD[Audit Logging]
+        end
+
+        ORM[Prisma Client Data Access Layer<br>Multi-Tenant Extension & Connection Pool]
+    end
+
+    subgraph StorageContainers [Persistent Data Containers]
+        DB[(PostgreSQL 16+ Database<br>Shared Relational Schema<br>B-Tree Composite Indexes & Constraints)]
+        BLOB[(Cloud Object Storage<br>S3-Compatible Blob Store)]
+    end
+
+    SPA -->|HTTPS / JSON REST API<br>HttpOnly Session Cookies| API
+    API --> InternalModules
+    InternalModules --> ORM
+    ORM -->|Parameterized SQL over TLS| DB
+    API -->|Pre-signed Upload / Download URLs| BLOB

@@ -1,0 +1,48 @@
+flowchart TD
+    %% Production Deployment Topology for FSD-SDG-4
+
+    subgraph InternetClients [Users on Internet]
+        MOB[Mobile Devices / 3G Browsers]
+        DESK[School Lab Desktops]
+    end
+
+    subgraph EdgeLayer [Cloud Edge & Security Perimeter]
+        CF[Cloudflare / AWS CloudFront CDN<br>TLS 1.3 Termination, DDoS Shield, Edge Caching]
+    end
+
+    subgraph CloudVPC [Cloud VPC Environment]
+        subgraph Ingress [Ingress & Reverse Proxy]
+            ALB[Application Load Balancer / Nginx<br>Path Routing & Rate Limiting]
+        end
+
+        subgraph ComputeTier [Container Compute Cluster]
+            API1[Node.js Monolith Container 1<br>Express /api/v1 - Port 3000]
+            API2[Node.js Monolith Container 2<br>Express /api/v1 - Port 3000]
+        end
+
+        subgraph DataTier [Managed Persistence Layer]
+            PGB[PgBouncer Connection Pooler]
+            PRIMARY_DB[(PostgreSQL 16+ Primary Instance<br>Multi-AZ Automated Replication)]
+            STANDBY_DB[(PostgreSQL Standby Replica<br>Read-Only Analytics / Failover)]
+        end
+
+        subgraph StorageTier [Object Storage]
+            S3[(Cloud Object Storage<br>Encrypted Attachments & Guides)]
+        end
+    end
+
+    MOB -->|HTTPS| CF
+    DESK -->|HTTPS| CF
+    CF -->|Static Assets| CF
+    CF -->|Dynamic API /api/v1| ALB
+
+    ALB --> API1
+    ALB --> API2
+
+    API1 --> PGB
+    API2 --> PGB
+    PGB --> PRIMARY_DB
+    PRIMARY_DB -.->|Synchronous Streaming Replication| STANDBY_DB
+
+    API1 -->|Pre-signed Uploads| S3
+    API2 -->|Pre-signed Uploads| S3

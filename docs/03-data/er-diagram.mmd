@@ -1,0 +1,251 @@
+erDiagram
+    %% Conceptual Entity-Relationship Diagram for FSD-SDG-4 Quality Education SaaS
+
+    School ||--o{ User : "contains"
+    School ||--o{ AcademicYear : "manages"
+    School ||--o{ Class : "defines"
+    School ||--o{ Subject : "curates"
+    School ||--o{ AuditLog : "records"
+
+    User ||--o{ Session : "authenticates"
+    User ||--o| StudentProfile : "has profile"
+    User ||--o| TeacherProfile : "has profile"
+    User ||--o{ GuardianRelationship : "acts as guardian"
+
+    AcademicYear ||--o{ Section : "schedules"
+    AcademicYear ||--o{ CourseOffering : "hosts"
+    AcademicYear ||--o{ Enrollment : "spans"
+
+    Class ||--o{ Section : "divides into"
+
+    Section ||--o{ Enrollment : "enrolls"
+    Section ||--o{ CourseOffering : "offers"
+    Section ||--o{ AttendanceRecord : "tracks"
+
+    Subject ||--o{ CourseOffering : "taught in"
+
+    CourseOffering ||--o{ CourseTeacher : "assigned to"
+    CourseOffering ||--o{ LearningResource : "publishes"
+    CourseOffering ||--o{ Assignment : "assigns"
+    CourseOffering ||--o{ Assessment : "evaluates"
+
+    TeacherProfile ||--o{ CourseTeacher : "teaches"
+    TeacherProfile ||--o{ SupportPlan : "leads"
+
+    StudentProfile ||--o{ Enrollment : "belongs to"
+    StudentProfile ||--o{ GuardianRelationship : "cared by"
+    StudentProfile ||--o{ AttendanceRecord : "recorded for"
+    StudentProfile ||--o{ AssignmentSubmission : "submits"
+    StudentProfile ||--o{ AssessmentResult : "scores"
+    StudentProfile ||--o{ ProgressSnapshot : "aggregated into"
+    StudentProfile ||--o{ SupportFlag : "triggers"
+    StudentProfile ||--o{ SupportPlan : "receives"
+
+    Assignment ||--o{ AssignmentSubmission : "receives"
+    AssignmentSubmission ||--o| Feedback : "reviewed with"
+
+    Assessment ||--o{ AssessmentResult : "produces"
+    AssessmentResult ||--o| Feedback : "annotated with"
+
+    SupportFlag ||--o| SupportPlan : "initiates"
+
+    SupportPlan ||--o{ SupportPlanAction : "contains"
+    SupportPlan ||--o{ SupportReview : "reviewed in"
+
+    School {
+        uuid id PK
+        string name
+        string code
+        string subdomain
+        string status
+    }
+
+    User {
+        uuid id PK
+        uuid school_id FK
+        string email
+        string password_hash
+        string role
+        string status
+    }
+
+    AcademicYear {
+        uuid id PK
+        uuid school_id FK
+        string name
+        date start_date
+        date end_date
+        string status
+    }
+
+    Class {
+        uuid id PK
+        uuid school_id FK
+        string name
+        int stage
+    }
+
+    Section {
+        uuid id PK
+        uuid school_id FK
+        uuid class_id FK
+        uuid academic_year_id FK
+        string name
+        int capacity
+    }
+
+    Subject {
+        uuid id PK
+        uuid school_id FK
+        string name
+        string code
+    }
+
+    CourseOffering {
+        uuid id PK
+        uuid school_id FK
+        uuid section_id FK
+        uuid subject_id FK
+        uuid academic_year_id FK
+    }
+
+    StudentProfile {
+        uuid id PK
+        uuid school_id FK
+        uuid user_id FK
+        string student_id_number
+        string first_name
+        string last_name
+        date dob
+    }
+
+    TeacherProfile {
+        uuid id PK
+        uuid school_id FK
+        uuid user_id FK
+        string employee_id
+        string first_name
+        string last_name
+    }
+
+    Enrollment {
+        uuid id PK
+        uuid school_id FK
+        uuid student_id FK
+        uuid section_id FK
+        uuid academic_year_id FK
+        string status
+    }
+
+    AttendanceRecord {
+        uuid id PK
+        uuid school_id FK
+        uuid section_id FK
+        uuid student_id FK
+        date attendance_date
+        string status
+        string remarks
+    }
+
+    LearningResource {
+        uuid id PK
+        uuid school_id FK
+        uuid course_offering_id FK
+        string title
+        string type
+        string status
+    }
+
+    Assignment {
+        uuid id PK
+        uuid school_id FK
+        uuid course_offering_id FK
+        string title
+        decimal max_points
+        timestamp due_date
+    }
+
+    AssignmentSubmission {
+        uuid id PK
+        uuid school_id FK
+        uuid assignment_id FK
+        uuid student_id FK
+        timestamp submitted_at
+        string status
+        decimal score
+    }
+
+    Assessment {
+        uuid id PK
+        uuid school_id FK
+        uuid course_offering_id FK
+        string title
+        decimal weight_percentage
+        decimal max_marks
+    }
+
+    AssessmentResult {
+        uuid id PK
+        uuid school_id FK
+        uuid assessment_id FK
+        uuid student_id FK
+        decimal score
+        string grade_letter
+    }
+
+    ProgressSnapshot {
+        uuid id PK
+        uuid school_id FK
+        uuid student_id FK
+        decimal attendance_rate
+        decimal coursework_average
+    }
+
+    SupportFlag {
+        uuid id PK
+        uuid school_id FK
+        uuid student_id FK
+        string flag_type
+        string severity
+        string rationale
+        string status
+    }
+
+    SupportPlan {
+        uuid id PK
+        uuid school_id FK
+        uuid student_id FK
+        uuid lead_teacher_id FK
+        string target_goal
+        date review_date
+        string status
+    }
+
+    SupportPlanAction {
+        uuid id PK
+        uuid school_id FK
+        uuid support_plan_id FK
+        string description
+        date due_date
+        string status
+    }
+
+    SupportReview {
+        uuid id PK
+        uuid school_id FK
+        uuid support_plan_id FK
+        date review_date
+        string outcome_status
+        string notes
+    }
+
+    AuditLog {
+        uuid id PK
+        uuid school_id FK
+        uuid actor_id FK
+        string action
+        string entity_type
+        uuid entity_id
+        jsonb delta
+        timestamp timestamp
+    }

@@ -1,0 +1,50 @@
+flowchart TD
+    %% Backend Modular Monolith Domain Boundaries for FSD-SDG-4
+
+    subgraph HTTPGateway [Express HTTP Router /api/v1]
+        R_AUTH[/auth]
+        R_SCH[/schools]
+        R_USR[/users]
+        R_ATT[/attendance]
+        R_CWK[/coursework]
+        R_ASM[/assessments]
+        R_SUP[/support-interventions]
+        R_AUD[/audit]
+    end
+
+    subgraph DomainModules [Decoupled Domain Service Modules]
+        S_AUTH[Identity & Session Service<br>Argon2id, Session Store, RBAC]
+        S_SCH[School & Academic Service<br>Academic Years, Classes, Sections, Subjects]
+        S_USR[User & Enrollment Service<br>Staff, Students, Section Rosters]
+        S_ATT[Attendance Service<br>Rosters, Bulk Submission, Attendance Rates]
+        S_CWK[Coursework Service<br>Resources, Assignments, Submissions, Grading]
+        S_ASM[Assessment Service<br>Standardized Exams, Gradebook Aggregations]
+        S_SUP[Support Intervention Service<br>Progress Calculation, Support Flags, Plans, Reviews]
+        S_AUD[Audit Service<br>Asynchronous Immutable Audit Ledger]
+    end
+
+    subgraph SharedKernel [Shared Infrastructure Layer]
+        PRISMA[Prisma Client Data Access<br>Tenant Context Injection & Transactions]
+    end
+
+    R_AUTH --> S_AUTH
+    R_SCH --> S_SCH
+    R_USR --> S_USR
+    R_ATT --> S_ATT
+    R_CWK --> S_CWK
+    R_ASM --> S_ASM
+    R_SUP --> S_SUP
+    R_AUD --> S_AUD
+
+    S_ATT -.->|Emits Attendance Metrics| S_SUP
+    S_CWK -.->|Emits Coursework Grades| S_SUP
+    S_ASM -.->|Emits Exam Averages| S_SUP
+
+    S_AUTH --> PRISMA
+    S_SCH --> PRISMA
+    S_USR --> PRISMA
+    S_ATT --> PRISMA
+    S_CWK --> PRISMA
+    S_ASM --> PRISMA
+    S_SUP --> PRISMA
+    S_AUD --> PRISMA

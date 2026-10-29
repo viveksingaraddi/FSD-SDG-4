@@ -1,0 +1,35 @@
+flowchart TD
+    %% Multi-Tenant Isolation Flow for FSD-SDG-4
+
+    subgraph ClientRequests [Inbound HTTP Requests]
+        R1[Teacher from School A<br>Session Cookie: sid_SchoolA]
+        R2[Attacker / Malicious User<br>Attempting IDOR: GET /support-plans/:id_SchoolB]
+    end
+
+    subgraph Gateways [Express Security Gateway]
+        AUTH[Session Authenticator Middleware<br>Extracts cryptographically verified { schoolId } from DB session]
+        TENANT_GUARD[Tenant Scoping Guard<br>Verifies path params match session.schoolId]
+    end
+
+    subgraph DataAccess [Prisma Data Access Layer]
+        EXT[Prisma Multi-Tenant Extension<br>Automatically injects { schoolId: session.schoolId } into AST]
+    end
+
+    subgraph Database [PostgreSQL 16+ Shared Database]
+        subgraph TenantA [Tenant A Data Partition]
+            DA1[(School A Records<br>school_id = AAA)]
+        end
+        subgraph TenantB [Tenant B Data Partition]
+            DB1[(School B Records<br>school_id = BBB)]
+        end
+    end
+
+    R1 --> AUTH
+    R2 --> AUTH
+    AUTH --> TENANT_GUARD
+
+    TENANT_GUARD -->|Valid Tenant Match| EXT
+    TENANT_GUARD -.->|Cross-Tenant Mismatch Detected| ERR[404 Not Found / 403 Forbidden<br>Audit Alert Logged]
+
+    EXT -->|WHERE school_id = AAA| DA1
+    EXT -.->|CANNOT QUERY school_id = BBB| DB1
