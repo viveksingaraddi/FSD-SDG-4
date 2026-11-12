@@ -9,6 +9,18 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage';
 
 const PortalPlaceholderPage = lazy(() => import('@/pages/PortalPlaceholderPage'));
+const SuperAdminDashboardPage = lazy(
+  () => import('@/features/super-admin/SuperAdminDashboardPage'),
+);
+const SchoolsDirectoryPage = lazy(() => import('@/features/super-admin/SchoolsDirectoryPage'));
+const SchoolInspectionPage = lazy(() => import('@/features/super-admin/SchoolInspectionPage'));
+const PlatformGovernancePage = lazy(() => import('@/features/super-admin/PlatformGovernancePage'));
+const PlatformSettingsPage = lazy(() => import('@/features/super-admin/PlatformSettingsPage'));
+const SchoolAdminDashboardPage = lazy(() => import('@/features/admin/SchoolAdminDashboardPage'));
+const AcademicSetupPage = lazy(() => import('@/features/admin/AcademicSetupPage'));
+const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPage'));
+const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
+const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -65,27 +77,83 @@ export function App() {
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
               <Route
-                path="/super-admin/*"
+                path="/super-admin"
                 element={
                   <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-                    <PortalPlaceholderPage
-                      role="SUPER_ADMIN"
-                      portalTitle="Platform Super Admin Portal"
-                      description="Multi-school governance, onboarding, and platform health overview."
-                    />
+                    <SuperAdminDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/schools"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <SchoolsDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/schools/:schoolId"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <SchoolInspectionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/governance"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <PlatformGovernancePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <PlatformSettingsPage />
                   </ProtectedRoute>
                 }
               />
 
               <Route
-                path="/admin/*"
+                path="/admin"
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
-                    <PortalPlaceholderPage
-                      role="SCHOOL_ADMIN"
-                      portalTitle="School Administrator Portal"
-                      description="Academic year setup, class rosters, staff management, and school reporting."
-                    />
+                    <SchoolAdminDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/academic"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <AcademicSetupPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/staff"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <StaffDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/students"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <StudentDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <SchoolSettingsPage />
                   </ProtectedRoute>
                 }
               />

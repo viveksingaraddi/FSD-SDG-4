@@ -171,4 +171,3 @@ describe('Shared UI component library', () => {
     expect(toastRegion).not.toHaveTextContent('Saved changes');
   });
 });
-

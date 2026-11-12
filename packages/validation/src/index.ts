@@ -114,3 +114,101 @@ export const passwordSchema = z
   .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
   .regex(/[0-9]/, 'Password must contain at least one digit')
   .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+
+// ─── Admin Portal Schemas (Phase 10) ────────────────────────────────────────
+
+export const schoolStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'ARCHIVED']);
+
+export const createSchoolSchema = z.object({
+  name: nonEmptyString('School name').max(200),
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(2, 'School code must be at least 2 characters')
+    .max(64)
+    .regex(/^[A-Z0-9_-]+$/, 'School code may contain letters, numbers, hyphens, and underscores'),
+  subdomain: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(2, 'Subdomain must be at least 2 characters')
+    .max(64)
+    .regex(/^[a-z0-9-]+$/, 'Subdomain may contain lowercase letters, numbers, and hyphens'),
+  contactEmail: emailSchema,
+});
+
+export const updateSchoolSchema = z.object({
+  name: nonEmptyString('School name').max(200).optional(),
+  contactEmail: emailSchema.optional(),
+  status: schoolStatusSchema.optional(),
+});
+
+export const createAcademicYearSchema = z.object({
+  name: nonEmptyString('Academic year name').max(64),
+  startDate: isoDateString,
+  endDate: isoDateString,
+});
+
+export const createClassSchema = z.object({
+  name: nonEmptyString('Class name').max(100),
+  stage: nonEmptyString('Stage').max(64),
+  sortOrder: z.coerce.number().int().min(0).max(999).default(0),
+});
+
+export const createSectionSchema = z.object({
+  classId: uuidSchema,
+  academicYearId: uuidSchema,
+  name: nonEmptyString('Section name').max(64),
+  capacity: z.coerce.number().int().min(1).max(500).optional(),
+  roomNumber: z.string().trim().max(32).optional(),
+});
+
+export const createSubjectSchema = z.object({
+  name: nonEmptyString('Subject name').max(120),
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(2, 'Subject code must be at least 2 characters')
+    .max(32),
+  description: z.string().trim().max(500).optional(),
+});
+
+export const createStaffSchema = z.object({
+  email: emailSchema,
+  employeeId: nonEmptyString('Employee ID').max(64),
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  specialization: z.string().trim().max(150).optional(),
+  temporaryPassword: passwordSchema,
+});
+
+export const updateUserStatusSchema = z.object({
+  status: z.enum(['ACTIVE', 'INACTIVE', 'LOCKED']),
+});
+
+export const createStudentSchema = z.object({
+  email: emailSchema,
+  studentIdNumber: nonEmptyString('Student ID').max(64),
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  admissionDate: isoDateString,
+  temporaryPassword: passwordSchema,
+  sectionId: uuidSchema.optional(),
+});
+
+export const updateSchoolSettingsSchema = z.object({
+  name: nonEmptyString('School name').max(200),
+  contactEmail: emailSchema,
+});
+
+export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;
+export type UpdateSchoolInput = z.infer<typeof updateSchoolSchema>;
+export type CreateAcademicYearInput = z.infer<typeof createAcademicYearSchema>;
+export type CreateClassInput = z.infer<typeof createClassSchema>;
+export type CreateSectionInput = z.infer<typeof createSectionSchema>;
+export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
+export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+export type CreateStudentInput = z.infer<typeof createStudentSchema>;
+export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchema>;

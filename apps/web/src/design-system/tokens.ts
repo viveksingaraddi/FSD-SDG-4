@@ -80,4 +80,3 @@ export const DESIGN_TOKENS = {
     toast: 60,
   },
 } as const;
-

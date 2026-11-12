@@ -46,14 +46,24 @@ export const API_ROUTES = {
     CHANGE_PASSWORD: '/api/v1/auth/change-password',
     SESSIONS: '/api/v1/auth/sessions',
   },
-  // School admin (Phase 8)
+  // Super Admin (Phase 10)
+  SUPER_ADMIN: {
+    OVERVIEW: '/api/v1/super-admin/overview',
+    SCHOOLS: '/api/v1/super-admin/schools',
+    AUDIT_LOGS: '/api/v1/super-admin/audit-logs',
+  },
+  // School admin (Phase 10)
   SCHOOL: {
+    OVERVIEW: '/api/v1/school/overview',
     ACADEMIC_YEARS: '/api/v1/school/academic-years',
     CLASSES: '/api/v1/school/classes',
+    SECTIONS: '/api/v1/school/sections',
     SUBJECTS: '/api/v1/school/subjects',
     OFFERINGS: '/api/v1/school/offerings',
     STAFF: '/api/v1/school/staff',
     STUDENTS: '/api/v1/school/students',
+    AUDIT_LOGS: '/api/v1/school/audit-logs',
+    SETTINGS: '/api/v1/school/settings',
   },
   // Teacher (Phase 10–12)
   TEACHER: {
@@ -66,3 +76,119 @@ export const API_ROUTES = {
 } as const;
 
 export type ApiRoutes = typeof API_ROUTES;
+
+// ─── Admin Portal DTOs (Phase 10) ───────────────────────────────────────────
+
+export type SchoolStatus = 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+
+export interface SchoolSummaryDto {
+  id: string;
+  name: string;
+  code: string;
+  subdomain: string;
+  contactEmail: string;
+  status: SchoolStatus;
+  createdAt: string;
+  userCount: number;
+  studentCount: number;
+}
+
+export interface SchoolDetailDto extends SchoolSummaryDto {
+  classCount: number;
+  staffCount: number;
+  activeAcademicYear: string | null;
+}
+
+export interface PlatformOverviewDto {
+  totalSchools: number;
+  activeSchools: number;
+  suspendedSchools: number;
+  totalUsers: number;
+  recentAuditEvents: number;
+}
+
+export interface SchoolOverviewDto {
+  schoolName: string;
+  activeAcademicYear: string | null;
+  totalStudents: number;
+  totalStaff: number;
+  totalClasses: number;
+  totalSections: number;
+  activeSupportPlans: number;
+}
+
+export interface AcademicYearDto {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+}
+
+export interface SectionDto {
+  id: string;
+  name: string;
+  capacity: number | null;
+  roomNumber: string | null;
+  academicYearId: string;
+  academicYearName: string;
+}
+
+export interface ClassDto {
+  id: string;
+  name: string;
+  stage: string;
+  sortOrder: number;
+  sections: SectionDto[];
+}
+
+export interface SubjectDto {
+  id: string;
+  name: string;
+  code: string;
+  description: string | null;
+  credits: string | null;
+}
+
+export interface StaffMemberDto {
+  id: string;
+  userId: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  specialization: string | null;
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+}
+
+export interface StudentDirectoryDto {
+  id: string;
+  userId: string;
+  studentIdNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'GRADUATED' | 'TRANSFERRED';
+  admissionDate: string;
+  currentSection: string | null;
+}
+
+export interface AuditLogDto {
+  id: string;
+  schoolId: string | null;
+  actorId: string | null;
+  actorEmail: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  createdAt: string;
+}
+
+export interface SchoolSettingsDto {
+  id: string;
+  name: string;
+  code: string;
+  subdomain: string;
+  contactEmail: string;
+  status: SchoolStatus;
+}
