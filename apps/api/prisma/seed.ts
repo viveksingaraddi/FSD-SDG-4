@@ -72,7 +72,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   // 1. Platform Super Admin (schoolId = null)
   await db.user.upsert({
     where: { id: IDS.superAdmin },
-    update: {},
+    update: {
+      passwordHash: SYNTHETIC_PASSWORD_HASH,
+      status: 'ACTIVE',
+    },
     create: {
       id: IDS.superAdmin,
       schoolId: null,
@@ -160,7 +163,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   for (const u of gfUsers) {
     await db.user.upsert({
       where: { id: u.id },
-      update: {},
+      update: {
+        passwordHash: SYNTHETIC_PASSWORD_HASH,
+        status: 'ACTIVE',
+      },
       create: {
         id: u.id,
         schoolId: IDS.schGreenfield,
@@ -672,7 +678,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   ]) {
     await db.user.upsert({
       where: { id: u.id },
-      update: {},
+      update: {
+        passwordHash: SYNTHETIC_PASSWORD_HASH,
+        status: 'ACTIVE',
+      },
       create: {
         id: u.id,
         schoolId: IDS.schHighcrest,
@@ -795,7 +804,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   // 9. Tenant 3: Empty Horizon Academy (admin only)
   await db.user.upsert({
     where: { id: IDS.ehAdmin },
-    update: {},
+    update: {
+      passwordHash: SYNTHETIC_PASSWORD_HASH,
+      status: 'ACTIVE',
+    },
     create: {
       id: IDS.ehAdmin,
       schoolId: IDS.schEmpty,
