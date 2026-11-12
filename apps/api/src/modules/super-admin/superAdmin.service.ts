@@ -10,21 +10,86 @@ import { ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 
 export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
-  const [totalSchools, activeSchools, suspendedSchools, totalUsers, recentAuditEvents] =
-    await Promise.all([
-      prisma.school.count({ where: { deletedAt: null } }),
-      prisma.school.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
-      prisma.school.count({ where: { deletedAt: null, status: 'SUSPENDED' } }),
-      prisma.user.count({ where: { deletedAt: null } }),
-      prisma.auditLog.count(),
-    ]);
+  const [
+    totalSchools,
+    activeSchools,
+    suspendedSchools,
+    archivedSchools,
+    totalUsers,
+    recentAuditEvents,
+    usersGroupedByRole,
+    totalClasses,
+    totalSections,
+  ] = await Promise.all([
+    prisma.school.count({ where: { deletedAt: null } }),
+    prisma.school.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
+    prisma.school.count({ where: { deletedAt: null, status: 'SUSPENDED' } }),
+    prisma.school.count({ where: { deletedAt: null, status: 'ARCHIVED' } }),
+    prisma.user.count({ where: { deletedAt: null } }),
+    prisma.auditLog.count(),
+    prisma.user.groupBy({
+      by: ['role'],
+      where: { deletedAt: null },
+      _count: { id: true },
+    }),
+    prisma.class.count(),
+    prisma.section.count(),
+  ]);
+
+  const roleMap: Record<string, number> = {};
+  for (const group of usersGroupedByRole) {
+    roleMap[group.role] = group._count.id;
+  }
+
+  const usersByRole = {
+    teachers: roleMap['TEACHER'] ?? 0,
+    students: roleMap['STUDENT'] ?? 0,
+    schoolAdmins: roleMap['SCHOOL_ADMIN'] ?? 0,
+    parents: roleMap['PARENT'] ?? 0,
+    superAdmins: roleMap['SUPER_ADMIN'] ?? 0,
+  };
+
+  const schoolsAnalytics = {
+    active: activeSchools,
+    suspended: suspendedSchools,
+    archived: archivedSchools,
+    totalClasses,
+    totalSections,
+  };
+
+  const alerts = [];
+  if (suspendedSchools > 0) {
+    alerts.push({
+      id: 'alert-suspended-tenants',
+      level: 'warning' as const,
+      title: `${suspendedSchools} Suspended School Tenant${suspendedSchools > 1 ? 's' : ''}`,
+      description: 'Tenants under administrative suspension require compliance inspection.',
+      actionUrl: '/super-admin/schools',
+      actionLabel: 'Inspect Tenants',
+    });
+  }
+
+  if (archivedSchools > 0) {
+    alerts.push({
+      id: 'alert-archived-tenants',
+      level: 'info' as const,
+      title: `${archivedSchools} Archived School Tenant${archivedSchools > 1 ? 's' : ''}`,
+      description: 'Archived tenant data is stored under immutable regulatory retention policy.',
+      actionUrl: '/super-admin/schools',
+      actionLabel: 'View Directory',
+    });
+  }
 
   return {
     totalSchools,
     activeSchools,
     suspendedSchools,
+    archivedSchools,
     totalUsers,
     recentAuditEvents,
+    usersByRole,
+    schoolsAnalytics,
+    alerts,
   };
 }
 

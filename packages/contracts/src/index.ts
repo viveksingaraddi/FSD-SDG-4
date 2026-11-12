@@ -99,12 +99,41 @@ export interface SchoolDetailDto extends SchoolSummaryDto {
   activeAcademicYear: string | null;
 }
 
+export interface PlatformUserBreakdownDto {
+  teachers: number;
+  students: number;
+  schoolAdmins: number;
+  parents: number;
+  superAdmins: number;
+}
+
+export interface PlatformSchoolBreakdownDto {
+  active: number;
+  suspended: number;
+  archived: number;
+  totalClasses: number;
+  totalSections: number;
+}
+
+export interface PlatformAlertDto {
+  id: string;
+  level: 'info' | 'warning' | 'error';
+  title: string;
+  description: string;
+  actionUrl?: string;
+  actionLabel?: string;
+}
+
 export interface PlatformOverviewDto {
   totalSchools: number;
   activeSchools: number;
   suspendedSchools: number;
+  archivedSchools?: number;
   totalUsers: number;
   recentAuditEvents: number;
+  usersByRole?: PlatformUserBreakdownDto;
+  schoolsAnalytics?: PlatformSchoolBreakdownDto;
+  alerts?: PlatformAlertDto[];
 }
 
 export interface SchoolOverviewDto {
