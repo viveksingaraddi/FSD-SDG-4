@@ -1,0 +1,36 @@
+{
+  "name": "fsd-sdg4",
+  "version": "0.0.0",
+  "private": true,
+  "description": "FSD-SDG-4 Quality Education SaaS — Multi-tenant platform supporting UN SDG 4",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.34.6",
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
+    "test": "pnpm --recursive --filter './packages/*' test && pnpm --recursive --filter './apps/*' test",
+    "test:unit": "pnpm --recursive test:unit",
+    "test:e2e": "pnpm --filter '@fsd-sdg4/web' test:e2e",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
+    "typecheck": "pnpm --recursive typecheck",
+    "clean": "pnpm --recursive clean && rimraf node_modules",
+    "prepare": "echo 'Monorepo root ready'"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@typescript-eslint/eslint-plugin": "8.72.1",
+    "@typescript-eslint/parser": "8.72.1",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "rimraf": "6.1.4",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "8.72.1"
+  }
+}
