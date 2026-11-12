@@ -1,33 +1,32 @@
-/**
- * 404 Not Found page — Phase 4 foundation.
- * WCAG: Clear explanation, no technical jargon, keyboard-accessible back link.
- */
-
-import type { JSX } from 'react';
 import { Link } from 'react-router-dom';
+import { FileQuestion } from 'lucide-react';
+import { Button, Card, Heading, Text } from '@/components/ui';
+import { getRoleHomePath, useAuth } from '@/features/auth/AuthContext';
 
-export function NotFoundPage(): JSX.Element {
+export function NotFoundPage() {
+  const { user } = useAuth();
+  const homePath = user ? getRoleHomePath(user.role) : '/login';
+
   return (
-    <main
-      id="main-content"
-      className="min-h-screen bg-slate-50 flex items-center justify-center p-8"
-      tabIndex={-1}
-    >
-      <div className="text-center max-w-md space-y-4">
-        <p className="text-6xl font-bold text-blue-700" aria-hidden="true">
-          404
-        </p>
-        <h1 className="text-2xl font-bold text-slate-900">Page Not Found</h1>
-        <p className="text-slate-600">
-          The page you are looking for does not exist or has been moved.
-        </p>
-        <Link
-          to="/"
-          className="inline-block mt-4 px-6 py-3 bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors"
-        >
-          Return to Home
-        </Link>
-      </div>
-    </main>
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--color-surface-canvas)] px-4">
+      <main id="main-content" tabIndex={-1} className="w-full max-w-md outline-none">
+        <Card padding="lg" className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-surface-sunken)] text-[var(--color-text-muted)]">
+            <FileQuestion className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <Heading level={1} size="h2">
+            Page not found
+          </Heading>
+          <Text variant="small" className="mt-2">
+            The page you requested could not be found or may have moved.
+          </Text>
+          <div className="mt-6 flex justify-center">
+            <Link to={homePath}>
+              <Button variant="primary">{user ? 'Back to portal' : 'Go to sign in'}</Button>
+            </Link>
+          </div>
+        </Card>
+      </main>
+    </div>
   );
 }
