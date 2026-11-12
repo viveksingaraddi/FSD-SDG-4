@@ -36,6 +36,7 @@ flowchart LR
 > Seed scripts must use **100% synthetic, procedurally generated data**. Real student, teacher, or parent names and credentials are never permitted in seed scripts.
 
 ### Deterministic Multi-Tenant Seed Profile
+
 The seed script designed in Phase 5 will provision three standard synthetic tenants to support local development and automated testing:
 
 1. **Tenant 1: Greenfield Primary School (`sch_greenfield`)**

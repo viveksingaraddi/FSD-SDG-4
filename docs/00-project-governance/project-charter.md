@@ -31,6 +31,7 @@ $$\text{RECORD} \longrightarrow \text{UNDERSTAND} \longrightarrow \text{FLAG} \l
 ## 3. High-Level Scope & Stakeholder Communities
 
 ### Primary User Communities
+
 - **Platform Super Administrators**: Cloud operators managing tenant onboarding, subscription health, platform security, and cross-tenant auditing.
 - **School Administrators**: Institutional leaders managing academic years, grade levels, sections, subjects, staff allocations, and institutional performance metrics.
 - **Teachers**: Educators recording attendance, curating learning resources, distributing coursework, grading submissions, observing student trajectories, and managing intervention plans.

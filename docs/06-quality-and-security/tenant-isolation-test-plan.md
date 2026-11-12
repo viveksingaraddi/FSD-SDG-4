@@ -34,31 +34,37 @@ The isolation harness provisions two isolated synthetic school tenants:
 ## 3. Detailed Isolation Test Cases
 
 ### TC-ISO-01: Cross-Tenant Attendance Roster Read
+
 - **Actor**: `teacher@alpha.test` (Authenticated in `sch_alpha`)
 - **Action**: Executes `GET /api/v1/attendance/sections/sec_beta_8B?date=2026-10-29`
 - **Expected Outcome**: HTTP `404 Not Found` (`ERR_RESOURCE_NOT_FOUND`). Response contains zero student names from Section 8B.
 
 ### TC-ISO-02: Cross-Tenant Attendance Mutation Attempt
+
 - **Actor**: `teacher@alpha.test`
 - **Action**: Executes `POST /api/v1/attendance/sections/sec_beta_8B` with valid payload attempting to mark Beta students `ABSENT`.
 - **Expected Outcome**: HTTP `404 Not Found`. Database verification confirms zero records created in `sch_beta`.
 
 ### TC-ISO-03: Cross-Tenant Assignment Grade Alteration
+
 - **Actor**: `teacher@alpha.test`
 - **Action**: Executes `POST /api/v1/submissions/sub_beta_01/grade` with payload `{ "score": 50 }`.
 - **Expected Outcome**: HTTP `404 Not Found`. Database verification confirms student grade in Tenant B remains unaltered.
 
 ### TC-ISO-04: Cross-Tenant Support Flag Tampering
+
 - **Actor**: `teacher@alpha.test`
 - **Action**: Executes `POST /api/v1/support/flags/flag_beta_01/dismiss` with dismissal note.
 - **Expected Outcome**: HTTP `404 Not Found`. Flag in Tenant B remains in `PROPOSED` status.
 
 ### TC-ISO-05: Administrative Staff Directory Harvest
+
 - **Actor**: `admin@alpha.test`
 - **Action**: Executes `GET /api/v1/users?role=TEACHER` with manipulated header `X-Tenant-Id: sch_beta`.
 - **Expected Outcome**: HTTP `200 OK`, but payload contains **strictly Tenant A teachers**. Header override is ignored because tenant context is bound exclusively to the authenticated session.
 
 ### TC-ISO-06: Student Cross-Tenant Coursework Access
+
 - **Actor**: `student@alpha.test`
 - **Action**: Executes `GET /api/v1/assignments/asgn_beta_1`.
 - **Expected Outcome**: HTTP `404 Not Found`. Student cannot access coursework or syllabus of another school.

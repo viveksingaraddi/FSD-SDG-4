@@ -7,13 +7,17 @@ This document defines the API versioning strategy, deprecation lifecycle, and st
 ## 1. Versioning and Deprecation Strategy
 
 ### 1.1 URI Path Versioning
+
 The platform employs **explicit URI path versioning**:
+
 - Base path: `/api/v1`
 - Any future breaking changes that cannot be achieved via additive, backward-compatible fields will be introduced under a new version namespace (e.g., `/api/v2`).
 - Additive changes (adding optional request fields, returning new response attributes) are considered backward compatible and do not bump the major version.
 
 ### 1.2 Deprecation Lifecycle
+
 If an endpoint or version must be deprecated:
+
 1. **Sunset Header**: The API emits standard IETF headers:  
    `Deprecation: true`  
    `Sunset: Wed, 29 Apr 2027 00:00:00 GMT`
@@ -26,6 +30,7 @@ If an endpoint or version must be deprecated:
 All HTTP error responses ($4xx$ and $5xx$) must strictly adhere to the `application/problem+json` format:
 
 ### Error Envelope Schema
+
 ```json
 {
   "type": "string (URI referencing the error category)",
@@ -49,14 +54,14 @@ All HTTP error responses ($4xx$ and $5xx$) must strictly adhere to the `applicat
 
 ## 3. Standard Error Code Registry
 
-| Error Code | HTTP Status | Title | Description |
-| :--- | :---: | :--- | :--- |
-| `ERR_AUTH_CREDENTIALS_INVALID` | 401 | Invalid Credentials | Password or email does not match. |
-| `ERR_AUTH_SESSION_EXPIRED` | 401 | Session Expired | Session token has expired; user must re-authenticate. |
-| `ERR_FORBIDDEN_ROLE` | 403 | Insufficient Permissions | User role lacks required permission for this resource. |
-| `ERR_TENANT_ISOLATION_VIOLATION` | 403 | Cross-Tenant Prohibited | Attempt to access resources outside user's school tenant. |
-| `ERR_RESOURCE_NOT_FOUND` | 404 | Resource Not Found | Target entity ID does not exist in the tenant. |
-| `ERR_STATE_CONFLICT` | 409 | State Conflict | Entity state conflicts with action (e.g. duplicate attendance). |
-| `ERR_VALIDATION_FAILED` | 422 | Unprocessable Entity | Payload failed Zod schema validation rules. |
-| `ERR_RATE_LIMIT_EXCEEDED` | 429 | Too Many Requests | Client exceeded request rate limit threshold. |
-| `ERR_INTERNAL_SERVER_ERROR` | 500 | Internal Server Error | Unhandled server exception (correlation ID logged). |
+| Error Code                       | HTTP Status | Title                    | Description                                                     |
+| :------------------------------- | :---------: | :----------------------- | :-------------------------------------------------------------- |
+| `ERR_AUTH_CREDENTIALS_INVALID`   |     401     | Invalid Credentials      | Password or email does not match.                               |
+| `ERR_AUTH_SESSION_EXPIRED`       |     401     | Session Expired          | Session token has expired; user must re-authenticate.           |
+| `ERR_FORBIDDEN_ROLE`             |     403     | Insufficient Permissions | User role lacks required permission for this resource.          |
+| `ERR_TENANT_ISOLATION_VIOLATION` |     403     | Cross-Tenant Prohibited  | Attempt to access resources outside user's school tenant.       |
+| `ERR_RESOURCE_NOT_FOUND`         |     404     | Resource Not Found       | Target entity ID does not exist in the tenant.                  |
+| `ERR_STATE_CONFLICT`             |     409     | State Conflict           | Entity state conflicts with action (e.g. duplicate attendance). |
+| `ERR_VALIDATION_FAILED`          |     422     | Unprocessable Entity     | Payload failed Zod schema validation rules.                     |
+| `ERR_RATE_LIMIT_EXCEEDED`        |     429     | Too Many Requests        | Client exceeded request rate limit threshold.                   |
+| `ERR_INTERNAL_SERVER_ERROR`      |     500     | Internal Server Error    | Unhandled server exception (correlation ID logged).             |

@@ -24,19 +24,20 @@ flowchart LR
 
 To safeguard institutional record integrity and prevent accidental data loss:
 
-| Entity Type | Deletion Strategy | Mechanism & Implementation | Rationale |
-| :--- | :---: | :--- | :--- |
-| **`User` / `StudentProfile`** | **Soft Delete** | Sets `deleted_at = NOW()`, `status = 'INACTIVE'`. | Preserves historical links on past attendance and assessment records. |
-| **`School` (Tenant)** | **Soft Delete (30-day Grace)** | Sets `status = 'SUSPENDED'`, scheduled cascade hard delete after 30 days. | Protects against accidental subscription cancellation. |
-| **`Session`** | **Hard Delete** | Immediate `DELETE FROM sessions WHERE id = $1`. | Expired authentication credentials must not linger in the database. |
-| **`AttendanceRecord`** | **No Deletion (Amended via Audit)** | Records cannot be deleted; corrected via `status` update + audit trail entry. | Legal requirement for student safety and truancy audits. |
-| **`SupportFlag`** | **State Transition (Archive)** | Marked as `DISMISSED` or `RESOLVED`; never physically deleted during term. | Preserves justification trail explaining why intervention was or was not taken. |
+| Entity Type                   |          Deletion Strategy          | Mechanism & Implementation                                                    | Rationale                                                                       |
+| :---------------------------- | :---------------------------------: | :---------------------------------------------------------------------------- | :------------------------------------------------------------------------------ |
+| **`User` / `StudentProfile`** |           **Soft Delete**           | Sets `deleted_at = NOW()`, `status = 'INACTIVE'`.                             | Preserves historical links on past attendance and assessment records.           |
+| **`School` (Tenant)**         |   **Soft Delete (30-day Grace)**    | Sets `status = 'SUSPENDED'`, scheduled cascade hard delete after 30 days.     | Protects against accidental subscription cancellation.                          |
+| **`Session`**                 |           **Hard Delete**           | Immediate `DELETE FROM sessions WHERE id = $1`.                               | Expired authentication credentials must not linger in the database.             |
+| **`AttendanceRecord`**        | **No Deletion (Amended via Audit)** | Records cannot be deleted; corrected via `status` update + audit trail entry. | Legal requirement for student safety and truancy audits.                        |
+| **`SupportFlag`**             |   **State Transition (Archive)**    | Marked as `DISMISSED` or `RESOLVED`; never physically deleted during term.    | Preserves justification trail explaining why intervention was or was not taken. |
 
 ---
 
 ## 3. Student Graduation and Departure Lifecycle
 
 When a student graduates or transfers away from an institution:
+
 1. Student account status updates to `GRADUATED` or `TRANSFERRED`.
 2. Active sessions are terminated.
 3. Student profile becomes read-only; historical grade transcripts remain accessible to administrators.

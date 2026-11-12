@@ -22,13 +22,13 @@ This document defines the testing pyramid, coverage thresholds, testing tools, a
 
 ## 2. Testing Frameworks & Tooling
 
-| Testing Level | Primary Tooling | Target Scope | Execution Environment | Coverage Target |
-| :--- | :--- | :--- | :--- | :---: |
-| **Unit Testing** | Vitest | Domain services, calculation utilities, state machines, Zod schemas. | Local / CI In-Memory | $\ge 85\%$ Lines |
-| **API Integration** | Supertest + Vitest | Express routes, Zod validation, error middleware, RBAC enforcement. | Real PostgreSQL Container | $\ge 80\%$ Endpoints |
-| **Tenant Isolation**| Dedicated Vitest Harness | Asserting zero cross-tenant read/write leakage across all routes. | Multi-tenant test database | **$100\%$ Routes** |
-| **Component & A11y**| React Testing Library + axe-core | UI primitives, accessible labels, keyboard focus, error states. | jsdom / Vitest | Zero A/AA flaws |
-| **End-to-End (E2E)**| Playwright | Full browser user flows (attendance, grading, support intervention). | Headless Chromium/Mobile | Critical Journeys |
+| Testing Level        | Primary Tooling                  | Target Scope                                                         | Execution Environment      |   Coverage Target    |
+| :------------------- | :------------------------------- | :------------------------------------------------------------------- | :------------------------- | :------------------: |
+| **Unit Testing**     | Vitest                           | Domain services, calculation utilities, state machines, Zod schemas. | Local / CI In-Memory       |   $\ge 85\%$ Lines   |
+| **API Integration**  | Supertest + Vitest               | Express routes, Zod validation, error middleware, RBAC enforcement.  | Real PostgreSQL Container  | $\ge 80\%$ Endpoints |
+| **Tenant Isolation** | Dedicated Vitest Harness         | Asserting zero cross-tenant read/write leakage across all routes.    | Multi-tenant test database |  **$100\%$ Routes**  |
+| **Component & A11y** | React Testing Library + axe-core | UI primitives, accessible labels, keyboard focus, error states.      | jsdom / Vitest             |   Zero A/AA flaws    |
+| **End-to-End (E2E)** | Playwright                       | Full browser user flows (attendance, grading, support intervention). | Headless Chromium/Mobile   |  Critical Journeys   |
 
 ---
 
@@ -48,6 +48,7 @@ Because multi-tenant confidentiality is critical, the testing strategy includes 
 ## 4. Continuous Integration Pipeline Execution
 
 Tests execute automatically on every pull request targeting `main`:
+
 1. `npm run lint` (ESLint + Prettier check).
 2. `npm run typecheck` (`tsc --noEmit` in strict mode).
 3. `npm run test:unit` (Vitest unit and service tests).

@@ -9,10 +9,12 @@ This document establishes the uniform query parameter conventions and response e
 All endpoints returning list collections must implement **offset/limit pagination** with strict upper bounds:
 
 ### 1.1 Query Parameters
+
 - `page`: 1-indexed positive integer specifying the requested page number (Default: `1`).
 - `limit`: Number of records to return per page (Default: `20`, Maximum: `100`).
 
 ### 1.2 Pagination Response Envelope
+
 ```json
 {
   "data": [

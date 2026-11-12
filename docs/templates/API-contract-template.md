@@ -17,15 +17,17 @@ Use this template to document versioned REST API endpoints for `/api/v1`.
 #### 1. Request Parameters
 
 ##### Path Parameters
-| Parameter | Type | Required? | Description |
-| :--- | :---: | :---: | :--- |
-| `id` | `UUID` | Yes | Target resource identifier. |
+
+| Parameter |  Type  | Required? | Description                 |
+| :-------- | :----: | :-------: | :-------------------------- |
+| `id`      | `UUID` |    Yes    | Target resource identifier. |
 
 ##### Query Parameters
-| Parameter | Type | Required? | Default | Description |
-| :--- | :---: | :---: | :---: | :--- |
-| `page` | `integer` | No | `1` | Page number for collection pagination. |
-| `limit` | `integer` | No | `20` | Max items per page ($\le 100$). |
+
+| Parameter |   Type    | Required? | Default | Description                            |
+| :-------- | :-------: | :-------: | :-----: | :------------------------------------- |
+| `page`    | `integer` |    No     |   `1`   | Page number for collection pagination. |
+| `limit`   | `integer` |    No     |  `20`   | Max items per page ($\le 100$).        |
 
 ---
 
@@ -36,7 +38,7 @@ import { z } from 'zod';
 
 export const ExampleRequestSchema = z.object({
   title: z.string().min(3).max(100),
-  score: z.number().min(0).max(100).optional()
+  score: z.number().min(0).max(100).optional(),
 });
 
 export type ExampleRequest = z.infer<typeof ExampleRequestSchema>;
@@ -47,6 +49,7 @@ export type ExampleRequest = z.infer<typeof ExampleRequestSchema>;
 #### 3. Response Envelopes
 
 ##### Success Response (`200 OK` / `201 Created`)
+
 ```json
 {
   "data": {
@@ -58,6 +61,7 @@ export type ExampleRequest = z.infer<typeof ExampleRequestSchema>;
 ```
 
 ##### Error Response (`422 Unprocessable Entity` / `404 Not Found`)
+
 ```json
 {
   "type": "https://api.fsd-sdg4.internal/errors/validation-failed",

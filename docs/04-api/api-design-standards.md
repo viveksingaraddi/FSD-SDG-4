@@ -21,13 +21,13 @@ This document establishes the uniform RESTful API conventions, naming patterns, 
 
 ## 2. HTTP Method Semantics
 
-| HTTP Verb | Idempotent? | Safe? | Usage & Semantics | Typical Success Code |
-| :--- | :---: | :---: | :--- | :---: |
-| **GET** | **Yes** | **Yes** | Read single entity or collection query. Zero side effects. | `200 OK` |
-| **POST** | No | No | Create a new entity or trigger an action (e.g. submit attendance). | `201 Created` or `200 OK` |
-| **PUT** | **Yes** | No | Replace an entire entity representation in full. | `200 OK` |
-| **PATCH** | No | No | Apply partial modifications to specific entity fields. | `200 OK` |
-| **DELETE** | **Yes** | No | Soft-delete, deactivate, or purge an entity. | `204 No Content` |
+| HTTP Verb  | Idempotent? |  Safe?  | Usage & Semantics                                                  |   Typical Success Code    |
+| :--------- | :---------: | :-----: | :----------------------------------------------------------------- | :-----------------------: |
+| **GET**    |   **Yes**   | **Yes** | Read single entity or collection query. Zero side effects.         |         `200 OK`          |
+| **POST**   |     No      |   No    | Create a new entity or trigger an action (e.g. submit attendance). | `201 Created` or `200 OK` |
+| **PUT**    |   **Yes**   |   No    | Replace an entire entity representation in full.                   |         `200 OK`          |
+| **PATCH**  |     No      |   No    | Apply partial modifications to specific entity fields.             |         `200 OK`          |
+| **DELETE** |   **Yes**   |   No    | Soft-delete, deactivate, or purge an entity.                       |     `204 No Content`      |
 
 ---
 

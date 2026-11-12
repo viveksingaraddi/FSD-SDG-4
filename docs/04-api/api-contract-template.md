@@ -6,7 +6,7 @@ This document provides the standardized contract template for specifying REST AP
 
 ## 1. Standard API Contract Template
 
-```markdown
+````markdown
 ### [METHOD] /api/v1/resource-path
 
 - **Summary**: Concise explanation of the endpoint's operational purpose.
@@ -16,19 +16,23 @@ This document provides the standardized contract template for specifying REST AP
 - **Tenant Scope**: Strict (derived from session `schoolId`)
 
 #### 1. Request Parameters
+
 - **Path Parameters**:
   - `paramName` (type, required): Description.
 - **Query Parameters**:
   - `queryParam` (type, optional, default): Description.
 
 #### 2. Request Body Schema (Zod)
+
 ```typescript
 export const RequestSchema = z.object({
   // Schema attributes
 });
 ```
+````
 
 #### 3. Success Response (`200 OK` / `201 Created`)
+
 ```json
 {
   "data": {}
@@ -36,11 +40,13 @@ export const RequestSchema = z.object({
 ```
 
 #### 4. Error Responses
+
 - `401 Unauthorized`: Missing or invalid session cookie (`ERR_AUTH_SESSION_EXPIRED`).
 - `403 Forbidden`: Role not authorized (`ERR_FORBIDDEN_ROLE`).
 - `404 Not Found`: Target resource not found in caller's school tenant (`ERR_RESOURCE_NOT_FOUND`).
 - `422 Unprocessable Entity`: Validation failure on request body (`ERR_VALIDATION_FAILED`).
-```
+
+````
 
 ---
 
@@ -70,9 +76,10 @@ export const SubmitAttendanceSchema = z.object({
     })
   ).min(1, 'At least one student record is required')
 });
-```
+````
 
 #### 3. Success Response (`200 OK`)
+
 ```json
 {
   "data": {

@@ -41,9 +41,9 @@ This document formalizes the final release acceptance criteria that must be cert
 
 Promotion to production requires explicit sign-off from all domain leads:
 
-| Domain Lead | Name | Role / Sign-Off Area | Approval Status | Date |
-| :--- | :--- | :--- | :---: | :---: |
-| **Product & UX Lead** | Vishwanath | Product Requirements & WCAG 2.2 AA Accessibility | Pending Gate | — |
-| **Technical Lead** | Vivek | Architecture, REST APIs & Tenant Isolation Security | Pending Gate | — |
-| **Database & Infra Lead**| Yashwardhan | Relational Integrity, Migrations & Disaster Recovery | Pending Gate | — |
-| **QA & Integration Lead**| Vishwas | Automated Test Harness & Performance Benchmarks | Pending Gate | — |
+| Domain Lead               | Name        | Role / Sign-Off Area                                 | Approval Status | Date |
+| :------------------------ | :---------- | :--------------------------------------------------- | :-------------: | :--: |
+| **Product & UX Lead**     | Vishwanath  | Product Requirements & WCAG 2.2 AA Accessibility     |  Pending Gate   |  —   |
+| **Technical Lead**        | Vivek       | Architecture, REST APIs & Tenant Isolation Security  |  Pending Gate   |  —   |
+| **Database & Infra Lead** | Yashwardhan | Relational Integrity, Migrations & Disaster Recovery |  Pending Gate   |  —   |
+| **QA & Integration Lead** | Vishwas     | Automated Test Harness & Performance Benchmarks      |  Pending Gate   |  —   |

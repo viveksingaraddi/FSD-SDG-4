@@ -25,15 +25,15 @@ All color pairings are mathematically verified to satisfy **WCAG 2.2 Level AA** 
 
 The typography scale utilizes modern system sans-serif stacks (or self-hosted Inter) to eliminate external Google Font network latency on low-bandwidth connections:
 
-| Type Token | CSS Font Size | Line Height | Font Weight | Typical Usage |
-| :--- | :--- | :--- | :---: | :--- |
-| `display-1` | `2.25rem (36px)` | `2.5rem (40px)` | Bold (700) | Landing headers, Dashboard main statistics. |
-| `heading-1` | `1.875rem (30px)`| `2.25rem (36px)`| Bold (700) | Top-level view title (`<h1>`, exactly one per page). |
-| `heading-2` | `1.5rem (24px)` | `1.875rem (30px)`| SemiBold (600)| Card titles, Section headers (`<h2>`). |
-| `heading-3` | `1.25rem (20px)` | `1.625rem (26px)`| Medium (500) | Table subheadings, Modal headers (`<h3>`). |
-| `body-base` | `1.0rem (16px)` | `1.5rem (24px)` | Regular (400)| Standard body text, form input values, table cells. |
-| `body-small`| `0.875rem (14px)`| `1.25rem (20px)`| Regular (400)| Supporting metadata, timestamps, badge labels. |
-| `caption` | `0.75rem (12px)` | `1.0rem (16px)` | Medium (500) | Form field helper hints, audit status timestamps. |
+| Type Token   | CSS Font Size     | Line Height       |  Font Weight   | Typical Usage                                        |
+| :----------- | :---------------- | :---------------- | :------------: | :--------------------------------------------------- |
+| `display-1`  | `2.25rem (36px)`  | `2.5rem (40px)`   |   Bold (700)   | Landing headers, Dashboard main statistics.          |
+| `heading-1`  | `1.875rem (30px)` | `2.25rem (36px)`  |   Bold (700)   | Top-level view title (`<h1>`, exactly one per page). |
+| `heading-2`  | `1.5rem (24px)`   | `1.875rem (30px)` | SemiBold (600) | Card titles, Section headers (`<h2>`).               |
+| `heading-3`  | `1.25rem (20px)`  | `1.625rem (26px)` |  Medium (500)  | Table subheadings, Modal headers (`<h3>`).           |
+| `body-base`  | `1.0rem (16px)`   | `1.5rem (24px)`   | Regular (400)  | Standard body text, form input values, table cells.  |
+| `body-small` | `0.875rem (14px)` | `1.25rem (20px)`  | Regular (400)  | Supporting metadata, timestamps, badge labels.       |
+| `caption`    | `0.75rem (12px)`  | `1.0rem (16px)`   |  Medium (500)  | Form field helper hints, audit status timestamps.    |
 
 ---
 

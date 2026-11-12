@@ -25,14 +25,14 @@ Educational data involving minor students requires the highest standard of ethic
 
 ## 3. Data Retention Lifecycle
 
-| Data Category | Active Period | Archival / Inactive Period | Final Disposition / Deletion Policy |
-| :--- | :--- | :--- | :--- |
-| **User Credentials & Auth Logs** | Current active session | 90 days audit history | Session records purged automatically after 30 days of inactivity. Security logs retained 90 days. |
-| **Daily Attendance Records** | Active Academic Year | 5 years post-completion | Retained in read-only cold storage for statutory school audits; purged after 5 years or upon tenant deletion. |
-| **Assignments & Submissions** | Active Academic Year | 1 year post-completion | Binary attachments (PDF/DOCX) purged 1 year after academic year completion; numerical grades retained. |
-| **Formal Assessment Results** | Active Academic Year | Indefinitely or 7 years | Permanent academic record retained for official transcript generation per institutional policy. |
-| **Support Flags & Action Plans** | Active Academic Year | 2 years post-graduation | Concluded support plans archived; accessible only to school admin/counselor; permanently expunged after 2 years. |
-| **Decommissioned Tenants** | Active subscription | 30-day grace period | Complete tenant cascade deletion across all relational tables after 30 days of confirmed contract termination. |
+| Data Category                    | Active Period          | Archival / Inactive Period | Final Disposition / Deletion Policy                                                                              |
+| :------------------------------- | :--------------------- | :------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| **User Credentials & Auth Logs** | Current active session | 90 days audit history      | Session records purged automatically after 30 days of inactivity. Security logs retained 90 days.                |
+| **Daily Attendance Records**     | Active Academic Year   | 5 years post-completion    | Retained in read-only cold storage for statutory school audits; purged after 5 years or upon tenant deletion.    |
+| **Assignments & Submissions**    | Active Academic Year   | 1 year post-completion     | Binary attachments (PDF/DOCX) purged 1 year after academic year completion; numerical grades retained.           |
+| **Formal Assessment Results**    | Active Academic Year   | Indefinitely or 7 years    | Permanent academic record retained for official transcript generation per institutional policy.                  |
+| **Support Flags & Action Plans** | Active Academic Year   | 2 years post-graduation    | Concluded support plans archived; accessible only to school admin/counselor; permanently expunged after 2 years. |
+| **Decommissioned Tenants**       | Active subscription    | 30-day grace period        | Complete tenant cascade deletion across all relational tables after 30 days of confirmed contract termination.   |
 
 ---
 

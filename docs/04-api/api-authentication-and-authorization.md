@@ -39,10 +39,10 @@ const router = Router();
 
 router.post(
   '/sections/:sectionId',
-  authenticate,                            // 1. Validates session cookie & extracts tenant context
+  authenticate, // 1. Validates session cookie & extracts tenant context
   requireRole(['TEACHER', 'SCHOOL_ADMIN']), // 2. Asserts user holds teacher or admin role
-  validateRequest(SubmitAttendanceSchema),  // 3. Validates Zod schema
-  AttendanceController.submitSectionAttendance
+  validateRequest(SubmitAttendanceSchema), // 3. Validates Zod schema
+  AttendanceController.submitSectionAttendance,
 );
 
 export default router;

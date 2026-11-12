@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.0-phase0] - 2026-10-29
 
 ### Added
+
 - **Project Charter and Governance (`docs/00-project-governance/`)**:
   - Established project scope, out-of-scope non-goals, and measurable success metrics.
   - Formulated stakeholder and team ownership structure across product, frontend, backend, database, and QA.
