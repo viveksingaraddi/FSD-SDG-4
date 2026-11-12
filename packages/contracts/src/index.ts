@@ -107,12 +107,18 @@ export interface PlatformUserBreakdownDto {
   superAdmins: number;
 }
 
+export interface SchoolRegistrationTrendDto {
+  period: string;
+  count: number;
+}
+
 export interface PlatformSchoolBreakdownDto {
   active: number;
   suspended: number;
   archived: number;
   totalClasses: number;
   totalSections: number;
+  registrationTrends?: SchoolRegistrationTrendDto[];
 }
 
 export interface PlatformAlertDto {

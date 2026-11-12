@@ -20,6 +20,7 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     usersGroupedByRole,
     totalClasses,
     totalSections,
+    allSchools,
   ] = await Promise.all([
     prisma.school.count({ where: { deletedAt: null } }),
     prisma.school.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
@@ -34,12 +35,29 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     }),
     prisma.class.count(),
     prisma.section.count(),
+    prisma.school.findMany({
+      where: { deletedAt: null },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    }),
   ]);
 
   const roleMap: Record<string, number> = {};
   for (const group of usersGroupedByRole) {
     roleMap[group.role] = group._count.id;
   }
+
+  const trendMap = new Map<string, number>();
+  for (const s of allSchools) {
+    const key = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
+      s.createdAt,
+    );
+    trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
+  }
+  const registrationTrends = Array.from(trendMap.entries()).map(([period, count]) => ({
+    period,
+    count,
+  }));
 
   const usersByRole = {
     teachers: roleMap['TEACHER'] ?? 0,
@@ -55,6 +73,7 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     archived: archivedSchools,
     totalClasses,
     totalSections,
+    registrationTrends,
   };
 
   const alerts = [];

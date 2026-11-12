@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   Activity,
   AlertTriangle,
+  BarChart3,
   BookOpen,
   Building2,
+  Calendar,
+  Filter,
   GraduationCap,
   Layers,
   RefreshCw,
@@ -55,14 +59,18 @@ function getActionBadge(action: string) {
 }
 
 export function SuperAdminDashboardPage() {
+  const [auditActionFilter, setAuditActionFilter] = useState<string>('ALL');
+  const [timeFilter, setTimeFilter] = useState<'all' | '30d' | 'year'>('all');
+
   const overviewQuery = useQuery({
     queryKey: ['super-admin', 'overview'],
     queryFn: ({ signal }) => fetchPlatformOverview(signal),
   });
 
   const auditQuery = useQuery({
-    queryKey: ['super-admin', 'recent-audit'],
-    queryFn: ({ signal }) => fetchPlatformAuditLogs(undefined, signal),
+    queryKey: ['super-admin', 'recent-audit', auditActionFilter],
+    queryFn: ({ signal }) =>
+      fetchPlatformAuditLogs(auditActionFilter === 'ALL' ? undefined : auditActionFilter, signal),
   });
 
   const overview = overviewQuery.data;
@@ -164,6 +172,9 @@ export function SuperAdminDashboardPage() {
     },
   ];
 
+  const trends = overview?.schoolsAnalytics?.registrationTrends ?? [];
+  const maxTrendCount = Math.max(...trends.map((t) => t.count), 1);
+
   return (
     <AppShell
       title="Platform Overview"
@@ -181,6 +192,44 @@ export function SuperAdminDashboardPage() {
             </Text>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Time period filter */}
+            <div className="flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-1 text-xs">
+              <Calendar className="h-3.5 w-3.5 text-[var(--color-text-muted)] ml-1" />
+              <button
+                type="button"
+                onClick={() => setTimeFilter('all')}
+                className={`px-2 py-1 rounded-[var(--radius-sm)] transition-colors ${
+                  timeFilter === 'all'
+                    ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeFilter('30d')}
+                className={`px-2 py-1 rounded-[var(--radius-sm)] transition-colors ${
+                  timeFilter === '30d'
+                    ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                Past 30D
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeFilter('year')}
+                className={`px-2 py-1 rounded-[var(--radius-sm)] transition-colors ${
+                  timeFilter === 'year'
+                    ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                This Year
+              </button>
+            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -412,46 +461,73 @@ export function SuperAdminDashboardPage() {
               <div className="flex items-center justify-between border-b border-[var(--color-border-default)] pb-3">
                 <div>
                   <Heading level={3} size="h3">
-                    Institutional Adoption &amp; Scale
+                    Institutional Adoption &amp; Trends
                   </Heading>
                   <Text variant="caption">Multi-tenant provisioning and academic footprint</Text>
                 </div>
                 <Building2 className="h-5 w-5 text-[var(--color-text-muted)]" aria-hidden="true" />
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
-                  <Text variant="caption" className="text-[var(--color-text-muted)]">
-                    Active Tenants
-                  </Text>
-                  <p className="mt-1 text-2xl font-bold text-emerald-600">
-                    {overview.activeSchools}
-                  </p>
-                  <Text variant="caption" className="text-xs text-[var(--color-text-secondary)]">
-                    Serving live curriculum
-                  </Text>
+              {/* Registration Trends Chart */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
+                    <BarChart3 className="h-4 w-4 text-[var(--color-brand-primary)]" />
+                    School Registration Velocity
+                  </span>
+                  <Badge variant="neutral">Verified</Badge>
                 </div>
 
-                <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
-                  <Text variant="caption" className="text-[var(--color-text-muted)]">
-                    Suspended / Inactive
-                  </Text>
-                  <p className="mt-1 text-2xl font-bold text-amber-600">
-                    {overview.suspendedSchools}
-                  </p>
-                  <Text variant="caption" className="text-xs text-[var(--color-text-secondary)]">
-                    Requires admin action
-                  </Text>
-                </div>
+                {trends.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    <div
+                      className="flex items-end gap-3 h-28 pt-2 pb-1"
+                      role="img"
+                      aria-label="School registration trends by period"
+                    >
+                      {trends.map((item) => {
+                        const heightPct = Math.max(
+                          18,
+                          Math.round((item.count / maxTrendCount) * 100),
+                        );
+                        return (
+                          <div
+                            key={item.period}
+                            className="flex flex-1 flex-col items-center gap-1.5 h-full justify-end"
+                          >
+                            <span className="text-xs font-bold text-[var(--color-text-primary)]">
+                              {item.count}
+                            </span>
+                            <div
+                              className="w-full max-w-[42px] rounded-t-[var(--radius-sm)] bg-[var(--color-brand-primary)] hover:opacity-90 transition-all"
+                              style={{ height: `${heightPct}%` }}
+                              title={`${item.period}: ${item.count} school(s)`}
+                            />
+                            <span className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[64px]">
+                              {item.period}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 p-4 text-center text-xs text-[var(--color-text-muted)] border border-dashed rounded-[var(--radius-md)]">
+                    Registration velocity data will populate as schools onboard.
+                  </div>
+                )}
+              </div>
 
-                <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
+              {/* Academic Hierarchy Scale Metrics */}
+              <div className="mt-4 grid grid-cols-2 gap-3 pt-3 border-t border-[var(--color-border-default)]">
+                <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-2.5">
                   <div className="flex items-center gap-1.5">
                     <Layers className="h-4 w-4 text-[var(--color-brand-primary)]" />
                     <Text variant="caption" className="text-[var(--color-text-muted)]">
                       Classes Configured
                     </Text>
                   </div>
-                  <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
+                  <p className="mt-1 text-xl font-bold text-[var(--color-text-primary)]">
                     {overview.schoolsAnalytics?.totalClasses ?? 0}
                   </p>
                   <Text variant="caption" className="text-xs text-[var(--color-text-secondary)]">
@@ -459,14 +535,14 @@ export function SuperAdminDashboardPage() {
                   </Text>
                 </div>
 
-                <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
+                <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-2.5">
                   <div className="flex items-center gap-1.5">
                     <School className="h-4 w-4 text-[var(--color-brand-primary)]" />
                     <Text variant="caption" className="text-[var(--color-text-muted)]">
                       Active Sections
                     </Text>
                   </div>
-                  <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
+                  <p className="mt-1 text-xl font-bold text-[var(--color-text-primary)]">
                     {overview.schoolsAnalytics?.totalSections ?? 0}
                   </p>
                   <Text variant="caption" className="text-xs text-[var(--color-text-secondary)]">
@@ -474,21 +550,13 @@ export function SuperAdminDashboardPage() {
                   </Text>
                 </div>
               </div>
-
-              <div className="mt-5 rounded-[var(--radius-md)] border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
-                <p className="font-semibold">Security &amp; Multi-Tenancy Guarantee</p>
-                <p className="mt-0.5 opacity-90">
-                  Each school tenant possesses an isolated data partition bounded by composite
-                  foreign keys with tenant-level RBAC validation.
-                </p>
-              </div>
             </Card>
           </div>
         )}
 
         {/* Section D: Recent Administrative Activity */}
         <section aria-label="Recent platform activity" className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <Heading level={3} size="h3">
                 Recent Administrative Activity
@@ -498,11 +566,50 @@ export function SuperAdminDashboardPage() {
                 actions.
               </Text>
             </div>
-            <Link to="/super-admin/governance">
-              <Button variant="outline" size="sm">
-                View Full Audit Stream
-              </Button>
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-1 text-xs">
+                <Filter className="h-3.5 w-3.5 text-[var(--color-text-muted)] ml-1" />
+                <button
+                  type="button"
+                  onClick={() => setAuditActionFilter('ALL')}
+                  className={`px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors ${
+                    auditActionFilter === 'ALL'
+                      ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuditActionFilter('PLATFORM_SCHOOL_CREATED')}
+                  className={`px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors ${
+                    auditActionFilter === 'PLATFORM_SCHOOL_CREATED'
+                      ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                  }`}
+                >
+                  Provisions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuditActionFilter('PLATFORM_SCHOOL_UPDATED')}
+                  className={`px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors ${
+                    auditActionFilter === 'PLATFORM_SCHOOL_UPDATED'
+                      ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                  }`}
+                >
+                  Updates
+                </button>
+              </div>
+
+              <Link to="/super-admin/governance">
+                <Button variant="outline" size="sm">
+                  View Full Audit Stream
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <DataTable
