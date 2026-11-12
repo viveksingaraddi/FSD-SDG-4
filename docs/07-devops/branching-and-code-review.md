@@ -20,6 +20,7 @@ main (Protected: Production-ready baseline)
 ```
 
 ### Branch Naming Taxonomy
+
 - `main`: Protected production branch. Direct commits and force pushes are blocked.
 - `phase/phase-<number>-<title>`: Active phase milestone integration branch.
 - `feat/<issue-id>-<short-description>`: New functional capabilities.
@@ -31,8 +32,9 @@ main (Protected: Production-ready baseline)
 ## 2. Pull Request (PR) Requirements
 
 Every pull request targeting `main` or an active `phase/*` branch must:
+
 1. **Reference a Tracking Issue**: Must link to a valid requirement ID or phase deliverable.
-2. **Include Clear Description**: Explain the *Problem*, the *Approach Taken*, and any *Architectural Trade-offs*.
+2. **Include Clear Description**: Explain the _Problem_, the _Approach Taken_, and any _Architectural Trade-offs_.
 3. **Include Accompanying Tests**: Features must include unit and integration tests; bug fixes must include a regression test reproducing the issue.
 4. **Pass All CI Checks**: Automated GitHub Actions workflow must complete with 100% green status.
 5. **Receive At Least One Approved Review**: Must be reviewed and approved by the designated domain lead:
@@ -46,6 +48,7 @@ Every pull request targeting `main` or an active `phase/*` branch must:
 ## 3. Code Review Verification Checklist
 
 During code review, reviewers must verify:
+
 - [ ] Does this PR introduce any code outside the currently authorized phase scope?
 - [ ] Does every database query enforce `school_id` tenant isolation?
 - [ ] Are any raw database error messages or stack traces leaked to clients?

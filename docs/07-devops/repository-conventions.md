@@ -2,6 +2,8 @@
 
 This document establishes the repository structure, file naming standards, code style, and commit message conventions for the **FSD-SDG-4 Quality Education SaaS** project.
 
+> **Phase 4 Implementation Note**: The `pnpm` workspace monorepo layout (`apps/web`, `apps/api`, `packages/contracts`, `packages/validation`, `packages/shared-types`, `packages/config`), ESLint 10 flat config (`eslint.config.mjs`), Prettier, and strict `tsconfig.base.json` are now active. See also [`docs/02-architecture/repository-structure.md`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/docs/02-architecture/repository-structure.md) and [`docs/07-devops/workspace-dependency-policy.md`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/docs/07-devops/workspace-dependency-policy.md).
+
 ---
 
 ## 1. Directory and File Naming Conventions
@@ -19,6 +21,7 @@ This document establishes the repository structure, file naming standards, code 
 ## 2. Strict TypeScript & Code Quality Policy
 
 When implementation begins in authorized phases:
+
 1. **Strict Mode Mandatory**: `"strict": true` enforced in `tsconfig.json`.
 2. **Prohibited TypeScript Patterns**:
    - `any` is strictly prohibited. Use explicit types, generics, or `unknown` with runtime type narrowing.
@@ -43,6 +46,7 @@ All Git commits must strictly adhere to the **Conventional Commits v1.0.0** spec
 ```
 
 **Permitted Commit Types**:
+
 - `feat`: A new user-facing feature (only in authorized implementation phases).
 - `fix`: A bug fix.
 - `docs`: Documentation-only updates.
@@ -51,6 +55,7 @@ All Git commits must strictly adhere to the **Conventional Commits v1.0.0** spec
 - `chore`: Tooling, dependency, or configuration updates.
 
 **Examples**:
+
 - `docs(arch): establish ADR-0003 multi-tenancy strategy`
 - `feat(attendance): implement bulk section attendance submission endpoint`
 - `fix(auth): correct cookie max-age calculation on mobile safari`

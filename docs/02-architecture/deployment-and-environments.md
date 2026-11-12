@@ -11,12 +11,12 @@ This document defines the multi-tier environment strategy, containerization blue
 
 The platform maintains four strictly isolated operational environments:
 
-| Environment | Purpose | Target Host / Infrastructure | Data Strategy | Access Policy |
-| :--- | :--- | :--- | :--- | :--- |
-| **Development (`local`)** | Feature development and local debugging. | Local developer machine (Node.js LTS, local Docker PostgreSQL). | Deterministic synthetic mock seed fixtures. | Individual engineer. |
-| **Test (`ci`)** | Automated CI pipeline validation. | GitHub Actions runner containers. | Ephemeral PostgreSQL service container, wiped per run. | Automated CI runner. |
-| **Staging (`stage`)** | Pre-production testing, integration hardening, accessibility audits. | Cloud container service (e.g., AWS ECS / Render / Fly.io) + Managed Postgres. | Sanitized, anonymized synthetic production-scale dataset. | Internal engineering team & pilot stakeholders. |
-| **Production (`prod`)** | Live multi-tenant SaaS application for pilot schools. | Hardened cloud container service + Multi-AZ Managed PostgreSQL + CDN. | Production tenant educational data; continuous WAL backup. | Public TLS endpoints; strict credential controls. |
+| Environment               | Purpose                                                              | Target Host / Infrastructure                                                  | Data Strategy                                              | Access Policy                                     |
+| :------------------------ | :------------------------------------------------------------------- | :---------------------------------------------------------------------------- | :--------------------------------------------------------- | :------------------------------------------------ |
+| **Development (`local`)** | Feature development and local debugging.                             | Local developer machine (Node.js LTS, local Docker PostgreSQL).               | Deterministic synthetic mock seed fixtures.                | Individual engineer.                              |
+| **Test (`ci`)**           | Automated CI pipeline validation.                                    | GitHub Actions runner containers.                                             | Ephemeral PostgreSQL service container, wiped per run.     | Automated CI runner.                              |
+| **Staging (`stage`)**     | Pre-production testing, integration hardening, accessibility audits. | Cloud container service (e.g., AWS ECS / Render / Fly.io) + Managed Postgres. | Sanitized, anonymized synthetic production-scale dataset.  | Internal engineering team & pilot stakeholders.   |
+| **Production (`prod`)**   | Live multi-tenant SaaS application for pilot schools.                | Hardened cloud container service + Multi-AZ Managed PostgreSQL + CDN.         | Production tenant educational data; continuous WAL backup. | Public TLS endpoints; strict credential controls. |
 
 ---
 
@@ -39,6 +39,7 @@ The application is designed to be fully container-ready, packageable as lightwei
 ```
 
 ### Containerization Guidelines (for Phase 4+ implementation)
+
 1. **Multi-Stage Builds**: Distinct build and production stages to ensure development dependencies (TypeScript compiler, test runners) are excluded from production images.
 2. **Non-Root Execution**: Container processes must execute under a dedicated non-root user (`node` or `appuser`) to mitigate container breakout vulnerabilities.
 3. **Healthcheck Probes**: Containers expose `/api/v1/health` and `/api/v1/ready` endpoints reporting process status and database connectivity.

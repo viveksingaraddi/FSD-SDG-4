@@ -37,8 +37,9 @@ During a declared **P1 Critical** or **P2 Major** incident, team members assume 
 ## 4. Blameless Post-Mortem Cadence
 
 Within **48 business hours** of incident resolution:
+
 1. The Incident Commander compiles an Incident Post-Mortem Report using the standardized template in `docs/templates/`.
 2. The team conducts a blameless post-mortem review focusing on:
-   - *Timeline of Events*: When did it break? When was it detected? When was it fixed?
-   - *Root Cause Analysis*: Five Whys methodology to uncover structural/process deficiencies.
-   - *Action Items*: Concrete preventative tasks assigned to team members with target completion dates.
+   - _Timeline of Events_: When did it break? When was it detected? When was it fixed?
+   - _Root Cause Analysis_: Five Whys methodology to uncover structural/process deficiencies.
+   - _Action Items_: Concrete preventative tasks assigned to team members with target completion dates.

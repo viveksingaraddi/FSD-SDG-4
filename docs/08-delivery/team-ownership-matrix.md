@@ -6,22 +6,22 @@ This document establishes the primary engineering accountability and peer review
 
 ## 1. Domain & Module Ownership Matrix
 
-| System Module / Architectural Area | Primary Engineering Owner | Secondary Peer Reviewer | Target Quality Standard |
-| :--- | :--- | :--- | :--- |
-| **Product Vision & Scope** | **Vishwanath** (Product Lead) | Vivek (Tech Lead) | Clear functional specs, zero scope creep. |
-| **Frontend UI Design System** | **Vishwanath** (Frontend Lead) | Vishwas (QA Lead) | WCAG 2.2 AA certified, responsive $<640$px. |
-| **Client State (TanStack Query)** | **Vishwanath** (Frontend Lead) | Vivek (Tech Lead) | Optimistic updates, cache invalidation. |
-| **Modular Monolith Core** | **Vivek** (Tech Lead) | Yashwardhan (Infra Lead)| Clean domain boundaries, strict TypeScript. |
-| **REST APIs & OpenAPI Specs** | **Vivek** (Tech Lead) | Vishwanath (Frontend Lead)| RFC 7807 error envelopes, Zod validation. |
-| **Identity, Sessions & Auth** | **Vivek** (Tech Lead) | Vishwas (Security Lead) | Argon2id hashing, secure HttpOnly cookies. |
-| **Multi-Tenant Isolation** | **Vivek** (Tech Lead) | Vishwas (Security Lead) | 100% automated isolation test coverage. |
-| **Relational Data Architecture** | **Yashwardhan** (Database Lead) | Vivek (Tech Lead) | 3NF normalization, composite tenant keys. |
-| **PostgreSQL Indexing & RLS** | **Yashwardhan** (Database Lead) | Vivek (Tech Lead) | B-Tree leading tenant index, query plans. |
-| **Backup, Disaster Recovery & DDL**| **Yashwardhan** (Database Lead) | Vishwas (QA Lead) | RPO $\le 1$ hr, RTO $\le 2$ hrs dry-run verified. |
-| **DevOps, Docker & CI/CD** | **Yashwardhan** (Infra Lead) | Vivek (Tech Lead) | Multi-stage OCI containers, automated gates. |
-| **Automated Test Harness** | **Vishwas** (QA Lead) | Vivek (Tech Lead) | Vitest, Supertest, Playwright pipelines. |
-| **Accessibility Auditing (A11y)** | **Vishwas** (QA Lead) | Vishwanath (Frontend Lead)| Zero `axe-core` Level A/AA violations. |
-| **Performance & Load Testing** | **Vishwas** (QA Lead) | Yashwardhan (Infra Lead)| k6 load tests, P95 latency $\le 200$ms. |
+| System Module / Architectural Area  | Primary Engineering Owner       | Secondary Peer Reviewer    | Target Quality Standard                           |
+| :---------------------------------- | :------------------------------ | :------------------------- | :------------------------------------------------ |
+| **Product Vision & Scope**          | **Vishwanath** (Product Lead)   | Vivek (Tech Lead)          | Clear functional specs, zero scope creep.         |
+| **Frontend UI Design System**       | **Vishwanath** (Frontend Lead)  | Vishwas (QA Lead)          | WCAG 2.2 AA certified, responsive $<640$px.       |
+| **Client State (TanStack Query)**   | **Vishwanath** (Frontend Lead)  | Vivek (Tech Lead)          | Optimistic updates, cache invalidation.           |
+| **Modular Monolith Core**           | **Vivek** (Tech Lead)           | Yashwardhan (Infra Lead)   | Clean domain boundaries, strict TypeScript.       |
+| **REST APIs & OpenAPI Specs**       | **Vivek** (Tech Lead)           | Vishwanath (Frontend Lead) | RFC 7807 error envelopes, Zod validation.         |
+| **Identity, Sessions & Auth**       | **Vivek** (Tech Lead)           | Vishwas (Security Lead)    | Argon2id hashing, secure HttpOnly cookies.        |
+| **Multi-Tenant Isolation**          | **Vivek** (Tech Lead)           | Vishwas (Security Lead)    | 100% automated isolation test coverage.           |
+| **Relational Data Architecture**    | **Yashwardhan** (Database Lead) | Vivek (Tech Lead)          | 3NF normalization, composite tenant keys.         |
+| **PostgreSQL Indexing & RLS**       | **Yashwardhan** (Database Lead) | Vivek (Tech Lead)          | B-Tree leading tenant index, query plans.         |
+| **Backup, Disaster Recovery & DDL** | **Yashwardhan** (Database Lead) | Vishwas (QA Lead)          | RPO $\le 1$ hr, RTO $\le 2$ hrs dry-run verified. |
+| **DevOps, Docker & CI/CD**          | **Yashwardhan** (Infra Lead)    | Vivek (Tech Lead)          | Multi-stage OCI containers, automated gates.      |
+| **Automated Test Harness**          | **Vishwas** (QA Lead)           | Vivek (Tech Lead)          | Vitest, Supertest, Playwright pipelines.          |
+| **Accessibility Auditing (A11y)**   | **Vishwas** (QA Lead)           | Vishwanath (Frontend Lead) | Zero `axe-core` Level A/AA violations.            |
+| **Performance & Load Testing**      | **Vishwas** (QA Lead)           | Yashwardhan (Infra Lead)   | k6 load tests, P95 latency $\le 200$ms.           |
 
 ---
 

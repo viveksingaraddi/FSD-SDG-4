@@ -15,6 +15,7 @@ The platform must serve multiple independent school tenants while maintaining st
 ## 2. Decision
 
 We will implement a **Shared Database, Shared Schema** tenancy architecture:
+
 1. Every tenant-owned table includes a mandatory foreign key `school_id UUID REFERENCES schools(id) ON DELETE CASCADE`.
 2. Tenant isolation is enforced primarily at the application data-access layer via a custom Prisma Client extension that automatically scopes all queries (`findMany`, `findFirst`, `update`, `delete`) to the session's verified `schoolId`.
 3. Unique natural constraints are composite, incorporating `school_id` (e.g., `UNIQUE(school_id, student_id_number)`).
@@ -26,12 +27,14 @@ We will implement a **Shared Database, Shared Schema** tenancy architecture:
 ## 3. Alternatives Considered
 
 ### Alternative A: Database-per-Tenant
-- *Description*: Provisioning a distinct PostgreSQL database for each registered school.
-- *Rejection Rationale*: Massive infrastructure cost and operational overhead for 50+ schools. Schema migrations would need to be orchestrated sequentially across dozens of databases. Connection pooling becomes fragmented and unmanageable.
+
+- _Description_: Provisioning a distinct PostgreSQL database for each registered school.
+- _Rejection Rationale_: Massive infrastructure cost and operational overhead for 50+ schools. Schema migrations would need to be orchestrated sequentially across dozens of databases. Connection pooling becomes fragmented and unmanageable.
 
 ### Alternative B: Schema-per-Tenant
-- *Description*: A single PostgreSQL instance with separate schemas (`school_01`, `school_02`) per tenant.
-- *Rejection Rationale*: Prisma ORM does not natively support dynamic runtime multi-schema routing without complex connection switching or raw SQL. Migration execution time scales linearly with tenant count.
+
+- _Description_: A single PostgreSQL instance with separate schemas (`school_01`, `school_02`) per tenant.
+- _Rejection Rationale_: Prisma ORM does not natively support dynamic runtime multi-schema routing without complex connection switching or raw SQL. Migration execution time scales linearly with tenant count.
 
 ---
 
@@ -46,12 +49,13 @@ We will implement a **Shared Database, Shared Schema** tenancy architecture:
 ## 5. Trade-offs and Consequences
 
 - **Risk of Developer Omission**: If a developer bypasses Prisma extensions or writes raw SQL without a `school_id` filter, data could leak across tenants.
-  - *Mitigation*: Mandatory automated tenant isolation test suite in CI testing every endpoint with cross-tenant tokens; composite database constraints; evaluation of native RLS in Phase 5.
+  - _Mitigation_: Mandatory automated tenant isolation test suite in CI testing every endpoint with cross-tenant tokens; composite database constraints; evaluation of native RLS in Phase 5.
 
 ---
 
 ## 6. Conditions for Revisit
 
 This decision will be revisited if:
+
 1. Large enterprise school districts require dedicated data residency or dedicated encryption keys per tenant.
 2. A single tenant's transaction volume exceeds 60% of database capacity, necessitating physical sharding.

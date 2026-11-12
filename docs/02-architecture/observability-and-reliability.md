@@ -9,7 +9,9 @@ This document specifies the logging standards, health check probes, telemetry me
 All logging in the application is standardized on **Pino**, outputting newline-delimited JSON to `stdout`.
 
 ### 1.1 Mandatory Context Attributes
+
 Every log record emitted during HTTP request processing must include:
+
 - `time`: Unix millisecond timestamp.
 - `level`: Numeric log level (10=Trace, 20=Debug, 30=Info, 40=Warn, 50=Error, 60=Fatal).
 - `reqId`: UUID v4 correlation ID propagated from `X-Request-Id` or generated upon entry.
@@ -19,7 +21,9 @@ Every log record emitted during HTTP request processing must include:
 - `msg`: Clear, concise human-readable description of the event.
 
 ### 1.2 Data Sanitization (PII Masking)
+
 Pino serializers automatically redact sensitive fields to prevent accidental leakage in logs:
+
 - `password`, `confirmPassword`, `token`, `sessionToken`, `cookie`, `authorization`.
 - Student identification records and private contact information.
 
@@ -30,10 +34,12 @@ Pino serializers automatically redact sensitive fields to prevent accidental lea
 The backend exposes two dedicated monitoring endpoints under `/api/v1`:
 
 ### 2.1 Liveness Probe (`GET /api/v1/health/liveness`)
+
 - **Purpose**: Informs container orchestrators whether the Node.js event loop is alive.
 - **Behavior**: Returns `200 OK` with `{ "status": "ok", "uptime": 3600 }`. Does not query the database.
 
 ### 2.2 Readiness Probe (`GET /api/v1/health/readiness`)
+
 - **Purpose**: Verifies that the container is ready to accept user traffic (database connection established).
 - **Behavior**: Executes `SELECT 1` via Prisma.
   - If successful: Returns `200 OK` with `{ "status": "ready", "database": "connected" }`.

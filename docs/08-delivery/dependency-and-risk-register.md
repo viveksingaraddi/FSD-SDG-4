@@ -18,10 +18,10 @@ $$\text{Phase 0 (Arch)} \to \text{Phase 1 (Reqs)} \to \text{Phase 2 (UX Flows)} 
 
 ## 2. Risk Matrix and Action Plans
 
-| Risk ID | Risk Description | Severity | Likelihood | Impact Area | Mitigation & Action Plan | Trigger Condition |
-| :--- | :--- | :---: | :---: | :--- | :--- | :--- |
-| **R-DEP-01** | **Tenant Data Leakage via Raw Query** | **Critical** | Low | Security & Legal | Enforce Prisma query extension injecting `schoolId` into AST; automated CI isolation test suite. | Any endpoint added without isolation test. |
-| **R-DEP-02** | **Attendance Load Stampede** | **High** | High | Availability | Parameterized bulk insert endpoint; composite B-Tree indexes on `(school_id, section_id, date)`. | Morning attendance API P95 $> 300$ms. |
-| **R-DEP-03** | **Accessibility Regressions in Complex Views** | **High** | Medium | Inclusivity / A11y | Headless accessible primitives; automated `axe-core` CI scans reporting zero violations. | Any PR introducing unlabeled input or contrast $< 4.5:1$. |
-| **R-DEP-04** | **Stigmatizing Support Flags** | **High** | Medium | Pedagogical Value | Human-in-the-loop review mandatory; transparent evidence explanations; non-punitive copy. | User testing indicates students perceive flags as disciplinary. |
-| **R-DEP-05** | **Client Bundle Bloat on 3G** | **Medium** | High | Performance | Route-level code splitting via `React.lazy`; bundle budget CI check enforcing $\le 250$ KB. | Production build bundle exceeds 250 KB gzipped. |
+| Risk ID      | Risk Description                               |   Severity   | Likelihood | Impact Area        | Mitigation & Action Plan                                                                         | Trigger Condition                                               |
+| :----------- | :--------------------------------------------- | :----------: | :--------: | :----------------- | :----------------------------------------------------------------------------------------------- | :-------------------------------------------------------------- |
+| **R-DEP-01** | **Tenant Data Leakage via Raw Query**          | **Critical** |    Low     | Security & Legal   | Enforce Prisma query extension injecting `schoolId` into AST; automated CI isolation test suite. | Any endpoint added without isolation test.                      |
+| **R-DEP-02** | **Attendance Load Stampede**                   |   **High**   |    High    | Availability       | Parameterized bulk insert endpoint; composite B-Tree indexes on `(school_id, section_id, date)`. | Morning attendance API P95 $> 300$ms.                           |
+| **R-DEP-03** | **Accessibility Regressions in Complex Views** |   **High**   |   Medium   | Inclusivity / A11y | Headless accessible primitives; automated `axe-core` CI scans reporting zero violations.         | Any PR introducing unlabeled input or contrast $< 4.5:1$.       |
+| **R-DEP-04** | **Stigmatizing Support Flags**                 |   **High**   |   Medium   | Pedagogical Value  | Human-in-the-loop review mandatory; transparent evidence explanations; non-punitive copy.        | User testing indicates students perceive flags as disciplinary. |
+| **R-DEP-05** | **Client Bundle Bloat on 3G**                  |  **Medium**  |    High    | Performance        | Route-level code splitting via `React.lazy`; bundle budget CI check enforcing $\le 250$ KB.      | Production build bundle exceeds 250 KB gzipped.                 |

@@ -41,22 +41,23 @@ All error responses from the API must return `Content-Type: application/problem+
 
 ### Core Error Types & HTTP Status Mapping
 
-| HTTP Status | Title | Description / Typical Trigger |
-| :--- | :--- | :--- |
-| **400 Bad Request** | Malformed Request | Syntax errors in JSON body or missing required HTTP headers. |
-| **401 Unauthorized** | Authentication Required | Missing, expired, or invalid session cookie. |
-| **403 Forbidden** | Access Denied | Authenticated user lacks permission (RBAC) or tenant ownership. |
-| **404 Not Found** | Resource Not Found | Target entity does not exist or belongs to a different school tenant. |
-| **409 Conflict** | State Conflict | Duplicate unique constraint (e.g., duplicate attendance for date). |
-| **422 Unprocessable** | Validation Error | Payload fails Zod validation schema rules. |
-| **429 Too Many Req** | Rate Limit Exceeded | Exceeded allowed requests in sliding rate-limit window. |
-| **500 Internal Error** | Server Error | Unhandled server exception (details logged with correlation ID). |
+| HTTP Status            | Title                   | Description / Typical Trigger                                         |
+| :--------------------- | :---------------------- | :-------------------------------------------------------------------- |
+| **400 Bad Request**    | Malformed Request       | Syntax errors in JSON body or missing required HTTP headers.          |
+| **401 Unauthorized**   | Authentication Required | Missing, expired, or invalid session cookie.                          |
+| **403 Forbidden**      | Access Denied           | Authenticated user lacks permission (RBAC) or tenant ownership.       |
+| **404 Not Found**      | Resource Not Found      | Target entity does not exist or belongs to a different school tenant. |
+| **409 Conflict**       | State Conflict          | Duplicate unique constraint (e.g., duplicate attendance for date).    |
+| **422 Unprocessable**  | Validation Error        | Payload fails Zod validation schema rules.                            |
+| **429 Too Many Req**   | Rate Limit Exceeded     | Exceeded allowed requests in sliding rate-limit window.               |
+| **500 Internal Error** | Server Error            | Unhandled server exception (details logged with correlation ID).      |
 
 ---
 
 ## 3. Standard Response Envelopes
 
 ### 3.1 Single Resource Response
+
 ```json
 {
   "data": {
@@ -72,6 +73,7 @@ All error responses from the API must return `Content-Type: application/problem+
 ```
 
 ### 3.2 Collection Response with Standard Pagination
+
 ```json
 {
   "data": [

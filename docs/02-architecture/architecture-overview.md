@@ -5,6 +5,7 @@
 The **FSD-SDG-4 Quality Education SaaS** architecture is engineered around the principle of **sustainable simplicity**: creating a robust, secure, accessible, and high-velocity foundation tailored for a small, focused engineering team.
 
 Key foundational tenets:
+
 1. **Modular Monolith First**: A single, unified backend application structured into decoupled, domain-bounded modules. We reject premature distributed microservices complexity in favor of transactional consistency, simple debugging, and unified deployment.
 2. **Tenant Isolation by Design**: Multi-tenancy is not an afterthought or a simple `WHERE` clause check. It is an end-to-end architectural invariant enforced at the API gateway, session layer, domain service boundary, and database query tier.
 3. **Defense in Depth**: Security controls operate across multiple independent boundaries (secure cookies, rate limiting, Zod validation, RBAC middleware, ORM query extensions, and potential database RLS).
@@ -32,21 +33,21 @@ Mobile / Desktop               Zod Validation + Pino                Prisma ORM
 
 ## 3. Technology Stack Summary (Proposed Baseline)
 
-| System Layer | Selected Technology | Version / Tooling | Rationale & ADR Reference |
-| :--- | :--- | :--- | :--- |
-| **Frontend Framework** | React | 18+ | Declarative component model, rich ecosystem, accessibility tooling. |
-| **Build & Dev Tooling** | Vite | 5+ | Ultra-fast HMR, optimized tree-shaking, minimal bundle overhead. |
-| **Language & Typings** | TypeScript | 5+ (Strict) | Compile-time type safety across frontend and backend domains. |
-| **Styling & Design System** | Tailwind CSS + Headless UI | Modern | Mobile-first utility design system with strict accessible tokens. |
-| **Client State / Fetching** | TanStack Query | v5 | Automated cache invalidation, background refetching, offline resiliency. |
-| **Forms & Validation** | React Hook Form + Zod | Modern | Performant, un-opinionated form state with isomorphic Zod validation schemas. |
-| **Backend Runtime** | Node.js | LTS (v20+) | Event-driven, non-blocking I/O ideal for RESTful JSON APIs. |
-| **Web Application Server** | Express | 4.x / 5.x | Mature, un-opinionated, lightweight HTTP routing and middleware framework. |
-| **API Contract & Format** | RESTful `/api/v1` | OpenAPI 3.1 | Standardized versioned endpoints with RFC 7807 structured error responses. |
-| **Structured Logging** | Pino | 8+ | High-performance JSON logger with correlation IDs (`requestId`, `tenantId`). |
-| **Database Engine** | PostgreSQL | 16+ | ACID relational integrity, powerful JSONB/indexing, multi-tenant safety. |
-| **ORM / Data Access** | Prisma ORM | 5+ | Type-safe query generation, migration management, query extensions. |
-| **Testing Harness** | Vitest, Supertest, Playwright | Modern | Unified unit, integration, and browser end-to-end testing matrix. |
+| System Layer                | Selected Technology           | Version / Tooling | Rationale & ADR Reference                                                     |
+| :-------------------------- | :---------------------------- | :---------------- | :---------------------------------------------------------------------------- |
+| **Frontend Framework**      | React                         | 18+               | Declarative component model, rich ecosystem, accessibility tooling.           |
+| **Build & Dev Tooling**     | Vite                          | 5+                | Ultra-fast HMR, optimized tree-shaking, minimal bundle overhead.              |
+| **Language & Typings**      | TypeScript                    | 5+ (Strict)       | Compile-time type safety across frontend and backend domains.                 |
+| **Styling & Design System** | Tailwind CSS + Headless UI    | Modern            | Mobile-first utility design system with strict accessible tokens.             |
+| **Client State / Fetching** | TanStack Query                | v5                | Automated cache invalidation, background refetching, offline resiliency.      |
+| **Forms & Validation**      | React Hook Form + Zod         | Modern            | Performant, un-opinionated form state with isomorphic Zod validation schemas. |
+| **Backend Runtime**         | Node.js                       | LTS (v20+)        | Event-driven, non-blocking I/O ideal for RESTful JSON APIs.                   |
+| **Web Application Server**  | Express                       | 4.x / 5.x         | Mature, un-opinionated, lightweight HTTP routing and middleware framework.    |
+| **API Contract & Format**   | RESTful `/api/v1`             | OpenAPI 3.1       | Standardized versioned endpoints with RFC 7807 structured error responses.    |
+| **Structured Logging**      | Pino                          | 8+                | High-performance JSON logger with correlation IDs (`requestId`, `tenantId`).  |
+| **Database Engine**         | PostgreSQL                    | 16+               | ACID relational integrity, powerful JSONB/indexing, multi-tenant safety.      |
+| **ORM / Data Access**       | Prisma ORM                    | 5+                | Type-safe query generation, migration management, query extensions.           |
+| **Testing Harness**         | Vitest, Supertest, Playwright | Modern            | Unified unit, integration, and browser end-to-end testing matrix.             |
 
 ---
 

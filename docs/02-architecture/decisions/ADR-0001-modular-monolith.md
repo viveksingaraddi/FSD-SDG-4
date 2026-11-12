@@ -8,7 +8,7 @@
 
 ## 1. Context and Problem Statement
 
-The FSD-SDG-4 platform is an early-stage SaaS application being developed by a small team of four engineers. The application encompasses multiple complex educational domains: identity, school configuration, attendance, coursework, assessments, and structured support interventions. 
+The FSD-SDG-4 platform is an early-stage SaaS application being developed by a small team of four engineers. The application encompasses multiple complex educational domains: identity, school configuration, attendance, coursework, assessments, and structured support interventions.
 
 We must choose an overarching system architecture that enables rapid development, simple deployment, atomic database transactions, and clear domain boundaries without incurring overwhelming operational or distributed systems overhead.
 
@@ -19,6 +19,7 @@ We must choose an overarching system architecture that enables rapid development
 We will structure the backend as a **Modular Monolith** running as a single deployable Node.js process. The application will be partitioned into strict, decoupled domain modules (`identity`, `schools`, `users`, `attendance`, `coursework`, `assessments`, `support-intervention`, `audit`) residing in `backend/src/modules/`.
 
 Rules governing the modular monolith:
+
 1. Each domain module exposes a typed public service interface.
 2. Cross-module communication occurs strictly via service method calls, not direct database queries into other modules' tables.
 3. Modules share a single relational PostgreSQL database and run within the same operating system process.
@@ -29,12 +30,14 @@ Rules governing the modular monolith:
 ## 3. Alternatives Considered
 
 ### Alternative A: Microservices Architecture
-- *Description*: Decomposing the system into independent services (Auth Service, Attendance Service, Grading Service, Support Service) with separate databases and HTTP/gRPC communication.
-- *Rejection Rationale*: Massive operational complexity for a four-person engineering team. Distributed transactions across attendance and support flags would require complex saga patterns. Network latency and multi-container deployment overhead would significantly slow down feature delivery.
+
+- _Description_: Decomposing the system into independent services (Auth Service, Attendance Service, Grading Service, Support Service) with separate databases and HTTP/gRPC communication.
+- _Rejection Rationale_: Massive operational complexity for a four-person engineering team. Distributed transactions across attendance and support flags would require complex saga patterns. Network latency and multi-container deployment overhead would significantly slow down feature delivery.
 
 ### Alternative B: Unstructured "Spaghetti" Monolith
-- *Description*: Single repository with global controllers directly mutating all database tables with ad-hoc queries.
-- *Rejection Rationale*: Leads to rapid architectural decay, high regression rates, tight coupling, and unmanageable merge conflicts among team members.
+
+- _Description_: Single repository with global controllers directly mutating all database tables with ad-hoc queries.
+- _Rejection Rationale_: Leads to rapid architectural decay, high regression rates, tight coupling, and unmanageable merge conflicts among team members.
 
 ---
 
@@ -64,5 +67,6 @@ Rules governing the modular monolith:
 ## 7. Conditions for Revisit
 
 This decision will be revisited if:
+
 1. The engineering organization scales beyond 15 engineers with dedicated teams per domain.
 2. Specific modules (e.g., real-time attendance ingestion) exhibit CPU/memory scaling profiles that require independent horizontal autoscaling.

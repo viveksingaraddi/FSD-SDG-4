@@ -26,10 +26,12 @@ We adopt the following technology stack baseline:
 ## 3. Alternatives Considered
 
 ### Alternative A: Full-Stack Next.js (App Router)
-- *Rejection Rationale*: Next.js App Router couples frontend rendering with backend server actions. In a multi-tenant SaaS with complex role-based authorization and session state, separating the client SPA from an explicit REST API server provides cleaner architectural boundaries, predictable session cookie handling, and independent horizontal scaling.
+
+- _Rejection Rationale_: Next.js App Router couples frontend rendering with backend server actions. In a multi-tenant SaaS with complex role-based authorization and session state, separating the client SPA from an explicit REST API server provides cleaner architectural boundaries, predictable session cookie handling, and independent horizontal scaling.
 
 ### Alternative B: Python / Django or FastAPI
-- *Rejection Rationale*: While Django has strong built-in administration, adopting Python would split language proficiency across TypeScript on the frontend and Python on the backend. A unified TypeScript stack allows shared Zod validation schemas, unified type definitions, and fungible code reviews across the entire team.
+
+- _Rejection Rationale_: While Django has strong built-in administration, adopting Python would split language proficiency across TypeScript on the frontend and Python on the backend. A unified TypeScript stack allows shared Zod validation schemas, unified type definitions, and fungible code reviews across the entire team.
 
 ---
 
@@ -52,5 +54,6 @@ We adopt the following technology stack baseline:
 ## 6. Conditions for Revisit
 
 This decision will be revisited if:
+
 1. React Server Components or SSR become strictly required for SEO (unlikely for an authenticated internal SaaS).
 2. Advanced analytical reporting requires specialized polyglot persistence (e.g. ClickHouse for massive telemetry).

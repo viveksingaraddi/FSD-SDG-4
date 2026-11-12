@@ -8,22 +8,24 @@ This document specifies the frontend architecture, component design system, stat
 
 The frontend is engineered as a high-performance, mobile-first, accessible Single Page Application. It avoids bloated component libraries and heavy client-side state engines in favor of lightweight, standard web primitives and server-state synchronization.
 
-- **Framework**: React 18+ with strict TypeScript (`"strict": true`).
-- **Build Engine**: Vite (sub-second Hot Module Replacement, optimized ES module tree-shaking).
-- **Styling**: Tailwind CSS (curated design tokens, responsive breakpoints, high-contrast dark/light modes).
-- **Routing**: React Router v6+ (nested layouts, role-guarded route trees, code-split route chunks).
-- **Server-State Management**: TanStack Query (React Query v5) for automatic caching, background refetching, mutation lifecycle, and optimistic UI updates.
-- **Form Architecture**: React Hook Form paired with Zod schemas for zero-re-render form validation.
-- **Accessibility**: Semantic HTML5 augmented with accessible headless primitives (e.g., Radix UI / Headless UI patterns) ensuring 100% WCAG 2.2 Level AA compliance.
+- **Framework**: React 19 (`19.3.1`) with strict TypeScript (`"strict": true`).
+- **Build Engine**: Vite 8 (`8.3.6`, sub-second Hot Module Replacement, optimized ES module tree-shaking).
+- **Styling**: Tailwind CSS v4 (`@tailwindcss/vite` + CSS-first `@theme` design tokens in `apps/web/src/styles/globals.css`).
+- **Routing**: React Router v7 (`react-router-dom` `7.18.5`) for nested layouts, role-guarded route trees, and code-split route chunks.
+- **Server-State Management**: TanStack Query (`@tanstack/react-query` `5.106.0`) for automatic caching, background refetching, mutation lifecycle, and optimistic UI updates.
+- **Form Architecture**: React Hook Form (`7.91.0`) paired with Zod (`4.6.7`) schemas for zero-re-render form validation.
+- **Accessibility**: Semantic HTML5 augmented with accessible headless primitives ensuring 100% WCAG 2.2 Level AA compliance.
 
 ---
 
-## 2. Feature-Oriented Directory Structure (Proposed)
+## 2. Feature-Oriented Directory Structure (Monorepo Workspace: `apps/web/`)
+
+> **Phase 4 Status**: The workspace shell exists at `apps/web/src/` with `App.tsx`, `main.tsx`, `styles/globals.css`, `components/feedback/ErrorBoundary.tsx`, `components/layout/AppShellPlaceholder.tsx`, and `pages/NotFoundPage.tsx`. Domain `features/` below will be populated in authorized implementation phases.
 
 To ensure high cohesion and maintainability, the frontend source tree is structured around **business features** rather than generic technical types:
 
 ```text
-frontend/src/
+apps/web/src/
 ├── app/                        # Application entry, providers, and global router configuration
 │   ├── App.tsx
 │   ├── routes.tsx              # Role-guarded route definitions

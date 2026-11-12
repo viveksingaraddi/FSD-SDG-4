@@ -2,7 +2,7 @@
 
 Thank you for contributing to the FSD-SDG-4 Quality Education SaaS project. This repository follows rigorous engineering, security, and quality governance to build a resilient, accessible, multi-tenant educational platform.
 
-> **IMPORTANT REMINDER**: The project is currently in **Phase 0**. No application code may be introduced. Contributions in Phase 0 are strictly limited to architectural specifications, ADRs, documentation, and design models.
+> **IMPORTANT REMINDER**: The project has completed **Phase 4 (Repository Scaffolding)**. Contributions in this phase are limited to monorepo foundations, tooling, and documentation. Do not implement Prisma schemas, auth, or domain CRUD until Phase 5+ is authorized.
 
 ---
 
@@ -25,6 +25,7 @@ We follow a structured Git feature-branch workflow rooted in `main`:
 - `docs/<issue-id>-<description>`: Documentation changes (e.g., `docs/ARCH-005-api-pagination`).
 
 ### Commit Message Standards
+
 Commits must adhere to the **Conventional Commits** specification:
 
 ```text
@@ -36,6 +37,7 @@ Commits must adhere to the **Conventional Commits** specification:
 ```
 
 **Allowed Types**:
+
 - `feat`: A new feature (only in authorized implementation phases)
 - `fix`: A bug fix
 - `docs`: Documentation only changes
@@ -48,10 +50,11 @@ Commits must adhere to the **Conventional Commits** specification:
 ## 3. Pull Request Requirements
 
 Every pull request must:
+
 1. Reference a tracking issue or phase milestone.
 2. Include a clear description of the problem solved and the approach taken.
 3. Include updated documentation matching all architectural and schema changes.
-4. Pass all automated CI checks (once implemented in Phase 4+):
+4. Pass all automated CI verification checks (`pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`):
    - Type checking (`tsc --noEmit`)
    - Code formatting (`prettier --check`)
    - Linting (`eslint`)
@@ -68,6 +71,7 @@ Every pull request must:
 ## 4. Phase Governance & Definition of Done
 
 Work is organized in gated phases (0 through 16). A phase is considered **Done** only when:
+
 - All functional and non-functional requirements assigned to the phase meet their acceptance criteria.
 - All unit, integration, and security tests pass with required coverage.
 - All relevant documentation is updated.

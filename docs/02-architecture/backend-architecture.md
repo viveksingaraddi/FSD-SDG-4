@@ -4,12 +4,14 @@ This document specifies the backend architectural pattern, internal module bound
 
 ---
 
-## 1. Modular Monolith Pattern
+## 1. Modular Monolith Pattern (`apps/api/`)
+
+> **Phase 4 Status**: The API foundation is scaffolded at `apps/api/src/` with `app.ts`, `server.ts`, `config/env.ts`, `lib/logger.ts`, `middleware/requestId.ts`, `middleware/errorHandler.ts`, `routes/health.ts`, and `routes/v1/index.ts`. Auth, RBAC, Prisma DB access (`shared/db/`), and domain `modules/` below remain locked until Phases 5–14.
 
 The backend is architected as a **Modular Monolith** running within a single Node.js runtime process. This pattern combines the operational simplicity and transactional safety of a monolithic deployment with the strict domain boundaries and decoupled structure of microservices.
 
 ```text
-backend/src/
+apps/api/src/
 ├── app.ts                      # Express app setup, security headers, global middleware
 ├── server.ts                   # Process bootstrap, port binding, graceful shutdown hooks
 ├── config/                     # Environment configuration parsed and validated via Zod
@@ -52,6 +54,7 @@ flowchart TD
 ```
 
 ### Layer Responsibilities
+
 1. **Controller Layer (`*.controller.ts`, `*.routes.ts`)**:
    - Parses incoming HTTP requests, headers, and cookies.
    - Delegates payload validation to Zod schemas.

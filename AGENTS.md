@@ -1,7 +1,8 @@
 # AGENTS.md — Persistent Instructions for AI Coding Agents
 
-> **CRITICAL OPERATING DIRECTIVE: PHASE 0 IS CURRENTLY ACTIVE**  
-> Under NO circumstances is any AI agent authorized to write application code, initialize frameworks, create package manifests, generate database schemas, or run dev servers in this project until Phase 0 has been formally concluded and a subsequent implementation phase is explicitly authorized by the user.
+> **CURRENT PHASE STATUS: PHASE 4 COMPLETED — PHASE 5 AWAITING AUTHORIZATION**  
+> Phase 4 (Repository Scaffolding & Development Environment) has concluded. The monorepo, tooling, build, and test foundations are established.  
+> Under NO circumstances is any AI agent authorized to generate Prisma database schemas, execute SQL migrations, or implement authentication/business logic until Phase 5 is explicitly authorized by the user.
 
 ---
 
@@ -56,11 +57,12 @@ When interacting with this repository in any phase, every AI agent must strictly
 
 ---
 
-## 2. Phase 0 Concrete Enforcement
+## 2. Phase 5 Concrete Enforcement (Next Phase: Database Schema & Migrations)
 
-In this phase (Phase 0):
-- **DO NOT** execute `npm init`, `npx create-vite`, `npm install`, or `docker run`.
-- **DO NOT** generate `.ts`, `.tsx`, `.js`, `.json` configuration files (e.g. `package.json`, `tsconfig.json`).
-- **DO NOT** generate Prisma schema files (`schema.prisma`) or SQL files.
-- **DO NOT** produce visual prototypes or CSS stylesheets.
-- **ONLY** produce Markdown (`.md`) documentation, Mermaid diagram source files (`.mmd`), and directory structures.
+In Phase 5 (upon user authorization):
+
+- **DO** author the physical PostgreSQL schema using Prisma ORM (`prisma/schema.prisma`).
+- **DO** define explicit relational constraints, foreign keys, compound indexes, and `school_id` multi-tenancy columns.
+- **DO** generate idempotent, versioned Prisma migrations and synthetic seed fixtures.
+- **DO NOT** implement authentication, session endpoints, or frontend UI components.
+- **DO NOT** commit real student, teacher, or parent PII to fixtures or seed data.

@@ -27,10 +27,12 @@ We adopt a multi-tier testing strategy built on **Vitest, Supertest, React Testi
 ## 3. Alternatives Considered
 
 ### Alternative A: Jest for Testing
-- *Rejection Rationale*: Jest requires complex Babel/ts-jest transpilation configs and is significantly slower than Vitest in modern Vite-based TypeScript repositories. Vitest provides native ESM and TypeScript support with instant execution.
+
+- _Rejection Rationale_: Jest requires complex Babel/ts-jest transpilation configs and is significantly slower than Vitest in modern Vite-based TypeScript repositories. Vitest provides native ESM and TypeScript support with instant execution.
 
 ### Alternative B: Cypress for End-to-End Testing
-- *Rejection Rationale*: Playwright offers faster headless execution, built-in mobile device emulation, native multi-tab support, and superior trace recording compared to Cypress.
+
+- _Rejection Rationale_: Playwright offers faster headless execution, built-in mobile device emulation, native multi-tab support, and superior trace recording compared to Cypress.
 
 ---
 
@@ -45,4 +47,5 @@ We adopt a multi-tier testing strategy built on **Vitest, Supertest, React Testi
 ## 5. Conditions for Revisit
 
 This decision will be revisited if:
+
 1. Playwright test execution times exceed 15 minutes in CI, necessitating distributed test sharding.

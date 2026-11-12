@@ -15,6 +15,7 @@ A multi-tenant SaaS requires unambiguous, predictable communication between clie
 ## 2. Decision
 
 We will implement a **Versioned REST API** (`/api/v1`) governed by the following standards:
+
 1. **Runtime Validation via Zod**: All inbound request payloads (JSON bodies, query parameters, path variables) must be validated against explicit Zod schemas before being passed to domain controllers.
 2. **OpenAPI 3.1 Integration**: OpenAPI documentation is derived from or aligned with the Zod schemas, maintaining 100% synchronization between contract and code.
 3. **Standardized Error Envelopes (RFC 7807 / RFC 9457)**: All 4xx and 5xx errors return `application/problem+json` envelopes detailing `type`, `title`, `status`, `detail`, `instance`, `invalidParams`, and `correlationId`.
@@ -25,10 +26,12 @@ We will implement a **Versioned REST API** (`/api/v1`) governed by the following
 ## 3. Alternatives Considered
 
 ### Alternative A: GraphQL
-- *Rejection Rationale*: While GraphQL allows flexible client queries, it introduces significant complexity around fine-grained authorization, caching, rate limiting, and query depth/complexity attacks. In a multi-tenant application where every query must enforce strict `school_id` isolation, RESTful endpoints provide clear, auditable authorization boundaries.
+
+- _Rejection Rationale_: While GraphQL allows flexible client queries, it introduces significant complexity around fine-grained authorization, caching, rate limiting, and query depth/complexity attacks. In a multi-tenant application where every query must enforce strict `school_id` isolation, RESTful endpoints provide clear, auditable authorization boundaries.
 
 ### Alternative B: gRPC / tRPC
-- *Rejection Rationale*: tRPC tightly couples full-stack TypeScript codebases and does not provide language-agnostic OpenAPI contracts. Standard REST `/api/v1` ensures clean decoupling and allows external mobile or third-party client integrations in the future.
+
+- _Rejection Rationale_: tRPC tightly couples full-stack TypeScript codebases and does not provide language-agnostic OpenAPI contracts. Standard REST `/api/v1` ensures clean decoupling and allows external mobile or third-party client integrations in the future.
 
 ---
 
@@ -43,4 +46,5 @@ We will implement a **Versioned REST API** (`/api/v1`) governed by the following
 ## 5. Conditions for Revisit
 
 This decision will be revisited if:
+
 1. Advanced mobile offline synchronization requires a binary protocol (e.g., Protobuf/gRPC).

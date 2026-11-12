@@ -22,7 +22,7 @@ sequenceDiagram
     API->>DB: Insert new Session record (random 256-bit ID, expiry, schoolId, userId)
     DB-->>API: Session created
     API-->>User: 200 OK + Set-Cookie: sid=<token>; HttpOnly; Secure; SameSite=Lax; Path=/
-    
+
     Note over User,API: Subsequent Authenticated Requests
     User->>API: GET /api/v1/attendance/rosters (Cookie: sid=<token>)
     API->>DB: Lookup Session by sid & verify not expired
@@ -32,7 +32,9 @@ sequenceDiagram
 ```
 
 ### 1.1 Password Security (Argon2id)
+
 All user passwords must be hashed using the **Argon2id** algorithm (RFC 9106) with calibrated parameters:
+
 - **Algorithm**: Argon2id
 - **Memory Cost ($m$)**: Minimum 64 MB ($65,536\text{ KB}$)
 - **Time Cost ($t$)**: Minimum 3 iterations
@@ -40,6 +42,7 @@ All user passwords must be hashed using the **Argon2id** algorithm (RFC 9106) wi
 - **Salt**: 16 bytes of cryptographically secure random bytes generated per password.
 
 ### 1.2 Session Cookie Configuration
+
 - **Name**: `__Host-sid` (or `sid` in development).
 - **Attributes**:
   - `HttpOnly`: Prevents client-side JavaScript access via `document.cookie` (immune to XSS token theft).
@@ -54,22 +57,22 @@ All user passwords must be hashed using the **Argon2id** algorithm (RFC 9106) wi
 
 The system implements strict role-based access control. Permissions are verified on every protected API endpoint via `requireRole(...)` middleware:
 
-| Permission / Action | Super Admin | School Admin | Teacher | Student | Parent (P1) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Manage Global School Tenants** | **CRUD** | — | — | — | — |
-| **Configure Academic Years & Classes** | — | **CRUD** | Read | Read | — |
-| **Manage Staff Profiles** | — | **CRUD** | — | — | — |
-| **Manage Student Profiles & Rosters** | — | **CRUD** | Read | — | — |
-| **Record Daily Section Attendance** | — | Update (Audit) | **Create / Update** | — | — |
-| **View Student Attendance Records** | — | School-wide | Assigned Classes | Own Record | Linked Child |
-| **Publish Learning Resources** | — | — | **CRUD** | Read | Read |
-| **Publish Assignments & Tests** | — | — | **CRUD** | — | — |
-| **Submit Assignment Coursework** | — | — | — | **Create / Update**| — |
-| **Grade Submissions & Input Scores** | — | — | **Create / Update**| — | — |
-| **View Academic Grades & Feedback** | — | School-wide | Assigned Classes | Own Record | Linked Child |
-| **Review / Confirm Support Flags** | — | Read / Confirm | **Review / Confirm**| — | — |
-| **Author & Review Support Plans** | — | Approve / Escalate| **CRUD Lead** | View Goals | View Goals |
-| **View Audit Logs** | Platform-wide | School Tenant | — | — | — |
+| Permission / Action                    |  Super Admin  |    School Admin    |       Teacher        |       Student       | Parent (P1)  |
+| :------------------------------------- | :-----------: | :----------------: | :------------------: | :-----------------: | :----------: |
+| **Manage Global School Tenants**       |   **CRUD**    |         —          |          —           |          —          |      —       |
+| **Configure Academic Years & Classes** |       —       |      **CRUD**      |         Read         |        Read         |      —       |
+| **Manage Staff Profiles**              |       —       |      **CRUD**      |          —           |          —          |      —       |
+| **Manage Student Profiles & Rosters**  |       —       |      **CRUD**      |         Read         |          —          |      —       |
+| **Record Daily Section Attendance**    |       —       |   Update (Audit)   | **Create / Update**  |          —          |      —       |
+| **View Student Attendance Records**    |       —       |    School-wide     |   Assigned Classes   |     Own Record      | Linked Child |
+| **Publish Learning Resources**         |       —       |         —          |       **CRUD**       |        Read         |     Read     |
+| **Publish Assignments & Tests**        |       —       |         —          |       **CRUD**       |          —          |      —       |
+| **Submit Assignment Coursework**       |       —       |         —          |          —           | **Create / Update** |      —       |
+| **Grade Submissions & Input Scores**   |       —       |         —          | **Create / Update**  |          —          |      —       |
+| **View Academic Grades & Feedback**    |       —       |    School-wide     |   Assigned Classes   |     Own Record      | Linked Child |
+| **Review / Confirm Support Flags**     |       —       |   Read / Confirm   | **Review / Confirm** |          —          |      —       |
+| **Author & Review Support Plans**      |       —       | Approve / Escalate |    **CRUD Lead**     |     View Goals      |  View Goals  |
+| **View Audit Logs**                    | Platform-wide |   School Tenant    |          —           |          —          |      —       |
 
 ---
 
