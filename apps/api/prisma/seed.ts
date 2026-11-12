@@ -6,7 +6,12 @@
 
 import { PrismaClient } from '@prisma/client';
 
-const SYNTHETIC_PASSWORD_HASH = 'SYNTHETIC_DEV_HASH_NOT_FOR_PRODUCTION_USE';
+/**
+ * Deterministic Argon2id hash for local synthetic accounts with development password:
+ * "SuperAdmin@2026!" (satisfies 12+ chars, uppercase, lowercase, digit, symbol).
+ */
+const SYNTHETIC_PASSWORD_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$wq0lQ+cPmKQSmI5yu/Yuvg$7jlh3YGctwG75macj3VjzHGG3Tfa/BvWn3CP0LraalU';
 
 // Deterministic UUIDs for idempotent seeding
 const IDS = {
