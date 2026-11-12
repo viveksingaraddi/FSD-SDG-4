@@ -1,7 +1,7 @@
 # FSD-SDG-4 — Admin Portal Implementation Plan
 
-**Project:** FSD-SDG-4 Quality Education SaaS  
-**Branch:** `feature/admin-portal` (branched from `develop` at `d6a7825`)  
+**Project:** FSD-SDG-4 Quality Education SaaS\
+**Branch:** `feature/admin-portal` (branched from `develop` at `d6a7825`)\
 **Assigned Developer:** Developer 1 — Project Lead (`SUPER_ADMIN` + `SCHOOL_ADMIN`)
 
 > **Inspected Repository Reality:** Phase 9 established the shared React foundation (`apps/web/src/components/ui/`, `AppShell`, `AuthContext`, `apiClient`, `createZodResolver`, `ROLE_NAV_ITEMS`). On `feature/admin-portal`, initial Super Admin and School Admin backend modules (`apps/api/src/modules/super-admin/`, `apps/api/src/modules/school-admin/`), shared contracts/validation (`packages/contracts`, `packages/validation`), and initial portal pages (`apps/web/src/features/super-admin/`, `apps/web/src/features/admin/`) are staged in the working tree. This plan catalogs the complete scope, classifies every API dependency honestly, and identifies remaining gaps for human review before further implementation or merge.

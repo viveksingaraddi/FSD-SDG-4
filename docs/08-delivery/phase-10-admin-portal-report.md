@@ -1,7 +1,7 @@
 # Phase 10 Completion Report — Admin Portal (Developer 1: Super Admin + School Admin)
 
-**Status:** PASS  
-**Branch:** `feature/admin-portal` (branched from `develop` at `d6a7825`)  
+**Status:** PASS\
+**Branch:** `feature/admin-portal` (branched from `develop` at `d6a7825`)\
 **Owner:** Developer 1 — Project Lead
 
 ---
