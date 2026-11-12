@@ -88,7 +88,7 @@ PostgreSQL Row-Level Security (RLS) provides kernel-level defense: even if an ap
 | **Strengths**                      | Fast, simple debugging; standard Prisma tooling; no connection session state leaks. | Kernel-level guarantee; immune to application code bugs or raw SQL omissions.                                 |
 | **Operational Overhead**           | Developer discipline and automated tests required.                                  | Requires setting session variables (`SET LOCAL app.current_school_id = ...`) inside every pooled transaction. |
 | **Connection Pooling (PgBouncer)** | Zero friction in transaction pooling mode.                                          | Can cause tenant state leakage if `SET LOCAL` is omitted or if connection is returned to pool uncleanly.      |
-| **Recommendation**                 | **Primary baseline for Phase 6–7**.                                                 | **Evaluated in Phase 5 staging spike** for optional defense-in-depth activation.                              |
+| **Recommendation**                 | **Primary baseline for Phases 5–14** (paired with composite `(school_id, id)` FKs). | **Proposed deferred to Phase 15** (`ADR-0007`) pending PgBouncer load benchmark.                              |
 
 ---
 

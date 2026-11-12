@@ -13,6 +13,7 @@ out/
 # Environment files — NEVER commit real secrets
 .env
 .env.local
+.env.test
 .env.development.local
 .env.test.local
 .env.production.local
@@ -46,8 +47,7 @@ Thumbs.db
 *.swp
 *.swo
 
-# Prisma generated (Phase 5)
-prisma/migrations/
+# Prisma local dev artifacts (migrations are version-controlled)
 
 # Temporary
 tmp/

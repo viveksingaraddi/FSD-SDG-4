@@ -1,8 +1,8 @@
 # AGENTS.md — Persistent Instructions for AI Coding Agents
 
-> **CURRENT PHASE STATUS: PHASE 4 COMPLETED — PHASE 5 AWAITING AUTHORIZATION**  
-> Phase 4 (Repository Scaffolding & Development Environment) has concluded. The monorepo, tooling, build, and test foundations are established.  
-> Under NO circumstances is any AI agent authorized to generate Prisma database schemas, execute SQL migrations, or implement authentication/business logic until Phase 5 is explicitly authorized by the user.
+> **CURRENT PHASE STATUS: PHASE 6 COMPLETED — PHASE 7 AWAITING AUTHORIZATION**  
+> Phase 6 (Backend Foundation, API Contracts & Security Controls) has concluded. The Express modular monolith bootstrap, `/api/v1` contracts, OpenAPI 3.1 specification, Zod validation middleware, security controls (Helmet, strict CORS, rate limiting, Pino redaction), typed error hierarchy, and application-level tenant scoping helpers are implemented and verified.  
+> Under NO circumstances is any AI agent authorized to implement authentication (`/api/v1/auth/*`), RBAC enforcement, session issuance, or domain CRUD until Phase 7 is explicitly authorized by the user.
 
 ---
 

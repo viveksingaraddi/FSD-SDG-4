@@ -1,6 +1,46 @@
 # Entity Relationships, Cardinality & Referential Integrity
 
-This document defines the relational associations, cardinalities, cascade deletion policies, and referential integrity constraints governing the **FSD-SDG-4 Quality Education SaaS** data model.
+This document defines the relational associations, cardinalities, cascade deletion policies, and referential integrity constraints governing the **FSD-SDG-4 Quality Education SaaS** data model (implemented in [`apps/api/prisma/schema.prisma`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/prisma/schema.prisma)).
+
+## 0. Physical Entity-Relationship Diagram (Phase 5)
+
+```mermaid
+erDiagram
+    SCHOOLS ||--o{ USERS : owns
+    SCHOOLS ||--o{ ACADEMIC_YEARS : owns
+    SCHOOLS ||--o{ CLASSES : owns
+    SCHOOLS ||--o{ SUBJECTS : owns
+    USERS ||--o{ SESSIONS : holds
+    USERS ||--o| TEACHER_PROFILES : "1:1"
+    USERS ||--o| STUDENT_PROFILES : "1:1"
+    ACADEMIC_YEARS ||--o{ SECTIONS : structures
+    CLASSES ||--o{ SECTIONS : groups
+    SECTIONS ||--o{ ENROLLMENTS : rosters
+    STUDENT_PROFILES ||--o{ ENROLLMENTS : enrolled_in
+    USERS ||--o{ GUARDIAN_RELATIONSHIPS : guardian
+    STUDENT_PROFILES ||--o{ GUARDIAN_RELATIONSHIPS : ward
+    SECTIONS ||--o{ COURSE_OFFERINGS : schedules
+    SUBJECTS ||--o{ COURSE_OFFERINGS : taught_in
+    COURSE_OFFERINGS ||--o{ COURSE_TEACHERS : staffed_by
+    TEACHER_PROFILES ||--o{ COURSE_TEACHERS : teaches
+    SECTIONS ||--o{ ATTENDANCE_RECORDS : logs
+    STUDENT_PROFILES ||--o{ ATTENDANCE_RECORDS : attends
+    COURSE_OFFERINGS ||--o{ LEARNING_RESOURCES : hosts
+    COURSE_OFFERINGS ||--o{ ASSIGNMENTS : assigns
+    ASSIGNMENTS ||--o{ ASSIGNMENT_SUBMISSIONS : receives
+    STUDENT_PROFILES ||--o{ ASSIGNMENT_SUBMISSIONS : submits
+    COURSE_OFFERINGS ||--o{ ASSESSMENTS : evaluates
+    ASSESSMENTS ||--o{ ASSESSMENT_RESULTS : records
+    STUDENT_PROFILES ||--o{ ASSESSMENT_RESULTS : scores
+    ASSIGNMENT_SUBMISSIONS ||--o{ FEEDBACKS : "commented (XOR)"
+    ASSESSMENT_RESULTS ||--o{ FEEDBACKS : "commented (XOR)"
+    STUDENT_PROFILES ||--o{ PROGRESS_SNAPSHOTS : aggregates
+    STUDENT_PROFILES ||--o{ SUPPORT_FLAGS : triggers
+    STUDENT_PROFILES ||--o{ SUPPORT_PLANS : receives
+    SUPPORT_PLANS ||--o{ SUPPORT_FLAGS : links
+    SUPPORT_PLANS ||--o{ SUPPORT_PLAN_ACTIONS : contains
+    SUPPORT_PLANS ||--o{ SUPPORT_REVIEWS : reviewed_by
+```
 
 ---
 

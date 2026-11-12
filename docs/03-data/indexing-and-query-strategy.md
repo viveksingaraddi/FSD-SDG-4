@@ -52,7 +52,8 @@ This ensures that the PostgreSQL query planner immediately prunes index scans to
 
 ---
 
-## 3. Query Performance Budgets & Execution Plans
+## 3. Query Performance Budgets, Write Costs & Future Benchmarking
 
+- **Write Cost Trade-off**: Only high-frequency tenant-prefixed access paths and foreign-key columns are indexed in Phase 5 (`schema.prisma` + partial index `idx_support_flags_proposed_partial` in `migration.sql`). Speculative single-column indexes on low-cardinality fields were omitted to keep `INSERT`/`UPDATE` B-Tree maintenance overhead low during bulk attendance submissions.
 - **Query Execution Timeout**: Server sets `statement_timeout = '5000ms'` to abort pathological queries before consuming database thread pools.
-- **Explain Analyze Verification**: During Phase 5 schema development, all queries supporting core workflows must undergo `EXPLAIN (ANALYZE, BUFFERS)` inspection to verify index scans (`Index Scan` or `Bitmap Index Scan`) with zero `Seq Scan` on tables with $> 1,000$ rows.
+- **Future Performance Testing (Phase 10 / Phase 15)**: Bulk section attendance submission (`attendance_records`), 30-day progress snapshot aggregation (`progress_snapshots`), and support-flag queue queries will undergo `EXPLAIN (ANALYZE, BUFFERS)` and k6 load benchmarking at scale.

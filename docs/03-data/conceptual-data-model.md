@@ -66,7 +66,7 @@ The conceptual model is partitioned into seven interconnected domain clusters:
 - **AssignmentSubmission**: Student's submitted work (text entry, file attachment) with submission timestamp.
 - **Assessment**: Formal examination or scheduled test (Midterm, Final) with institutional weighting.
 - **AssessmentResult**: Numerical score and letter grade achieved by a student in an Assessment.
-- **Feedback**: Constructive pedagogical comments attached to a submission or assessment.
+- **Feedback**: Constructive pedagogical comments attached to either an `AssignmentSubmission` or an `AssessmentResult` via explicit nullable composite foreign keys (`submission_id` or `assessment_result_id`, enforced mutually exclusive via `chk_feedbacks_single_parent`).
 
 ### Cluster 6: Support, Intervention & Progress (The Closed Loop)
 

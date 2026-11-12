@@ -1,6 +1,6 @@
 # Data Lifecycle and Retention Policy
 
-This document defines the lifecycle states, archival strategies, soft-versus-hard deletion rules, and end-of-life data purging procedures for the **FSD-SDG-4 Quality Education SaaS** database.
+This document defines the lifecycle states, archival strategies, soft-versus-hard deletion rules, and end-of-life data purging procedures for the **FSD-SDG-4 Quality Education SaaS** database (aligned with `deleted_at` and `status` columns in [`apps/api/prisma/schema.prisma`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/prisma/schema.prisma)).
 
 ---
 

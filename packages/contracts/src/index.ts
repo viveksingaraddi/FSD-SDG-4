@@ -33,12 +33,18 @@ export type {
  */
 export const API_ROUTES = {
   HEALTH: '/health',
+  V1_HEALTH: '/api/v1/health',
   READY: '/api/v1/ready',
+  OPENAPI: '/api/v1/openapi.json',
   // Authentication (Phase 7)
   AUTH: {
     LOGIN: '/api/v1/auth/login',
     LOGOUT: '/api/v1/auth/logout',
     ME: '/api/v1/auth/me',
+    FORGOT_PASSWORD: '/api/v1/auth/forgot-password',
+    RESET_PASSWORD: '/api/v1/auth/reset-password',
+    CHANGE_PASSWORD: '/api/v1/auth/change-password',
+    SESSIONS: '/api/v1/auth/sessions',
   },
   // School admin (Phase 8)
   SCHOOL: {

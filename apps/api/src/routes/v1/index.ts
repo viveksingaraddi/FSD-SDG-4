@@ -1,13 +1,27 @@
-/**
- * /api/v1 route aggregator.
- * Phase 4: Only ping/placeholder routes are mounted.
- * Subsequent phases will mount domain routers here.
- */
+import { Router, type Router as ExpressRouter } from 'express';
+import { API_ROUTES } from '@fsd-sdg4/contracts';
+import { buildOpenApiSpec } from '../../docs/openapi.js';
+import { createAuthRouter } from '../../modules/auth/auth.routes.js';
+import { sendSuccess } from '../../shared/http/response.js';
 
-import { Router } from 'express';
+export interface CreateV1RouterOptions {
+  enableRateLimit?: boolean;
+}
 
-export const v1Router: Router = Router();
+export function createV1Router(options: CreateV1RouterOptions = {}): ExpressRouter {
+  const router: ExpressRouter = Router();
 
-v1Router.get('/api/v1/ping', (_req, res) => {
-  res.status(200).json({ success: true, data: { message: 'pong', version: 'v1' } });
-});
+  router.get('/api/v1/ping', (_req, res) => {
+    sendSuccess(res, { message: 'pong', version: 'v1' });
+  });
+
+  router.get(API_ROUTES.OPENAPI, (_req, res) => {
+    res.status(200).json(buildOpenApiSpec());
+  });
+
+  router.use(createAuthRouter({ enableRateLimit: options.enableRateLimit ?? true }));
+
+  return router;
+}
+
+export const v1Router: ExpressRouter = createV1Router();

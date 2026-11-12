@@ -1,29 +1,39 @@
-/**
- * Express application factory.
- * Separated from server.ts to allow integration tests to construct
- * the app without binding to a network port.
- */
-
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.js';
-import { v1Router } from './routes/v1/index.js';
+import { createV1Router } from './routes/v1/index.js';
+import { createHttpLogger } from './shared/logging/logger.js';
+import { createHelmetMiddleware } from './shared/security/helmet.js';
+import { createCorsMiddleware } from './shared/security/cors.js';
+import { createApiRateLimiter } from './shared/security/rateLimiter.js';
 
-export function createApp(): express.Application {
+export interface CreateAppOptions {
+  enableRateLimit?: boolean;
+}
+
+export function createApp(options: CreateAppOptions = {}): express.Application {
   const app = express();
+  const enableRateLimit = options.enableRateLimit ?? true;
 
-  // ─── Security & Parsing Middleware ──────────────────────────────────────
   app.disable('x-powered-by');
+  app.use(requestIdMiddleware);
+  app.use(createHelmetMiddleware());
+  app.use(createCorsMiddleware());
+  app.use(cookieParser());
+  app.use(createHttpLogger());
+
+  if (enableRateLimit) {
+    app.use(createApiRateLimiter());
+  }
+
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-  app.use(requestIdMiddleware);
 
-  // ─── Routes ─────────────────────────────────────────────────────────────
   app.use(healthRouter);
-  app.use(v1Router);
+  app.use(createV1Router({ enableRateLimit }));
 
-  // ─── 404 & Error Handlers ───────────────────────────────────────────────
   app.use(notFoundHandler);
   app.use(errorHandler);
 

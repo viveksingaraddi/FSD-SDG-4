@@ -1,0 +1,152 @@
+import type { UserRole } from '@prisma/client';
+
+/**
+ * Canonical role aliases mapping specification names to Prisma UserRole enum values.
+ */
+export const ROLE_ALIASES = {
+  PLATFORM_SUPER_ADMIN: 'SUPER_ADMIN',
+  SCHOOL_ADMIN: 'SCHOOL_ADMIN',
+  TEACHER: 'TEACHER',
+  STUDENT: 'STUDENT',
+  PARENT_GUARDIAN: 'PARENT',
+} as const satisfies Record<string, UserRole>;
+
+export const PERMISSIONS = {
+  // Platform Super Admin
+  PLATFORM_SCHOOLS_READ: 'platform.schools.read',
+  PLATFORM_SCHOOLS_CREATE: 'platform.schools.create',
+  PLATFORM_SCHOOLS_UPDATE: 'platform.schools.update',
+  PLATFORM_SCHOOLS_DEACTIVATE: 'platform.schools.deactivate',
+  PLATFORM_AUDIT_READ: 'platform.audit.read',
+
+  // School Administration
+  SCHOOL_USERS_READ: 'school.users.read',
+  SCHOOL_USERS_CREATE: 'school.users.create',
+  SCHOOL_USERS_UPDATE: 'school.users.update',
+  SCHOOL_USERS_DEACTIVATE: 'school.users.deactivate',
+  SCHOOL_CLASSES_READ: 'school.classes.read',
+  SCHOOL_CLASSES_MANAGE: 'school.classes.manage',
+  SCHOOL_GUARDIANS_MANAGE: 'school.guardians.manage',
+  SCHOOL_AUDIT_READ: 'school.audit.read',
+
+  // Attendance
+  ATTENDANCE_READ: 'attendance.read',
+  ATTENDANCE_CREATE: 'attendance.create',
+  ATTENDANCE_UPDATE: 'attendance.update',
+
+  // Learning Resources & Assignments
+  RESOURCES_READ: 'resources.read',
+  RESOURCES_MANAGE: 'resources.manage',
+  ASSIGNMENTS_READ: 'assignments.read',
+  ASSIGNMENTS_CREATE: 'assignments.create',
+  ASSIGNMENTS_GRADE: 'assignments.grade',
+
+  // Assessments & Progress
+  ASSESSMENTS_READ: 'assessments.read',
+  ASSESSMENTS_MANAGE: 'assessments.manage',
+  PROGRESS_READ: 'progress.read',
+  PROGRESS_MANAGE: 'progress.manage',
+
+  // Structured Student Support (Human-in-the-Loop)
+  SUPPORT_FLAGS_READ: 'support_flags.read',
+  SUPPORT_FLAGS_REVIEW: 'support_flags.review',
+  SUPPORT_PLANS_READ: 'support_plans.read',
+  SUPPORT_PLANS_MANAGE: 'support_plans.manage',
+  SUPPORT_PLANS_APPROVE: 'support_plans.approve',
+
+  // Student Self-Service
+  STUDENT_PROFILE_READ_SELF: 'student.profile.read_self',
+  STUDENT_ASSIGNMENTS_SUBMIT_SELF: 'student.assignments.submit_self',
+
+  // Parent / Guardian (Verified Links Only)
+  PARENT_CHILDREN_READ_LINKED: 'parent.children.read_linked',
+
+  // Self-Service Auth
+  AUTH_SESSIONS_MANAGE_SELF: 'auth.sessions.manage_self',
+  AUTH_PASSWORD_CHANGE_SELF: 'auth.password.change_self',
+} as const;
+
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
+  SUPER_ADMIN: [
+    PERMISSIONS.PLATFORM_SCHOOLS_READ,
+    PERMISSIONS.PLATFORM_SCHOOLS_CREATE,
+    PERMISSIONS.PLATFORM_SCHOOLS_UPDATE,
+    PERMISSIONS.PLATFORM_SCHOOLS_DEACTIVATE,
+    PERMISSIONS.PLATFORM_AUDIT_READ,
+    PERMISSIONS.AUTH_SESSIONS_MANAGE_SELF,
+    PERMISSIONS.AUTH_PASSWORD_CHANGE_SELF,
+  ],
+  SCHOOL_ADMIN: [
+    PERMISSIONS.SCHOOL_USERS_READ,
+    PERMISSIONS.SCHOOL_USERS_CREATE,
+    PERMISSIONS.SCHOOL_USERS_UPDATE,
+    PERMISSIONS.SCHOOL_USERS_DEACTIVATE,
+    PERMISSIONS.SCHOOL_CLASSES_READ,
+    PERMISSIONS.SCHOOL_CLASSES_MANAGE,
+    PERMISSIONS.SCHOOL_GUARDIANS_MANAGE,
+    PERMISSIONS.SCHOOL_AUDIT_READ,
+    PERMISSIONS.ATTENDANCE_READ,
+    PERMISSIONS.ATTENDANCE_UPDATE,
+    PERMISSIONS.PROGRESS_READ,
+    PERMISSIONS.SUPPORT_FLAGS_READ,
+    PERMISSIONS.SUPPORT_FLAGS_REVIEW,
+    PERMISSIONS.SUPPORT_PLANS_READ,
+    PERMISSIONS.SUPPORT_PLANS_APPROVE,
+    PERMISSIONS.AUTH_SESSIONS_MANAGE_SELF,
+    PERMISSIONS.AUTH_PASSWORD_CHANGE_SELF,
+  ],
+  TEACHER: [
+    PERMISSIONS.SCHOOL_CLASSES_READ,
+    PERMISSIONS.ATTENDANCE_READ,
+    PERMISSIONS.ATTENDANCE_CREATE,
+    PERMISSIONS.ATTENDANCE_UPDATE,
+    PERMISSIONS.RESOURCES_READ,
+    PERMISSIONS.RESOURCES_MANAGE,
+    PERMISSIONS.ASSIGNMENTS_READ,
+    PERMISSIONS.ASSIGNMENTS_CREATE,
+    PERMISSIONS.ASSIGNMENTS_GRADE,
+    PERMISSIONS.ASSESSMENTS_READ,
+    PERMISSIONS.ASSESSMENTS_MANAGE,
+    PERMISSIONS.PROGRESS_READ,
+    PERMISSIONS.PROGRESS_MANAGE,
+    PERMISSIONS.SUPPORT_FLAGS_READ,
+    PERMISSIONS.SUPPORT_FLAGS_REVIEW,
+    PERMISSIONS.SUPPORT_PLANS_READ,
+    PERMISSIONS.SUPPORT_PLANS_MANAGE,
+    PERMISSIONS.AUTH_SESSIONS_MANAGE_SELF,
+    PERMISSIONS.AUTH_PASSWORD_CHANGE_SELF,
+  ],
+  STUDENT: [
+    PERMISSIONS.SCHOOL_CLASSES_READ,
+    PERMISSIONS.RESOURCES_READ,
+    PERMISSIONS.ASSIGNMENTS_READ,
+    PERMISSIONS.ASSESSMENTS_READ,
+    PERMISSIONS.PROGRESS_READ,
+    PERMISSIONS.SUPPORT_PLANS_READ,
+    PERMISSIONS.STUDENT_PROFILE_READ_SELF,
+    PERMISSIONS.STUDENT_ASSIGNMENTS_SUBMIT_SELF,
+    PERMISSIONS.AUTH_SESSIONS_MANAGE_SELF,
+    PERMISSIONS.AUTH_PASSWORD_CHANGE_SELF,
+  ],
+  PARENT: [
+    PERMISSIONS.RESOURCES_READ,
+    PERMISSIONS.ATTENDANCE_READ,
+    PERMISSIONS.ASSIGNMENTS_READ,
+    PERMISSIONS.ASSESSMENTS_READ,
+    PERMISSIONS.PROGRESS_READ,
+    PERMISSIONS.SUPPORT_PLANS_READ,
+    PERMISSIONS.PARENT_CHILDREN_READ_LINKED,
+    PERMISSIONS.AUTH_SESSIONS_MANAGE_SELF,
+    PERMISSIONS.AUTH_PASSWORD_CHANGE_SELF,
+  ],
+};
+
+export function getPermissionsForRole(role: UserRole): readonly Permission[] {
+  return ROLE_PERMISSIONS[role] ?? [];
+}
+
+export function hasPermission(role: UserRole, permission: Permission): boolean {
+  return getPermissionsForRole(role).includes(permission);
+}

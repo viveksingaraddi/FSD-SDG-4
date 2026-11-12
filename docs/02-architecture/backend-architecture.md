@@ -6,7 +6,7 @@ This document specifies the backend architectural pattern, internal module bound
 
 ## 1. Modular Monolith Pattern (`apps/api/`)
 
-> **Phase 4 Status**: The API foundation is scaffolded at `apps/api/src/` with `app.ts`, `server.ts`, `config/env.ts`, `lib/logger.ts`, `middleware/requestId.ts`, `middleware/errorHandler.ts`, `routes/health.ts`, and `routes/v1/index.ts`. Auth, RBAC, Prisma DB access (`shared/db/`), and domain `modules/` below remain locked until Phases 5–14.
+> **Phase 6 Status**: The API foundation is implemented at `apps/api/src/` with `app.ts`, `server.ts`, `config/env.ts`, `docs/openapi.ts`, `middleware/requestId.ts`, `middleware/errorHandler.ts`, `routes/health.ts` (`/health`, `/api/v1/health`, `/api/v1/ready`), `routes/v1/index.ts` (`/api/v1/ping`, `/api/v1/openapi.json`), and `shared/` (`database/`, `db/`, `errors/`, `http/`, `logging/`, `security/`, `validation/`). Authentication (`authenticate.ts`), RBAC (`requireRole.ts`), and domain `modules/` remain locked until Phases 7–14. Note: `ADR-0007` (PostgreSQL RLS) remains `Proposed`/inactive; tenant isolation in Phase 6 is enforced at the application layer via `shared/database/tenantScope.ts`.
 
 The backend is architected as a **Modular Monolith** running within a single Node.js runtime process. This pattern combines the operational simplicity and transactional safety of a monolithic deployment with the strict domain boundaries and decoupled structure of microservices.
 

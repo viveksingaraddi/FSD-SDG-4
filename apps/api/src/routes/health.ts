@@ -1,38 +1,75 @@
-/**
- * Health and readiness endpoints.
- * GET /health  — Liveness probe (always returns 200 if process is alive)
- * GET /api/v1/ready — Readiness probe (checks dependency availability)
- *
- * Phase 5 will add real database connectivity checks to the readiness probe.
- */
-
-import { Router } from 'express';
-import type { HealthCheckResponse, ReadinessCheckResponse } from '@fsd-sdg4/contracts';
+import { Router, type Router as ExpressRouter } from 'express';
+import type {
+  HealthCheckResponse,
+  ReadinessCheckResponse,
+  ReadinessCheck,
+} from '@fsd-sdg4/contracts';
+import { API_ROUTES } from '@fsd-sdg4/contracts';
 import { env } from '../config/env.js';
+import { checkDatabaseReadiness } from '../shared/database/index.js';
 
-export const healthRouter: Router = Router();
+export const healthRouter: ExpressRouter = Router();
 
-healthRouter.get('/health', (_req, res) => {
-  const response: HealthCheckResponse = {
+function buildHealthPayload(): HealthCheckResponse {
+  return {
     status: 'ok',
-    timestamp: new Date().toISOString(),
     version: env.API_VERSION,
     environment: env.NODE_ENV,
+    timestamp: new Date().toISOString(),
   };
-  res.status(200).json(response);
+}
+
+healthRouter.get([API_ROUTES.HEALTH, API_ROUTES.V1_HEALTH], (_req, res) => {
+  res.status(200).json(buildHealthPayload());
 });
 
-healthRouter.get('/api/v1/ready', (_req, res) => {
-  const response: ReadinessCheckResponse = {
-    status: 'ready',
+healthRouter.get(API_ROUTES.READY, async (_req, res) => {
+  const checks: ReadinessCheck[] = [];
+
+  if (env.DATABASE_URL === undefined || env.DATABASE_URL.trim().length === 0) {
+    checks.push({
+      name: 'postgresql',
+      status: 'fail',
+      message: 'DATABASE_URL is not configured.',
+    });
+
+    const payload: ReadinessCheckResponse = {
+      status: 'not_ready',
+      checks,
+      timestamp: new Date().toISOString(),
+    };
+    res.status(503).json(payload);
+    return;
+  }
+
+  const dbResult = await checkDatabaseReadiness();
+  if (dbResult.ok) {
+    checks.push({
+      name: 'postgresql',
+      status: 'pass',
+      latencyMs: dbResult.latencyMs,
+    });
+
+    const payload: ReadinessCheckResponse = {
+      status: 'ready',
+      checks,
+      timestamp: new Date().toISOString(),
+    };
+    res.status(200).json(payload);
+    return;
+  }
+
+  checks.push({
+    name: 'postgresql',
+    status: 'fail',
+    latencyMs: dbResult.latencyMs,
+    message: 'Database connection check failed.',
+  });
+
+  const payload: ReadinessCheckResponse = {
+    status: 'not_ready',
+    checks,
     timestamp: new Date().toISOString(),
-    checks: [
-      {
-        name: 'database',
-        status: 'pass',
-        message: 'Database connectivity check not yet implemented (Phase 5)',
-      },
-    ],
   };
-  res.status(200).json(response);
+  res.status(503).json(payload);
 });

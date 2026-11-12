@@ -3,8 +3,9 @@
  */
 
 import { createApp } from './app.js';
-import { logger } from './lib/logger.js';
 import { env } from './config/env.js';
+import { disconnectDatabase } from './shared/database/index.js';
+import { logger } from './shared/logging/logger.js';
 
 const app = createApp();
 
@@ -24,13 +25,20 @@ const server = app.listen(env.PORT, () => {
 function gracefulShutdown(signal: string): void {
   logger.info({ signal }, 'Received shutdown signal — closing server gracefully');
 
-  server.close((err) => {
+  server.close(async (err) => {
     if (err) {
-      logger.error({ err }, 'Error during graceful shutdown');
+      logger.error({ err }, 'Error during HTTP server shutdown');
       process.exit(1);
     }
-    logger.info('Server closed cleanly');
-    process.exit(0);
+
+    try {
+      await disconnectDatabase();
+      logger.info('Server and database connections closed cleanly');
+      process.exit(0);
+    } catch (dbErr) {
+      logger.error({ err: dbErr }, 'Error disconnecting database during shutdown');
+      process.exit(1);
+    }
   });
 
   setTimeout(() => {

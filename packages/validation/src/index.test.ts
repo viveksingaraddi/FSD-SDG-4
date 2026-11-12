@@ -63,3 +63,23 @@ describe('@fsd-sdg4/validation — isoDateString', () => {
     expect(isoDateString.safeParse('Nov 5 2026').success).toBe(false);
   });
 });
+
+import { uuidSchema, idParamSchema, createSortSchema, paginatedQuerySchema } from './index.js';
+
+describe('@fsd-sdg4/validation — Phase 6 identifiers, sorting & query schemas', () => {
+  it('validates UUIDs and rejects malformed identifiers', () => {
+    expect(uuidSchema.safeParse('10000000-0000-4000-8000-000000000001').success).toBe(true);
+    expect(idParamSchema.safeParse({ id: 'not-a-uuid' }).success).toBe(false);
+  });
+
+  it('enforces sort field allowlist via createSortSchema', () => {
+    const sortSchema = createSortSchema(['createdAt', 'name'] as const);
+    expect(sortSchema.parse({})).toEqual({ sortBy: 'createdAt', sortOrder: 'desc' });
+    expect(sortSchema.safeParse({ sortBy: 'passwordHash' }).success).toBe(false);
+  });
+
+  it('parses paginatedQuerySchema with optional search and defaults', () => {
+    const parsed = paginatedQuerySchema.parse({ page: '2', limit: '10', search: '  math  ' });
+    expect(parsed).toEqual({ page: 2, limit: 10, search: 'math', sortOrder: 'desc' });
+  });
+});

@@ -54,3 +54,63 @@ export type PaginationParams = z.infer<typeof paginationSchema>;
 export const isoDateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be in YYYY-MM-DD format' });
+
+/**
+ * Validates a standard UUID identifier (v4/v7).
+ */
+export const uuidSchema = z.string().uuid({ message: 'Must be a valid UUID' });
+
+/**
+ * Validates standard `:id` route parameter.
+ */
+export const idParamSchema = z.object({
+  id: uuidSchema,
+});
+
+/**
+ * Validates sort direction query parameter.
+ */
+export const sortOrderSchema = z.enum(['asc', 'desc']).default('desc');
+
+export type SortOrder = z.infer<typeof sortOrderSchema>;
+
+/**
+ * Creates a strict sort query schema restricted to an explicit allowlist of fields.
+ */
+export function createSortSchema<T extends readonly [string, ...string[]]>(
+  allowedFields: T,
+  defaultField: T[number] = allowedFields[0],
+) {
+  return z.object({
+    sortBy: z.enum(allowedFields).default(defaultField),
+    sortOrder: sortOrderSchema,
+  });
+}
+
+/**
+ * Validates optional search query string (trimmed, bounded length to prevent abuse).
+ */
+export const searchQuerySchema = z.string().trim().min(1).max(100).optional();
+
+/**
+ * Reusable paginated list query schema with optional search and sort direction.
+ */
+export const paginatedQuerySchema = paginationSchema.extend({
+  search: searchQuerySchema,
+  sortOrder: sortOrderSchema,
+});
+
+export type PaginatedQueryParams = z.infer<typeof paginatedQuerySchema>;
+
+/**
+ * Password complexity schema per FSD-SDG-4 Phase 7 security policy:
+ * 12-128 chars, requiring uppercase, lowercase, digit, and special character.
+ */
+export const passwordSchema = z
+  .string()
+  .min(12, 'Password must be at least 12 characters long')
+  .max(128, 'Password must not exceed 128 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one digit')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');

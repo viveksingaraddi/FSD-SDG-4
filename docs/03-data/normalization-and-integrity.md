@@ -25,12 +25,14 @@ To ensure high performance under real-world school operations, controlled denorm
 
 ## 3. Database Integrity Constraints
 
-### 3.1 Domain & Check Constraints
+### 3.1 Domain & Check Constraints (Implemented in `20261112065114_init`)
 
-- **Attendance Status**: `CHECK (status IN ('PRESENT', 'ABSENT', 'LATE', 'EXCUSED'))`
-- **Assessment Scores**: `CHECK (score >= 0.0 AND score <= max_marks)`
-- **Academic Year Dates**: `CHECK (end_date > start_date)`
-- **Review Date**: `CHECK (review_date >= created_at::DATE)`
+- **Attendance Status**: Enforced via PostgreSQL `AttendanceStatus` enum (`PRESENT`, `ABSENT`, `LATE`, `EXCUSED`) + `chk_attendance_late_minutes_positive`.
+- **Assessment & Assignment Scores**: `chk_assignments_max_points_positive`, `chk_submissions_score_non_negative`, `chk_assessments_bounds`, `chk_assessment_results_score_non_negative`.
+- **Academic Year Dates & Single Active Term**: `chk_academic_years_dates` (`end_date > start_date`) + partial unique index `uq_academic_years_one_active_per_school`.
+- **User Role vs Tenant Boundary**: `chk_users_role_school_id` (`SUPER_ADMIN` has `school_id IS NULL`; all school roles have `school_id IS NOT NULL`).
+- **Feedback Single-Parent Constraint**: `chk_feedbacks_single_parent` (XOR between `submission_id` and `assessment_result_id`).
+- **Support Flag Dismissal Justification**: `chk_support_flags_dismissal_reason` (`char_length(btrim(dismissal_reason)) >= 10` when `DISMISSED`).
 
 ### 3.2 Composite Uniqueness Constraints
 

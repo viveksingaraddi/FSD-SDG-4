@@ -1,6 +1,8 @@
 # Backup and Disaster Recovery Strategy
 
-This document establishes the automated backup schedules, write-ahead log (WAL) archiving, disaster recovery procedures, and recovery objective thresholds for the **FSD-SDG-4 Quality Education SaaS** platform.
+This document establishes the proposed automated backup schedules, write-ahead log (WAL) archiving, disaster recovery procedures, and recovery objective thresholds for the **FSD-SDG-4 Quality Education SaaS** platform.
+
+> **Infrastructure Notice**: No cloud backup pipelines, WAL archiving buckets, or automated restore jobs are provisioned in Phase 5 local development. The targets and procedures below are proposed architecture specifications to be provisioned and verified during **Phase 16 (Staging & Production Readiness)**.
 
 ---
 

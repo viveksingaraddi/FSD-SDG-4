@@ -35,18 +35,10 @@ flowchart LR
 > **MANDATORY POLICY**:  
 > Seed scripts must use **100% synthetic, procedurally generated data**. Real student, teacher, or parent names and credentials are never permitted in seed scripts.
 
-### Deterministic Multi-Tenant Seed Profile
+### Deterministic Multi-Tenant Seed Profile (Implemented in `apps/api/prisma/seed.ts`)
 
-The seed script designed in Phase 5 will provision three standard synthetic tenants to support local development and automated testing:
+The idempotent seed script [`apps/api/prisma/seed.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/prisma/seed.ts) provisions 1 Platform Super Admin (`schoolId = null`) and three synthetic tenants using `.example.invalid` domains and placeholder hash `SYNTHETIC_DEV_HASH_NOT_FOR_PRODUCTION_USE`:
 
-1. **Tenant 1: Greenfield Primary School (`sch_greenfield`)**
-   - 1 Academic Year (`2026-2027`, Active).
-   - 4 Classes (Grade 5, 6, 7, 8) with 2 Sections each (8-A, 8-B).
-   - 12 Teachers, 120 Students, 240 Guardian relationships.
-   - 60 days of historical attendance with realistic variance ($\approx 92\%$ presence).
-   - Complete coursework: 8 assignments, 3 unit assessments per course offering.
-   - Active support interventions: 5 proposed support flags, 3 active Support Plans with action items.
-2. **Tenant 2: Highcrest Secondary School (`sch_highcrest`)**
-   - Baseline secondary school configuration for cross-tenant testing.
-3. **Tenant 3: Empty Horizon Academy (`sch_empty`)**
-   - Freshly registered school with zero enrollments to test empty states and onboarding wizards.
+1. **Tenant 1: Greenfield Primary School (`SCH-GREENFIELD`)** — Active Academic Year `2026-2027`, Classes (`Grade 7`, `Grade 8`), Sections (`7-A`, `8-A`), Subjects (`MATH-101`, `SCI-101`), Course Offerings & Course Teachers, 1 School Admin, 2 Teachers, 2 Students + Enrollments, 1 Parent + GuardianRelationship, AttendanceRecords, LearningResource, Assignment + AssignmentSubmission + Feedback, Assessment + AssessmentResult, ProgressSnapshot, SupportFlags (`IN_PLAN` & `PROPOSED`), SupportPlan + SupportPlanAction + SupportReview.
+2. **Tenant 2: Highcrest Secondary School (`SCH-HIGHCREST`)** — Active Academic Year `2026-2027`, Grade 9 (`9-A`), English Literature, 1 School Admin, 1 Teacher, 1 Student + Enrollment for cross-tenant isolation testing.
+3. **Tenant 3: Empty Horizon Academy (`SCH-EMPTY`)** — Freshly registered school with 1 School Admin and zero enrollments to test empty states.
