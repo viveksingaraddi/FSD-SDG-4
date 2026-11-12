@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { App } from './App.js';
+import { App } from './App';
 
 function renderWithProviders(initialPath: string = '/') {
   const queryClient = new QueryClient({
@@ -17,29 +17,47 @@ function renderWithProviders(initialPath: string = '/') {
   );
 }
 
-describe('App — foundation shell', () => {
-  it('renders without crashing', () => {
-    const { container } = renderWithProviders('/');
-    expect(container).toBeDefined();
+describe('App — shared frontend foundation', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            type: 'https://httpstatuses.com/401',
+            title: 'Unauthorized',
+            status: 401,
+            detail: 'Not authenticated',
+          }),
+          { status: 401, headers: { 'Content-Type': 'application/problem+json' } },
+        ),
+      ),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders the skip-to-main-content link as first focusable element', () => {
-    renderWithProviders('/');
+    renderWithProviders('/login');
     const skipLink = screen.getByText('Skip to main content');
-    expect(skipLink).toBeDefined();
+    expect(skipLink).toBeInTheDocument();
     expect(skipLink.tagName).toBe('A');
-    expect(skipLink.getAttribute('href')).toBe('#main-content');
+    expect(skipLink).toHaveAttribute('href', '#main-content');
   });
 
-  it('renders the placeholder h1 on the root route', () => {
+  it('redirects unauthenticated root requests to the login page', async () => {
     renderWithProviders('/');
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toBeDefined();
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { level: 1, name: /sign in to fsd-sdg-4/i }),
+      ).toBeInTheDocument();
+    });
   });
 
   it('renders the 404 page for an unknown route', () => {
     renderWithProviders('/this-route-does-not-exist');
-    const heading = screen.getByRole('heading', { name: /page not found/i });
-    expect(heading).toBeDefined();
+    expect(screen.getByRole('heading', { name: /page not found/i })).toBeInTheDocument();
   });
 });
