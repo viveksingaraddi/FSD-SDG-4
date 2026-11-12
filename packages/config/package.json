@@ -1,0 +1,20 @@
+{
+  "name": "@fsd-sdg4/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared tooling configuration — ESLint, Prettier, TypeScript, Vitest base configs",
+  "type": "module",
+  "exports": {
+    "./vitest": "./vitest.base.ts"
+  },
+  "scripts": {
+    "typecheck": "echo 'Config package — no TypeScript sources to check'",
+    "test": "echo 'Config package — no tests'",
+    "test:unit": "echo 'Config package — no tests'",
+    "build": "echo 'Config package — no build step'",
+    "clean": "echo 'Config package — nothing to clean'"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

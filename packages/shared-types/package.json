@@ -1,0 +1,27 @@
+{
+  "name": "@fsd-sdg4/shared-types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared TypeScript type definitions for FSD-SDG-4 (domain-agnostic, no runtime code)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "rimraf": "6.1.4",
+    "typescript": "^5.8.2",
+    "vitest": "5.1.0"
+  }
+}
