@@ -151,7 +151,7 @@ apps/web build: Done (Vite production bundle built in 655ms, 0 errors)
 
 - **Branch**: `feature/admin-portal`
 - **Target Branch**: `develop`
-- **Commit Hash**: `9b882ef`
+- **Commit Hash**: `e7f1fee`
 - **Push Confirmation**: Pushed to `origin/feature/admin-portal`.
 
 ---
