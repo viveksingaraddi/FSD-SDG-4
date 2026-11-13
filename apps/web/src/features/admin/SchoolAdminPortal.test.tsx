@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/ui';
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { SchoolAdminDashboardPage } from './SchoolAdminDashboardPage';
 import { AcademicSetupPage } from './AcademicSetupPage';
+import { StaffDirectoryPage } from './StaffDirectoryPage';
+import { TeacherProfilePage } from './TeacherProfilePage';
 
 function renderWithProviders(ui: ReactNode, initialPath = '/admin') {
   const queryClient = new QueryClient({
@@ -390,5 +392,295 @@ describe('School Admin Portal', () => {
     await waitFor(() => {
       expect(screen.getByText('MATH-8')).toBeInTheDocument();
     });
+  });
+
+  it('renders teacher directory with KPI metrics, filters, and modal provisioning', async () => {
+    const fetchMock = vi.fn((input: string | URL, init?: { method?: string }) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'adm-1',
+                  email: 'admin@example.edu',
+                  role: 'SCHOOL_ADMIN',
+                  schoolId: 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/staff') && method === 'GET') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'tch-1',
+                  userId: 'usr-1',
+                  employeeId: 'TCH-001',
+                  firstName: 'Eleanor',
+                  lastName: 'Vance',
+                  email: 'e.vance@school.edu',
+                  specialization: 'STEM, Calculus',
+                  status: 'ACTIVE',
+                  allocationCount: 2,
+                },
+                {
+                  id: 'tch-2',
+                  userId: 'usr-2',
+                  employeeId: 'TCH-002',
+                  firstName: 'Marcus',
+                  lastName: 'Holloway',
+                  email: 'm.holloway@school.edu',
+                  specialization: 'Computer Science',
+                  status: 'INACTIVE',
+                  allocationCount: 0,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/staff') && method === 'POST') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'tch-3',
+                userId: 'usr-3',
+                employeeId: 'TCH-003',
+                firstName: 'Sophia',
+                lastName: 'Patel',
+                email: 's.patel@school.edu',
+                specialization: 'Literature',
+                status: 'ACTIVE',
+                allocationCount: 0,
+              },
+            }),
+            { status: 201, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<StaffDirectoryPage />, '/admin/staff');
+
+    // Wait for teacher data to render
+    await waitFor(() => {
+      expect(screen.getByText('Eleanor Vance')).toBeInTheDocument();
+      expect(screen.getByText('Marcus Holloway')).toBeInTheDocument();
+      expect(screen.getByText('TCH-001')).toBeInTheDocument();
+    });
+
+    // Check KPI counts
+    expect(screen.getByText('Total Teachers')).toBeInTheDocument();
+    expect(screen.getByText('Active Faculty')).toBeInTheDocument();
+
+    // Verify inspect button links to /admin/staff/tch-1
+    expect(screen.getByRole('button', { name: 'Inspect Eleanor Vance' })).toBeInTheDocument();
+
+    // Open Provision Teacher modal
+    const provisionButtons = screen.getAllByRole('button', { name: 'Provision Teacher' });
+    fireEvent.click(provisionButtons[0]!);
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    // Fill form and submit
+    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Sophia' } });
+    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Patel' } });
+    fireEvent.change(screen.getByLabelText(/institutional email/i), {
+      target: { value: 's.patel@school.edu' },
+    });
+    fireEvent.change(screen.getByLabelText(/employee id/i), { target: { value: 'TCH-003' } });
+    fireEvent.change(screen.getByLabelText(/temporary password/i), {
+      target: { value: 'TeacherPass@2026!' },
+    });
+
+    const submitButtons = screen.getAllByRole('button', { name: 'Provision Teacher' });
+    fireEvent.click(submitButtons[1]!);
+  });
+
+  it('renders teacher profile inspection with course allocations and actions', async () => {
+    const fetchMock = vi.fn((input: string | URL, init?: { method?: string }) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'adm-1',
+                  email: 'admin@example.edu',
+                  role: 'SCHOOL_ADMIN',
+                  schoolId: 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/staff/tch-1') && method === 'GET') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'tch-1',
+                userId: 'usr-1',
+                employeeId: 'TCH-001',
+                firstName: 'Eleanor',
+                lastName: 'Vance',
+                email: 'e.vance@school.edu',
+                specialization: 'STEM, Calculus',
+                status: 'ACTIVE',
+                createdAt: '2026-08-15T08:00:00Z',
+                updatedAt: '2026-08-15T08:00:00Z',
+                allocations: [
+                  {
+                    id: 'alloc-1',
+                    courseOfferingId: 'co-1',
+                    subjectId: 'sub-1',
+                    subjectName: 'Advanced Calculus',
+                    subjectCode: 'MATH-12',
+                    sectionId: 'sec-1',
+                    sectionName: '12A',
+                    classId: 'cls-1',
+                    className: 'Grade 12',
+                    academicYearId: 'yr-1',
+                    academicYearName: '2026-2027',
+                    role: 'PRIMARY',
+                    assignedAt: '2026-08-20T10:00:00Z',
+                  },
+                ],
+                recentAuditLogs: [
+                  {
+                    id: 'aud-1',
+                    schoolId: 'school-1',
+                    actorId: 'adm-1',
+                    actorEmail: 'admin@example.edu',
+                    action: 'SCHOOL_TEACHER_ALLOCATED',
+                    entityType: 'CourseTeacher',
+                    entityId: 'alloc-1',
+                    createdAt: '2026-08-20T10:00:00Z',
+                  },
+                ],
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/academic-years')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'yr-1', name: '2026-2027', status: 'ACTIVE' }],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/subjects')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'sub-1', name: 'Advanced Calculus', code: 'MATH-12' }],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/classes')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'cls-1',
+                  name: 'Grade 12',
+                  stage: 'High School',
+                  sortOrder: 12,
+                  sections: [{ id: 'sec-1', name: '12A' }],
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/allocations/alloc-1') && method === 'DELETE') {
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { success: true } }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Render with Route to populate useParams: id: 'tch-1'
+    renderWithProviders(
+      <Routes>
+        <Route path="/admin/staff/:id" element={<TeacherProfilePage />} />
+      </Routes>,
+      '/admin/staff/tch-1',
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Eleanor Vance')[0]).toBeInTheDocument();
+      expect(screen.getByText('Advanced Calculus')).toBeInTheDocument();
+      expect(screen.getByText('MATH-12')).toBeInTheDocument();
+      expect(screen.getByText('Section 12A')).toBeInTheDocument();
+    });
+
+    // Check presence of action buttons
+    expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Allocate Course' })[0]!).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Suspend Access' })).toBeInTheDocument();
+
+    // Trigger deallocation dialog
+    fireEvent.click(screen.getByRole('button', { name: /unassign advanced calculus/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Remove Course Allocation/i)).toBeInTheDocument();
   });
 });

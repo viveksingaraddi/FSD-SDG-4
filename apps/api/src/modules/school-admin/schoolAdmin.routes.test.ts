@@ -137,4 +137,217 @@ describe('School Admin API routes', () => {
 
     expect(res.status).toBe(422);
   });
+
+  it('lists staff scoped to authenticated school tenant with search & status filters', async () => {
+    const spy = vi.spyOn(schoolAdminService, 'listStaff').mockResolvedValue([
+      {
+        id: '11111111-2222-4333-8444-555555555555',
+        userId: '22222222-3333-4444-8555-666666666666',
+        employeeId: 'EMP-001',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'jane.doe@school.edu',
+        specialization: 'Mathematics',
+        status: 'ACTIVE',
+        allocationCount: 2,
+      },
+    ]);
+
+    const res = await request(app)
+      .get(API_ROUTES.SCHOOL.STAFF)
+      .query({ search: 'Jane', status: 'ACTIVE' })
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith('tenant-school-1', { search: 'Jane', status: 'ACTIVE' });
+    expect(res.body.data[0].employeeId).toBe('EMP-001');
+    expect(res.body.data[0].allocationCount).toBe(2);
+  });
+
+  it('retrieves detailed teacher profile with course allocations and audit history', async () => {
+    const teacherId = '11111111-2222-4333-8444-555555555555';
+    const spy = vi.spyOn(schoolAdminService, 'getStaffById').mockResolvedValue({
+      id: teacherId,
+      userId: '22222222-3333-4444-8555-666666666666',
+      employeeId: 'EMP-001',
+      firstName: 'Jane',
+      lastName: 'Doe',
+      email: 'jane.doe@school.edu',
+      specialization: 'Mathematics',
+      status: 'ACTIVE',
+      createdAt: '2026-09-01T08:00:00.000Z',
+      updatedAt: '2026-09-01T08:00:00.000Z',
+      allocations: [
+        {
+          id: '33333333-4444-4555-8666-777777777777',
+          courseOfferingId: '44444444-5555-4666-8777-888888888888',
+          subjectId: '55555555-6666-4777-8888-999999999999',
+          subjectName: 'Mathematics',
+          subjectCode: 'MATH-8',
+          sectionId: '66666666-7777-4888-8999-000000000000',
+          sectionName: '8A',
+          classId: '77777777-8888-4999-8000-111111111111',
+          className: 'Grade 8',
+          academicYearId: '88888888-9999-4000-8111-222222222222',
+          academicYearName: '2026-2027',
+          role: 'PRIMARY',
+          assignedAt: '2026-09-05T09:00:00.000Z',
+        },
+      ],
+      recentAuditLogs: [],
+    });
+
+    const res = await request(app)
+      .get(`${API_ROUTES.SCHOOL.STAFF}/${teacherId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith('tenant-school-1', teacherId);
+    expect(res.body.data.employeeId).toBe('EMP-001');
+    expect(res.body.data.allocations[0].subjectName).toBe('Mathematics');
+  });
+
+  it('creates teacher profile with duplicate checks and audit logging', async () => {
+    const spy = vi.spyOn(schoolAdminService, 'createStaff').mockResolvedValue({
+      id: '11111111-2222-4333-8444-555555555555',
+      userId: '22222222-3333-4444-8555-666666666666',
+      employeeId: 'EMP-002',
+      firstName: 'John',
+      lastName: 'Smith',
+      email: 'john.smith@school.edu',
+      specialization: 'Physics',
+      status: 'ACTIVE',
+      allocationCount: 0,
+    });
+
+    const res = await request(app)
+      .post(API_ROUTES.SCHOOL.STAFF)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({
+        firstName: 'John',
+        lastName: 'Smith',
+        email: 'john.smith@school.edu',
+        employeeId: 'EMP-002',
+        specialization: 'Physics',
+        temporaryPassword: 'TempPassword@2026!',
+      });
+
+    expect(res.status).toBe(201);
+    expect(spy).toHaveBeenCalled();
+    expect(res.body.data.email).toBe('john.smith@school.edu');
+  });
+
+  it('updates teacher profile details via PATCH /staff/:id', async () => {
+    const teacherId = '11111111-2222-4333-8444-555555555555';
+    const spy = vi.spyOn(schoolAdminService, 'updateStaff').mockResolvedValue({
+      id: teacherId,
+      userId: '22222222-3333-4444-8555-666666666666',
+      employeeId: 'EMP-001',
+      firstName: 'Jane',
+      lastName: 'Updated',
+      email: 'jane.doe@school.edu',
+      specialization: 'Advanced Mathematics',
+      status: 'ACTIVE',
+    });
+
+    const res = await request(app)
+      .patch(`${API_ROUTES.SCHOOL.STAFF}/${teacherId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({
+        lastName: 'Updated',
+        specialization: 'Advanced Mathematics',
+      });
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      teacherId,
+      { lastName: 'Updated', specialization: 'Advanced Mathematics' },
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+  });
+
+  it('allocates teacher to course offering via POST /staff/:id/allocations', async () => {
+    const teacherId = '11111111-2222-4333-8444-555555555555';
+    const spy = vi.spyOn(schoolAdminService, 'allocateTeacher').mockResolvedValue({
+      id: '33333333-4444-4555-8666-777777777777',
+      courseOfferingId: '44444444-5555-4666-8777-888888888888',
+      subjectId: '55555555-6666-4777-8888-999999999999',
+      subjectName: 'Science',
+      subjectCode: 'SCI-8',
+      sectionId: '66666666-7777-4888-8999-000000000000',
+      sectionName: '8B',
+      classId: '77777777-8888-4999-8000-111111111111',
+      className: 'Grade 8',
+      academicYearId: '88888888-9999-4000-8111-222222222222',
+      academicYearName: '2026-2027',
+      role: 'PRIMARY',
+      assignedAt: '2026-09-10T10:00:00.000Z',
+    });
+
+    const res = await request(app)
+      .post(`${API_ROUTES.SCHOOL.STAFF}/${teacherId}/allocations`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({
+        academicYearId: '88888888-9999-4000-8111-222222222222',
+        subjectId: '55555555-6666-4777-8888-999999999999',
+        sectionId: '66666666-7777-4888-8999-000000000000',
+        role: 'PRIMARY',
+      });
+
+    expect(res.status).toBe(201);
+    expect(spy).toHaveBeenCalled();
+    expect(res.body.data.subjectName).toBe('Science');
+  });
+
+  it('deallocates teacher from course offering via DELETE /staff/:id/allocations/:allocationId', async () => {
+    const teacherId = '11111111-2222-4333-8444-555555555555';
+    const allocationId = '33333333-4444-4555-8666-777777777777';
+    const spy = vi
+      .spyOn(schoolAdminService, 'deallocateTeacher')
+      .mockResolvedValue({ success: true });
+
+    const res = await request(app)
+      .delete(`${API_ROUTES.SCHOOL.STAFF}/${teacherId}/allocations/${allocationId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      teacherId,
+      allocationId,
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+  });
+
+  it('soft-deletes staff member via DELETE /staff/:id', async () => {
+    const teacherId = '11111111-2222-4333-8444-555555555555';
+    const spy = vi.spyOn(schoolAdminService, 'deleteStaff').mockResolvedValue({ success: true });
+
+    const res = await request(app)
+      .delete(`${API_ROUTES.SCHOOL.STAFF}/${teacherId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      teacherId,
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+  });
 });

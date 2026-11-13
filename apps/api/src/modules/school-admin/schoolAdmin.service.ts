@@ -12,16 +12,22 @@ import type {
   StaffMemberDto,
   StudentDirectoryDto,
   SubjectDto,
+  TeacherAllocationDto,
+  TeacherDetailDto,
 } from '@fsd-sdg4/contracts';
 import type {
+  AllocateTeacherInput,
   CreateAcademicYearInput,
   CreateClassInput,
   CreateSectionInput,
   CreateStaffInput,
   CreateStudentInput,
   CreateSubjectInput,
+  StaffFilterQuery,
   UpdateSchoolSettingsInput,
+  UpdateStaffInput,
 } from '@fsd-sdg4/validation';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../shared/db/prisma.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { hashPassword } from '../../shared/security/password.js';
@@ -600,12 +606,41 @@ export async function createSubject(
   };
 }
 
-export async function listStaff(schoolId: string): Promise<StaffMemberDto[]> {
+export async function listStaff(
+  schoolId: string,
+  query?: StaffFilterQuery,
+): Promise<StaffMemberDto[]> {
+  const whereClause: Prisma.TeacherProfileWhereInput = {
+    schoolId,
+    user: { deletedAt: null },
+  };
+
+  if (query?.status && query.status !== 'ALL') {
+    whereClause.user = { deletedAt: null, status: query.status };
+  }
+
+  if (query?.specialization) {
+    whereClause.specialization = {
+      contains: query.specialization,
+      mode: 'insensitive',
+    };
+  }
+
+  if (query?.search) {
+    whereClause.OR = [
+      { firstName: { contains: query.search, mode: 'insensitive' } },
+      { lastName: { contains: query.search, mode: 'insensitive' } },
+      { employeeId: { contains: query.search, mode: 'insensitive' } },
+      { user: { email: { contains: query.search, mode: 'insensitive' } } },
+    ];
+  }
+
   const rows = await prisma.teacherProfile.findMany({
-    where: { schoolId },
+    where: whereClause,
     orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
     include: {
       user: { select: { email: true, status: true } },
+      _count: { select: { courseAssignments: true } },
     },
   });
 
@@ -618,7 +653,90 @@ export async function listStaff(schoolId: string): Promise<StaffMemberDto[]> {
     email: staff.user.email,
     specialization: staff.specialization,
     status: staff.user.status,
+    allocationCount: staff._count.courseAssignments,
   }));
+}
+
+export async function getStaffById(schoolId: string, staffId: string): Promise<TeacherDetailDto> {
+  const staff = await prisma.teacherProfile.findFirst({
+    where: { id: staffId, schoolId },
+    include: {
+      user: true,
+      courseAssignments: {
+        include: {
+          courseOffering: {
+            include: {
+              subject: true,
+              section: {
+                include: {
+                  class: true,
+                },
+              },
+              academicYear: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!staff || staff.user.deletedAt !== null) {
+    throw new NotFoundError('Teacher profile not found.');
+  }
+
+  const auditLogs = await prisma.auditLog.findMany({
+    where: {
+      schoolId,
+      entityId: staff.id,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    include: {
+      actor: { select: { email: true } },
+    },
+  });
+
+  const allocations: TeacherAllocationDto[] = staff.courseAssignments.map((ca) => ({
+    id: ca.id,
+    courseOfferingId: ca.courseOfferingId,
+    subjectId: ca.courseOffering.subject.id,
+    subjectName: ca.courseOffering.subject.name,
+    subjectCode: ca.courseOffering.subject.code,
+    sectionId: ca.courseOffering.section.id,
+    sectionName: ca.courseOffering.section.name,
+    classId: ca.courseOffering.section.class.id,
+    className: ca.courseOffering.section.class.name,
+    academicYearId: ca.courseOffering.academicYear.id,
+    academicYearName: ca.courseOffering.academicYear.name,
+    role: ca.role,
+    assignedAt: ca.createdAt.toISOString(),
+  }));
+
+  const recentAuditLogs: AuditLogDto[] = auditLogs.map((log) => ({
+    id: log.id,
+    schoolId: log.schoolId,
+    actorId: log.actorId,
+    actorEmail: log.actor?.email ?? null,
+    action: log.action,
+    entityType: log.entityType,
+    entityId: log.entityId,
+    createdAt: log.createdAt.toISOString(),
+  }));
+
+  return {
+    id: staff.id,
+    userId: staff.userId,
+    employeeId: staff.employeeId,
+    firstName: staff.firstName,
+    lastName: staff.lastName,
+    email: staff.user.email,
+    specialization: staff.specialization,
+    status: staff.user.status,
+    createdAt: staff.createdAt.toISOString(),
+    updatedAt: staff.updatedAt.toISOString(),
+    allocations,
+    recentAuditLogs,
+  };
 }
 
 export async function createStaff(
@@ -685,6 +803,66 @@ export async function createStaff(
     email: created.user.email,
     specialization: created.profile.specialization,
     status: created.user.status,
+    allocationCount: 0,
+  };
+}
+
+export async function updateStaff(
+  schoolId: string,
+  staffProfileId: string,
+  input: UpdateStaffInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<StaffMemberDto> {
+  const profile = await prisma.teacherProfile.findFirst({
+    where: { id: staffProfileId, schoolId },
+    include: { user: true },
+  });
+
+  if (!profile || profile.user.deletedAt !== null) {
+    throw new NotFoundError('Staff member not found.');
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedProfile = await tx.teacherProfile.update({
+      where: { id: staffProfileId },
+      data: {
+        ...(input.firstName ? { firstName: input.firstName } : {}),
+        ...(input.lastName ? { lastName: input.lastName } : {}),
+        ...(input.specialization !== undefined ? { specialization: input.specialization } : {}),
+      },
+    });
+
+    let updatedUser = profile.user;
+    if (input.status) {
+      updatedUser = await tx.user.update({
+        where: { id: profile.userId },
+        data: { status: input.status },
+      });
+    }
+
+    return { profile: updatedProfile, user: updatedUser };
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_STAFF_UPDATED',
+    entityType: 'TeacherProfile',
+    entityId: profile.id,
+    delta: input as Record<string, unknown>,
+    ipAddress,
+  });
+
+  return {
+    id: updated.profile.id,
+    userId: updated.user.id,
+    employeeId: updated.profile.employeeId,
+    firstName: updated.profile.firstName,
+    lastName: updated.profile.lastName,
+    email: updated.user.email,
+    specialization: updated.profile.specialization,
+    status: updated.user.status,
   };
 }
 
@@ -695,40 +873,195 @@ export async function updateStaffStatus(
   actorId: string,
   ipAddress: string | null,
 ): Promise<StaffMemberDto> {
-  const profile = await prisma.teacherProfile.findFirst({
-    where: { id: staffProfileId, schoolId },
-    include: { user: true },
-  });
+  return updateStaff(schoolId, staffProfileId, { status }, actorId, ipAddress);
+}
 
-  if (!profile) {
-    throw new NotFoundError('Staff member not found.');
+export async function allocateTeacher(
+  schoolId: string,
+  teacherId: string,
+  input: AllocateTeacherInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<TeacherAllocationDto> {
+  const [teacher, year, subject, section] = await Promise.all([
+    prisma.teacherProfile.findFirst({ where: { id: teacherId, schoolId } }),
+    prisma.academicYear.findFirst({ where: { id: input.academicYearId, schoolId } }),
+    prisma.subject.findFirst({ where: { id: input.subjectId, schoolId } }),
+    prisma.section.findFirst({
+      where: { id: input.sectionId, schoolId },
+      include: { class: true },
+    }),
+  ]);
+
+  if (!teacher) {
+    throw new NotFoundError('Teacher profile not found.');
+  }
+  if (!year) {
+    throw new NotFoundError('Academic year not found.');
+  }
+  if (!subject) {
+    throw new NotFoundError('Subject not found.');
+  }
+  if (!section) {
+    throw new NotFoundError('Section not found.');
   }
 
-  const updatedUser = await prisma.user.update({
-    where: { id: profile.userId },
-    data: { status },
+  // Find or create course offering for this year + section + subject
+  const assignment = await prisma.$transaction(async (tx) => {
+    let offering = await tx.courseOffering.findUnique({
+      where: {
+        schoolId_academicYearId_sectionId_subjectId: {
+          schoolId,
+          academicYearId: input.academicYearId,
+          sectionId: input.sectionId,
+          subjectId: input.subjectId,
+        },
+      },
+    });
+
+    if (!offering) {
+      offering = await tx.courseOffering.create({
+        data: {
+          schoolId,
+          academicYearId: input.academicYearId,
+          sectionId: input.sectionId,
+          subjectId: input.subjectId,
+        },
+      });
+    }
+
+    const existingAssignment = await tx.courseTeacher.findUnique({
+      where: {
+        schoolId_courseOfferingId_teacherId: {
+          schoolId,
+          courseOfferingId: offering.id,
+          teacherId,
+        },
+      },
+    });
+
+    if (existingAssignment) {
+      throw new ConflictError('Teacher is already allocated to this course offering.');
+    }
+
+    return tx.courseTeacher.create({
+      data: {
+        schoolId,
+        courseOfferingId: offering.id,
+        teacherId,
+        role: input.role,
+      },
+      include: {
+        courseOffering: {
+          include: {
+            subject: true,
+            section: { include: { class: true } },
+            academicYear: true,
+          },
+        },
+      },
+    });
   });
 
   await recordAuditEvent({
     schoolId,
     actorId,
-    action: 'SCHOOL_STAFF_STATUS_UPDATED',
-    entityType: 'TeacherProfile',
-    entityId: profile.id,
-    delta: { status },
+    action: 'SCHOOL_TEACHER_ALLOCATED',
+    entityType: 'CourseTeacher',
+    entityId: assignment.id,
+    delta: {
+      teacherId,
+      subjectId: input.subjectId,
+      sectionId: input.sectionId,
+      role: input.role,
+    },
     ipAddress,
   });
 
   return {
-    id: profile.id,
-    userId: profile.userId,
-    employeeId: profile.employeeId,
-    firstName: profile.firstName,
-    lastName: profile.lastName,
-    email: updatedUser.email,
-    specialization: profile.specialization,
-    status: updatedUser.status,
+    id: assignment.id,
+    courseOfferingId: assignment.courseOfferingId,
+    subjectId: assignment.courseOffering.subject.id,
+    subjectName: assignment.courseOffering.subject.name,
+    subjectCode: assignment.courseOffering.subject.code,
+    sectionId: assignment.courseOffering.section.id,
+    sectionName: assignment.courseOffering.section.name,
+    classId: assignment.courseOffering.section.class.id,
+    className: assignment.courseOffering.section.class.name,
+    academicYearId: assignment.courseOffering.academicYear.id,
+    academicYearName: assignment.courseOffering.academicYear.name,
+    role: assignment.role,
+    assignedAt: assignment.createdAt.toISOString(),
   };
+}
+
+export async function deallocateTeacher(
+  schoolId: string,
+  teacherId: string,
+  allocationId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ success: boolean }> {
+  const assignment = await prisma.courseTeacher.findFirst({
+    where: { id: allocationId, teacherId, schoolId },
+  });
+
+  if (!assignment) {
+    throw new NotFoundError('Course allocation not found for this teacher.');
+  }
+
+  await prisma.courseTeacher.delete({
+    where: { id: allocationId },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_TEACHER_DEALLOCATED',
+    entityType: 'CourseTeacher',
+    entityId: allocationId,
+    delta: { teacherId },
+    ipAddress,
+  });
+
+  return { success: true };
+}
+
+export async function deleteStaff(
+  schoolId: string,
+  staffProfileId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ success: boolean }> {
+  const profile = await prisma.teacherProfile.findFirst({
+    where: { id: staffProfileId, schoolId },
+    include: { user: true },
+  });
+
+  if (!profile || profile.user.deletedAt !== null) {
+    throw new NotFoundError('Staff member not found.');
+  }
+
+  // Soft-delete user account and set status to INACTIVE to preserve historic assessments/grades
+  await prisma.user.update({
+    where: { id: profile.userId },
+    data: {
+      deletedAt: new Date(),
+      status: 'INACTIVE',
+    },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_STAFF_DELETED',
+    entityType: 'TeacherProfile',
+    entityId: profile.id,
+    delta: { status: 'INACTIVE', softDeleted: true },
+    ipAddress,
+  });
+
+  return { success: true };
 }
 
 export async function listStudents(

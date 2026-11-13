@@ -1,6 +1,7 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { API_ROUTES } from '@fsd-sdg4/contracts';
 import {
+  allocateTeacherSchema,
   createAcademicYearSchema,
   createClassSchema,
   createSectionSchema,
@@ -9,7 +10,9 @@ import {
   createSubjectSchema,
   idParamSchema,
   searchQuerySchema,
+  staffFilterQuerySchema,
   updateSchoolSettingsSchema,
+  updateStaffSchema,
   updateUserStatusSchema,
   z,
 } from '@fsd-sdg4/validation';
@@ -22,14 +25,18 @@ import { PERMISSIONS } from '../identity/permissions.js';
 import { resolveTenantSchoolId } from '../identity/tenantAuthorization.js';
 import {
   activateAcademicYear,
+  allocateTeacher,
   createAcademicYear,
   createClass,
   createSection,
   createStaff,
   createStudent,
   createSubject,
+  deallocateTeacher,
+  deleteStaff,
   getSchoolOverview,
   getSchoolSettings,
+  getStaffById,
   listAcademicYears,
   listClasses,
   listSchoolAuditLogs,
@@ -37,8 +44,14 @@ import {
   listStudents,
   listSubjects,
   updateSchoolSettings,
+  updateStaff,
   updateStaffStatus,
 } from './schoolAdmin.service.js';
+
+const allocationParamSchema = z.object({
+  id: idParamSchema.shape.id,
+  allocationId: idParamSchema.shape.id,
+});
 
 const searchParamsSchema = z.object({
   search: searchQuerySchema,
@@ -176,10 +189,25 @@ export function createSchoolAdminRouter(): ExpressRouter {
     authenticate,
     requireRole(['SCHOOL_ADMIN']),
     requirePermission(PERMISSIONS.SCHOOL_USERS_READ),
+    validateRequest({ query: staffFilterQuerySchema }),
     async (req, res) => {
       const schoolId = await resolveTenantSchoolId(req);
-      const staff = await listStaff(schoolId);
+      const staff = await listStaff(schoolId, req.query);
       sendSuccess(res, staff);
+    },
+  );
+
+  router.get(
+    `${API_ROUTES.SCHOOL.STAFF}/:id`,
+    authenticate,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_READ),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const teacher = await getStaffById(schoolId, id);
+      sendSuccess(res, teacher);
     },
   );
 
@@ -194,6 +222,21 @@ export function createSchoolAdminRouter(): ExpressRouter {
       const schoolId = await resolveTenantSchoolId(req);
       const created = await createStaff(schoolId, req.body, req.auth!.userId, req.ip ?? null);
       sendSuccess(res, created, 201);
+    },
+  );
+
+  router.patch(
+    `${API_ROUTES.SCHOOL.STAFF}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_UPDATE),
+    validateRequest({ params: idParamSchema, body: updateStaffSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const updated = await updateStaff(schoolId, id, req.body, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, updated);
     },
   );
 
@@ -216,6 +259,63 @@ export function createSchoolAdminRouter(): ExpressRouter {
         req.ip ?? null,
       );
       sendSuccess(res, updated);
+    },
+  );
+
+  router.post(
+    `${API_ROUTES.SCHOOL.STAFF}/:id/allocations`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_UPDATE),
+    validateRequest({ params: idParamSchema, body: allocateTeacherSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const allocation = await allocateTeacher(
+        schoolId,
+        id,
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, allocation, 201);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.STAFF}/:id/allocations/:allocationId`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_UPDATE),
+    validateRequest({ params: allocationParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id, allocationId } = req.params as { id: string; allocationId: string };
+      const result = await deallocateTeacher(
+        schoolId,
+        id,
+        allocationId,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, result);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.STAFF}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_UPDATE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const result = await deleteStaff(schoolId, id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, result);
     },
   );
 

@@ -257,6 +257,38 @@ export interface StaffMemberDto {
   email: string;
   specialization: string | null;
   status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+  allocationCount?: number;
+}
+
+export interface TeacherAllocationDto {
+  id: string;
+  courseOfferingId: string;
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
+  sectionId: string;
+  sectionName: string;
+  classId: string;
+  className: string;
+  academicYearId: string;
+  academicYearName: string;
+  role: 'PRIMARY' | 'ASSISTANT';
+  assignedAt: string;
+}
+
+export interface TeacherDetailDto {
+  id: string;
+  userId: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  specialization: string | null;
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+  createdAt: string;
+  updatedAt: string;
+  allocations: TeacherAllocationDto[];
+  recentAuditLogs?: AuditLogDto[];
 }
 
 export interface StudentDirectoryDto {
@@ -268,7 +300,54 @@ export interface StudentDirectoryDto {
   email: string;
   status: 'ACTIVE' | 'INACTIVE' | 'GRADUATED' | 'TRANSFERRED';
   admissionDate: string;
+  dateOfBirth?: string | null;
+  gender?: string | null;
   currentSection: string | null;
+  currentSectionId?: string | null;
+  currentClassId?: string | null;
+  currentClassName?: string | null;
+}
+
+export interface StudentEnrollmentHistoryDto {
+  id: string;
+  sectionId: string;
+  sectionName: string;
+  className: string;
+  academicYearId: string;
+  academicYearName: string;
+  status: 'ACTIVE' | 'WITHDRAWN' | 'COMPLETED';
+  enrolledAt: string;
+}
+
+export interface StudentGuardianDto {
+  id: string;
+  guardianUserId: string;
+  name: string;
+  email: string;
+  relationshipType: 'MOTHER' | 'FATHER' | 'LEGAL_GUARDIAN' | 'OTHER';
+  isPrimaryContact: boolean;
+  isVerified: boolean;
+}
+
+export interface StudentDetailDto {
+  id: string;
+  userId: string;
+  studentIdNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'GRADUATED' | 'TRANSFERRED';
+  admissionDate: string;
+  dateOfBirth: string | null;
+  gender: string | null;
+  currentSectionId: string | null;
+  currentSectionName: string | null;
+  currentClassId: string | null;
+  currentClassName: string | null;
+  academicYearName: string | null;
+  enrollmentHistory: StudentEnrollmentHistoryDto[];
+  guardians: StudentGuardianDto[];
+  recentAuditLogs?: AuditLogDto[];
 }
 
 export interface AuditLogDto {

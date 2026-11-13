@@ -184,6 +184,26 @@ export const createStaffSchema = z.object({
   temporaryPassword: passwordSchema,
 });
 
+export const updateStaffSchema = z.object({
+  firstName: nonEmptyString('First name').max(100).optional(),
+  lastName: nonEmptyString('Last name').max(100).optional(),
+  specialization: z.string().trim().max(150).nullable().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
+});
+
+export const staffFilterQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  status: z.enum(['ALL', 'ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
+  specialization: z.string().trim().optional(),
+});
+
+export const allocateTeacherSchema = z.object({
+  academicYearId: uuidSchema,
+  subjectId: uuidSchema,
+  sectionId: uuidSchema,
+  role: z.enum(['PRIMARY', 'ASSISTANT']).default('PRIMARY'),
+});
+
 export const updateUserStatusSchema = z.object({
   status: z.enum(['ACTIVE', 'INACTIVE', 'LOCKED']),
 });
@@ -194,8 +214,26 @@ export const createStudentSchema = z.object({
   firstName: nonEmptyString('First name').max(100),
   lastName: nonEmptyString('Last name').max(100),
   admissionDate: isoDateString,
+  dateOfBirth: isoDateString.optional(),
+  gender: z.string().trim().max(32).optional(),
   temporaryPassword: passwordSchema,
   sectionId: uuidSchema.optional(),
+});
+
+export const updateStudentSchema = z.object({
+  firstName: nonEmptyString('First name').max(100).optional(),
+  lastName: nonEmptyString('Last name').max(100).optional(),
+  dateOfBirth: isoDateString.nullable().optional(),
+  gender: z.string().trim().max(32).nullable().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'TRANSFERRED']).optional(),
+  sectionId: uuidSchema.nullable().optional(),
+});
+
+export const studentFilterQuerySchema = z.object({
+  search: searchQuerySchema,
+  classId: uuidSchema.optional(),
+  sectionId: uuidSchema.optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'TRANSFERRED']).optional(),
 });
 
 export const updateSchoolSettingsSchema = z.object({
@@ -210,5 +248,10 @@ export type CreateClassInput = z.infer<typeof createClassSchema>;
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
 export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
+export type StaffFilterQuery = z.infer<typeof staffFilterQuerySchema>;
+export type AllocateTeacherInput = z.infer<typeof allocateTeacherSchema>;
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;
+export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
+export type StudentFilterQuery = z.infer<typeof studentFilterQuerySchema>;
 export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchema>;

@@ -232,7 +232,6 @@ export function SuperAdminDashboardPage() {
 
             <Button
               variant="outline"
-              size="sm"
               leftIcon={
                 <RefreshCw
                   className={`h-4 w-4 ${overviewQuery.isFetching ? 'animate-spin' : ''}`}
@@ -483,13 +482,13 @@ export function SuperAdminDashboardPage() {
                 {trends.length > 0 ? (
                   <div className="mt-3">
                     <div
-                      className="flex items-end gap-3 h-36 pt-3 pb-2 px-1"
+                      className="flex items-end gap-3 h-44 pt-3 pb-3 px-1"
                       role="img"
                       aria-label="School registration trends by period"
                     >
                       {trends.map((item) => {
                         const heightPct = Math.max(
-                          20,
+                          18,
                           Math.round((item.count / maxTrendCount) * 100),
                         );
                         return (
@@ -497,7 +496,7 @@ export function SuperAdminDashboardPage() {
                             key={item.period}
                             className="flex flex-1 flex-col items-center justify-end h-full"
                           >
-                            <span className="text-xs font-bold text-[var(--color-text-primary)] mb-1.5">
+                            <span className="text-xs font-bold text-[var(--color-text-primary)] mb-1">
                               {item.count}
                             </span>
                             <div className="flex-1 w-full max-w-[44px] flex items-end justify-center">
@@ -507,7 +506,7 @@ export function SuperAdminDashboardPage() {
                                 title={`${item.period}: ${item.count} school(s)`}
                               />
                             </div>
-                            <span className="text-[11px] font-medium text-[var(--color-text-muted)] truncate max-w-[72px] mt-2 text-center">
+                            <span className="text-[11px] font-medium text-[var(--color-text-muted)] truncate max-w-[80px] mt-2 pb-1 text-center">
                               {item.period}
                             </span>
                           </div>

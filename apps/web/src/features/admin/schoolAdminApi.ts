@@ -9,17 +9,22 @@ import {
   type StaffMemberDto,
   type StudentDirectoryDto,
   type SubjectDto,
+  type TeacherAllocationDto,
+  type TeacherDetailDto,
 } from '@fsd-sdg4/contracts';
 import type {
+  AllocateTeacherInput,
   CreateAcademicYearInput,
   CreateClassInput,
   CreateSectionInput,
   CreateStaffInput,
   CreateStudentInput,
   CreateSubjectInput,
+  StaffFilterQuery,
   UpdateSchoolSettingsInput,
+  UpdateStaffInput,
 } from '@fsd-sdg4/validation';
-import { apiGet, apiPatch, apiPost } from '@/lib/apiClient';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
 export function fetchSchoolOverview(signal?: AbortSignal): Promise<SchoolOverviewDto> {
   return apiGet<SchoolOverviewDto>(API_ROUTES.SCHOOL.OVERVIEW, signal ? { signal } : undefined);
@@ -64,12 +69,35 @@ export function createSubjectRequest(input: CreateSubjectInput): Promise<Subject
   return apiPost<SubjectDto>(API_ROUTES.SCHOOL.SUBJECTS, input);
 }
 
-export function fetchStaff(signal?: AbortSignal): Promise<StaffMemberDto[]> {
-  return apiGet<StaffMemberDto[]>(API_ROUTES.SCHOOL.STAFF, signal ? { signal } : undefined);
+export function fetchStaff(
+  query?: StaffFilterQuery,
+  signal?: AbortSignal,
+): Promise<StaffMemberDto[]> {
+  const params = new URLSearchParams();
+  if (query?.search?.trim()) params.set('search', query.search.trim());
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.specialization?.trim()) params.set('specialization', query.specialization.trim());
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<StaffMemberDto[]>(
+    `${API_ROUTES.SCHOOL.STAFF}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchStaffById(id: string, signal?: AbortSignal): Promise<TeacherDetailDto> {
+  return apiGet<TeacherDetailDto>(
+    `${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}`,
+    signal ? { signal } : undefined,
+  );
 }
 
 export function createStaffRequest(input: CreateStaffInput): Promise<StaffMemberDto> {
   return apiPost<StaffMemberDto>(API_ROUTES.SCHOOL.STAFF, input);
+}
+
+export function updateStaffRequest(id: string, input: UpdateStaffInput): Promise<StaffMemberDto> {
+  return apiPatch<StaffMemberDto>(`${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}`, input);
 }
 
 export function updateStaffStatusRequest(
@@ -79,6 +107,29 @@ export function updateStaffStatusRequest(
   return apiPatch<StaffMemberDto>(`${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}/status`, {
     status,
   });
+}
+
+export function allocateTeacherRequest(
+  id: string,
+  input: AllocateTeacherInput,
+): Promise<TeacherAllocationDto> {
+  return apiPost<TeacherAllocationDto>(
+    `${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}/allocations`,
+    input,
+  );
+}
+
+export function deallocateTeacherRequest(
+  id: string,
+  allocationId: string,
+): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}/allocations/${encodeURIComponent(allocationId)}`,
+  );
+}
+
+export function deleteStaffRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}`);
 }
 
 export function fetchStudents(

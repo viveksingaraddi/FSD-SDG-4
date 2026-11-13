@@ -19,6 +19,7 @@ const PlatformSettingsPage = lazy(() => import('@/features/super-admin/PlatformS
 const SchoolAdminDashboardPage = lazy(() => import('@/features/admin/SchoolAdminDashboardPage'));
 const AcademicSetupPage = lazy(() => import('@/features/admin/AcademicSetupPage'));
 const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPage'));
+const TeacherProfilePage = lazy(() => import('@/features/admin/TeacherProfilePage'));
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
 
@@ -138,6 +139,14 @@ export function App() {
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
                     <StaffDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/staff/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <TeacherProfilePage />
                   </ProtectedRoute>
                 }
               />

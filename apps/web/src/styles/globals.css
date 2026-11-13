@@ -158,11 +158,15 @@ body {
 
 /* Native <dialog> scroll-containment per modern-web-guidance */
 dialog:modal {
+  background-color: #ffffff;
+  color: var(--color-text-primary);
   overscroll-behavior: contain;
 }
 
 dialog::backdrop {
-  background: var(--color-overlay-backdrop);
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   overflow: hidden;
   overscroll-behavior: contain;
 }
