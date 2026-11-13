@@ -45,14 +45,14 @@ This deliverable implements the complete, functional School Administrator Dashbo
 
 ## 2. Files Changed
 
-| File | Change Description |
-|---|---|
-| [`packages/contracts/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/contracts/src/index.ts) | Enhanced `SchoolOverviewDto` with `SchoolAttendanceSummaryDto`, `SchoolAcademicSummaryDto`, `SchoolRecentActivityDto`, and `SchoolAlertDto`. |
-| [`apps/api/src/modules/school-admin/schoolAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.service.ts) | Enhanced `getSchoolOverview(schoolId)` to concurrently query attendance, active assignments, assessments, student registrations, scoped audit events, and pending support flags. |
-| [`apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts) | Added tenant isolation tests verifying rejection of missing tenant context, non-admin roles (TEACHER, STUDENT, PARENT), and verified scoping to authenticated `schoolId`. |
-| [`apps/web/src/features/admin/SchoolAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminDashboardPage.tsx) | Implemented comprehensive 5-section dashboard with KPI cards, attendance meters & trend chart, academic exam roster, student enrollments, school audit logs, and actionable alert banners. |
-| [`apps/web/src/features/admin/SchoolAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminPortal.test.tsx) | Added tests for KPI cards, tenant isolation badge, attendance metrics, academic exam roster, activity feeds, empty states, and error recovery retry. |
-| [`docs/08-delivery/pull-request-reports/admin-school-dashboard-pr-report.md`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/docs/08-delivery/pull-request-reports/admin-school-dashboard-pr-report.md) | Pull Request readiness and verification report. |
+| File                                                                                                                                                                                                         | Change Description                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [`packages/contracts/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/contracts/src/index.ts)                                                                                     | Enhanced `SchoolOverviewDto` with `SchoolAttendanceSummaryDto`, `SchoolAcademicSummaryDto`, `SchoolRecentActivityDto`, and `SchoolAlertDto`.                                               |
+| [`apps/api/src/modules/school-admin/schoolAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.service.ts)                                   | Enhanced `getSchoolOverview(schoolId)` to concurrently query attendance, active assignments, assessments, student registrations, scoped audit events, and pending support flags.           |
+| [`apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts)                           | Added tenant isolation tests verifying rejection of missing tenant context, non-admin roles (TEACHER, STUDENT, PARENT), and verified scoping to authenticated `schoolId`.                  |
+| [`apps/web/src/features/admin/SchoolAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminDashboardPage.tsx)                                   | Implemented comprehensive 5-section dashboard with KPI cards, attendance meters & trend chart, academic exam roster, student enrollments, school audit logs, and actionable alert banners. |
+| [`apps/web/src/features/admin/SchoolAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminPortal.test.tsx)                                       | Added tests for KPI cards, tenant isolation badge, attendance metrics, academic exam roster, activity feeds, empty states, and error recovery retry.                                       |
+| [`docs/08-delivery/pull-request-reports/admin-school-dashboard-pr-report.md`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/docs/08-delivery/pull-request-reports/admin-school-dashboard-pr-report.md) | Pull Request readiness and verification report.                                                                                                                                            |
 
 ---
 
@@ -77,21 +77,26 @@ This deliverable implements the complete, functional School Administrator Dashbo
 ## 5. Exact Test Commands & Outputs
 
 ### A. Prettier Code Formatting (`pnpm format:check`)
+
 ```text
 > prettier --check "**/*.{ts,tsx,js,json,md,css}" --ignore-path .gitignore
 Checking formatting...
 All matched files use Prettier code style!
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ### B. ESLint Static Analysis (`pnpm lint`)
+
 ```text
 > eslint .
 (0 errors, 0 warnings)
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ### C. TypeScript Workspace Typecheck (`pnpm typecheck`)
+
 ```text
 > pnpm --recursive typecheck
 Scope: 6 of 7 workspace projects
@@ -102,9 +107,11 @@ packages/contracts typecheck: Done
 apps/api typecheck: Done
 apps/web typecheck: Done
 ```
+
 - **Exit Code**: `0` (PASS across all 6 packages)
 
 ### D. Unit & Integration Test Suite (`pnpm test`)
+
 ```text
 > pnpm --recursive --filter './packages/*' test && pnpm --recursive --filter './apps/*' test
 packages/contracts test: 1 passed (4 tests)
@@ -114,9 +121,11 @@ apps/api test: 10 passed (61 tests)
 apps/web test: 8 passed (26 tests)
 Total: 108 tests passed across workspace (0 failed)
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ### E. Production Workspace Build (`pnpm build`)
+
 ```text
 > pnpm --filter './packages/*' build && pnpm --filter './apps/*' build
 Scope: 4 of 7 workspace projects
@@ -127,23 +136,24 @@ Scope: 2 of 7 workspace projects
 apps/api build: Done
 apps/web build: Done (Vite production bundle built in 655ms, 0 errors)
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ---
 
 ## 6. Acceptance Checklist
 
-| Criteria | Status | Notes |
-|---|---|---|
-| Section A: School Overview metrics displayed | **PASS** | Students, teachers, classes, sections, active academic year, support plans. |
-| Section B: Attendance Overview displayed | **PASS** | Date, percentage progress bar, present/absent/late/excused breakdown, 7-day trend chart. |
-| Section C: Academic Overview displayed | **PASS** | Active assignments, upcoming assessments, recent exam table. |
-| Section D: Staff & Student Activity displayed | **PASS** | Recent enrollments with IDs, school administrative audit trail with actor emails. |
-| Section E: Alerts & Actionable Notifications | **PASS** | Contextual warnings with 1-click action triggers. |
-| Tenant Isolation Enforced | **PASS** | Server-side session scoping verified; cross-tenant mismatch rejected with 403. |
-| WCAG 2.2 AA Accessibility & Tokens | **PASS** | Semantic HTML, progressbar attributes, keyboard focus states, high contrast. |
-| Loading, Empty, and Error States | **PASS** | Full skeletons, empty states for unseeded cohorts, error state with retry button. |
-| Monorepo Build & Linting | **PASS** | Clean build, 0 ESLint errors, 0 Prettier errors, 0 TypeScript errors. |
+| Criteria                                      | Status   | Notes                                                                                    |
+| --------------------------------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| Section A: School Overview metrics displayed  | **PASS** | Students, teachers, classes, sections, active academic year, support plans.              |
+| Section B: Attendance Overview displayed      | **PASS** | Date, percentage progress bar, present/absent/late/excused breakdown, 7-day trend chart. |
+| Section C: Academic Overview displayed        | **PASS** | Active assignments, upcoming assessments, recent exam table.                             |
+| Section D: Staff & Student Activity displayed | **PASS** | Recent enrollments with IDs, school administrative audit trail with actor emails.        |
+| Section E: Alerts & Actionable Notifications  | **PASS** | Contextual warnings with 1-click action triggers.                                        |
+| Tenant Isolation Enforced                     | **PASS** | Server-side session scoping verified; cross-tenant mismatch rejected with 403.           |
+| WCAG 2.2 AA Accessibility & Tokens            | **PASS** | Semantic HTML, progressbar attributes, keyboard focus states, high contrast.             |
+| Loading, Empty, and Error States              | **PASS** | Full skeletons, empty states for unseeded cohorts, error state with retry button.        |
+| Monorepo Build & Linting                      | **PASS** | Clean build, 0 ESLint errors, 0 Prettier errors, 0 TypeScript errors.                    |
 
 ---
 
