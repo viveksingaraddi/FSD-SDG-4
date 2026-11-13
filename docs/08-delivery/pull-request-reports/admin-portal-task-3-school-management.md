@@ -49,21 +49,21 @@ This deliverable completes Task 3 of the Admin Portal implementation plan: **Sch
 
 ## 2. Changed Files
 
-| File | Change Description |
-|---|---|
-| [`packages/contracts/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/contracts/src/index.ts) | Added `sectionCount` and `recentAuditLogs` to `SchoolDetailDto`. |
-| [`apps/api/src/modules/super-admin/superAdmin.routes.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.routes.ts) | Added `status` query filter schema to `GET /schools` and `schoolId` filter to `GET /audit-logs`. |
-| [`apps/api/src/modules/super-admin/superAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.service.ts) | Implemented status filtering, section count querying, and school-scoped audit log retrieval. |
-| [`apps/web/src/styles/globals.css`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/styles/globals.css) | Defined `--color-surface-elevated`, semantic contrast tokens, and layered z-indexes. |
-| [`apps/web/src/components/ui/Button.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/Button.tsx) | Added `whitespace-nowrap`, fixed `danger` variant foreground color to solid high-contrast white. |
-| [`apps/web/src/components/ui/Overlays.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/Overlays.tsx) | Enforced solid opaque backgrounds on `Modal`, `Drawer`, and `DropdownMenu`. |
-| [`apps/web/src/components/ui/FormFields.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/FormFields.tsx) | Guaranteed non-transparent background on inputs and select elements. |
-| [`apps/web/src/components/ui/DataTable.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/DataTable.tsx) | Extended `DataTableColumn.header` type to accept `ReactNode | string` for interactive sorting controls. |
-| [`apps/web/src/features/super-admin/SchoolsDirectoryPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SchoolsDirectoryPage.tsx) | Rewrote directory with search, filter tabs, sorting, pagination, provisioning modal, edit modal, and suspension dialog. |
-| [`apps/web/src/features/super-admin/SchoolInspectionPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SchoolInspectionPage.tsx) | Implemented comprehensive institution details view with KPI cards, isolation badge, metadata edit, and audit log stream. |
-| [`apps/web/src/features/super-admin/superAdminApi.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/superAdminApi.ts) | Updated API client functions with status query parameters and flexible audit log query signatures. |
-| [`apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx) | Passed `RefreshCw` icon via `leftIcon` prop, prevented chart label clipping. |
-| [`apps/web/src/features/super-admin/SuperAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminPortal.test.tsx) | Added tests for School Directory search/filter, provisioning modal, edit modal, and status toggles. |
+| File                                                                                                                                                                                 | Change Description                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| [`packages/contracts/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/contracts/src/index.ts)                                                             | Added `sectionCount` and `recentAuditLogs` to `SchoolDetailDto`.                                                         |
+| [`apps/api/src/modules/super-admin/superAdmin.routes.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.routes.ts)                 | Added `status` query filter schema to `GET /schools` and `schoolId` filter to `GET /audit-logs`.                         |
+| [`apps/api/src/modules/super-admin/superAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.service.ts)               | Implemented status filtering, section count querying, and school-scoped audit log retrieval.                             |
+| [`apps/web/src/styles/globals.css`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/styles/globals.css)                                                             | Defined `--color-surface-elevated`, semantic contrast tokens, and layered z-indexes.                                     |
+| [`apps/web/src/components/ui/Button.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/Button.tsx)                                                 | Added `whitespace-nowrap`, fixed `danger` variant foreground color to solid high-contrast white.                         |
+| [`apps/web/src/components/ui/Overlays.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/Overlays.tsx)                                             | Enforced solid opaque backgrounds on `Modal`, `Drawer`, and `DropdownMenu`.                                              |
+| [`apps/web/src/components/ui/FormFields.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/FormFields.tsx)                                         | Guaranteed non-transparent background on inputs and select elements.                                                     |
+| [`apps/web/src/components/ui/DataTable.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/components/ui/DataTable.tsx)                                           | Extended `DataTableColumn.header` type to accept `ReactNode                                                              | string` for interactive sorting controls. |
+| [`apps/web/src/features/super-admin/SchoolsDirectoryPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SchoolsDirectoryPage.tsx)       | Rewrote directory with search, filter tabs, sorting, pagination, provisioning modal, edit modal, and suspension dialog.  |
+| [`apps/web/src/features/super-admin/SchoolInspectionPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SchoolInspectionPage.tsx)       | Implemented comprehensive institution details view with KPI cards, isolation badge, metadata edit, and audit log stream. |
+| [`apps/web/src/features/super-admin/superAdminApi.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/superAdminApi.ts)                       | Updated API client functions with status query parameters and flexible audit log query signatures.                       |
+| [`apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx) | Passed `RefreshCw` icon via `leftIcon` prop, prevented chart label clipping.                                             |
+| [`apps/web/src/features/super-admin/SuperAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminPortal.test.tsx)     | Added tests for School Directory search/filter, provisioning modal, edit modal, and status toggles.                      |
 
 ---
 
@@ -72,21 +72,26 @@ This deliverable completes Task 3 of the Admin Portal implementation plan: **Sch
 All checks executed in the local repository environment:
 
 ### A. Prettier Formatting (`pnpm format:check`)
+
 ```text
 > prettier --check "**/*.{ts,tsx,js,json,md,css}" --ignore-path .gitignore
 Checking formatting...
 All matched files use Prettier code style!
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ### B. ESLint Static Analysis (`pnpm lint`)
+
 ```text
 > eslint .
 (0 errors, 0 warnings)
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ### C. TypeScript Workspace Typecheck (`pnpm typecheck`)
+
 ```text
 > pnpm --recursive typecheck
 packages/config typecheck: Done
@@ -96,9 +101,11 @@ packages/contracts typecheck: Done
 apps/web typecheck: Done
 apps/api typecheck: Done
 ```
+
 - **Exit Code**: `0` (PASS across all 6 packages)
 
 ### D. Unit & Integration Test Suite (`pnpm test`)
+
 ```text
 > pnpm --recursive --filter './packages/*' test && pnpm --recursive --filter './apps/*' test
 packages/contracts test: 1 passed (4 tests)
@@ -108,9 +115,11 @@ apps/api test: 10 passed (59 tests)
 apps/web test: 8 passed (24 tests)
 Total: 104 tests passed across workspace
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ### E. Production Workspace Build (`pnpm build`)
+
 ```text
 > pnpm --filter './packages/*' build && pnpm --filter './apps/*' build
 Scope: 4 of 7 workspace projects
@@ -121,6 +130,7 @@ Scope: 2 of 7 workspace projects
 apps/api build: Done
 apps/web build: Done (Vite production bundle built in 471ms, 0 errors)
 ```
+
 - **Exit Code**: `0` (PASS)
 
 ---

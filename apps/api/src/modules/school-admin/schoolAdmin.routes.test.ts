@@ -14,11 +14,19 @@ vi.mock('../../middleware/authenticate.js', () => ({
       return;
     }
     const role = roleHeader as 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+    const overrideSchoolId = req.get('x-test-school-id');
     req.auth = {
       userId: '11111111-1111-4111-8111-111111111111',
       sessionId: '22222222-2222-4222-8222-222222222222',
       role,
-      schoolId: role === 'SUPER_ADMIN' ? null : '33333333-3333-4333-8333-333333333333',
+      schoolId:
+        overrideSchoolId !== undefined
+          ? overrideSchoolId === 'null'
+            ? null
+            : overrideSchoolId
+          : role === 'SUPER_ADMIN'
+            ? null
+            : '33333333-3333-4333-8333-333333333333',
       permissions: getPermissionsForRole(role),
     };
     next();
@@ -52,7 +60,28 @@ describe('School Admin API routes', () => {
     expect(res.status).toBe(403);
   });
 
-  it('scopes overview query to authenticated schoolId', async () => {
+  it('rejects STUDENT and PARENT roles from accessing school admin overview with 403', async () => {
+    const studentRes = await request(app)
+      .get(API_ROUTES.SCHOOL.OVERVIEW)
+      .set('x-test-role', 'STUDENT');
+    expect(studentRes.status).toBe(403);
+
+    const parentRes = await request(app)
+      .get(API_ROUTES.SCHOOL.OVERVIEW)
+      .set('x-test-role', 'PARENT');
+    expect(parentRes.status).toBe(403);
+  });
+
+  it('rejects school admin request if tenant context is missing from session', async () => {
+    const res = await request(app)
+      .get(API_ROUTES.SCHOOL.OVERVIEW)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('x-test-school-id', 'null');
+
+    expect(res.status).toBe(403);
+  });
+
+  it('scopes overview query strictly to authenticated session schoolId', async () => {
     const spy = vi.spyOn(schoolAdminService, 'getSchoolOverview').mockResolvedValue({
       schoolName: 'Synthetic High',
       activeAcademicYear: '2026-2027',
@@ -61,15 +90,38 @@ describe('School Admin API routes', () => {
       totalClasses: 6,
       totalSections: 12,
       activeSupportPlans: 3,
+      attendance: {
+        recordedDate: '2026-10-14',
+        totalRecorded: 120,
+        present: 110,
+        absent: 6,
+        late: 2,
+        excused: 2,
+        attendanceRate: 93,
+        trend: [],
+      },
+      academic: {
+        activeAssignments: 5,
+        upcomingAssessments: 2,
+        totalAssessments: 8,
+        recentAssessments: [],
+      },
+      activity: {
+        recentStudents: [],
+        recentAuditLogs: [],
+      },
+      alerts: [],
     });
 
     const res = await request(app)
       .get(API_ROUTES.SCHOOL.OVERVIEW)
-      .set('x-test-role', 'SCHOOL_ADMIN');
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('x-test-school-id', 'school-tenant-xyz');
 
     expect(res.status).toBe(200);
-    expect(spy).toHaveBeenCalledWith('33333333-3333-4333-8333-333333333333');
+    expect(spy).toHaveBeenCalledWith('school-tenant-xyz');
     expect(res.body.data.schoolName).toBe('Synthetic High');
+    expect(res.body.data.attendance.attendanceRate).toBe(93);
   });
 
   it('validates academic year payload on POST /academic-years', async () => {

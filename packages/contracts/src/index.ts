@@ -144,6 +144,63 @@ export interface PlatformOverviewDto {
   alerts?: PlatformAlertDto[];
 }
 
+export interface AttendanceTrendItemDto {
+  date: string;
+  present: number;
+  absent: number;
+  total: number;
+  rate: number;
+}
+
+export interface SchoolAttendanceSummaryDto {
+  recordedDate: string;
+  totalRecorded: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  attendanceRate: number;
+  trend?: AttendanceTrendItemDto[];
+}
+
+export interface SchoolRecentAssessmentDto {
+  id: string;
+  title: string;
+  assessmentDate: string;
+  subjectName: string;
+  className: string;
+  maxMarks: number;
+  weightPercentage: number;
+}
+
+export interface SchoolAcademicSummaryDto {
+  activeAssignments: number;
+  upcomingAssessments: number;
+  totalAssessments: number;
+  recentAssessments: SchoolRecentAssessmentDto[];
+}
+
+export interface SchoolRecentStudentDto {
+  id: string;
+  name: string;
+  studentIdNumber: string;
+  createdAt: string;
+}
+
+export interface SchoolRecentActivityDto {
+  recentStudents: SchoolRecentStudentDto[];
+  recentAuditLogs: AuditLogDto[];
+}
+
+export interface SchoolAlertDto {
+  id: string;
+  type: 'WARNING' | 'INFO' | 'ACTION_REQUIRED';
+  title: string;
+  message: string;
+  actionUrl?: string;
+  actionLabel?: string;
+}
+
 export interface SchoolOverviewDto {
   schoolName: string;
   activeAcademicYear: string | null;
@@ -152,6 +209,10 @@ export interface SchoolOverviewDto {
   totalClasses: number;
   totalSections: number;
   activeSupportPlans: number;
+  attendance?: SchoolAttendanceSummaryDto;
+  academic?: SchoolAcademicSummaryDto;
+  activity?: SchoolRecentActivityDto;
+  alerts?: SchoolAlertDto[];
 }
 
 export interface AcademicYearDto {

@@ -2,7 +2,11 @@ import type {
   AcademicYearDto,
   AuditLogDto,
   ClassDto,
+  SchoolAcademicSummaryDto,
+  SchoolAlertDto,
+  SchoolAttendanceSummaryDto,
   SchoolOverviewDto,
+  SchoolRecentActivityDto,
   SchoolSettingsDto,
   SectionDto,
   StaffMemberDto,
@@ -24,6 +28,8 @@ import { hashPassword } from '../../shared/security/password.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 
 export async function getSchoolOverview(schoolId: string): Promise<SchoolOverviewDto> {
+  const now = new Date();
+
   const [
     school,
     activeYear,
@@ -32,6 +38,15 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
     totalClasses,
     totalSections,
     activeSupportPlans,
+    latestAttendanceRecord,
+    recentDatesWithAttendance,
+    activeAssignments,
+    upcomingAssessments,
+    totalAssessments,
+    recentAssessmentsRaw,
+    recentStudentsRaw,
+    recentAuditLogsRaw,
+    pendingFlagsCount,
   ] = await Promise.all([
     prisma.school.findUnique({ where: { id: schoolId }, select: { name: true } }),
     prisma.academicYear.findFirst({
@@ -43,10 +58,229 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
     prisma.class.count({ where: { schoolId } }),
     prisma.section.count({ where: { schoolId } }),
     prisma.supportPlan.count({ where: { schoolId, status: 'ACTIVE' } }),
+    // Latest attendance date
+    prisma.attendanceRecord.findFirst({
+      where: { schoolId },
+      orderBy: { attendanceDate: 'desc' },
+      select: { attendanceDate: true },
+    }),
+    // Distinct recent attendance dates for weekly trend
+    prisma.attendanceRecord.findMany({
+      where: { schoolId },
+      select: { attendanceDate: true },
+      distinct: ['attendanceDate'],
+      orderBy: { attendanceDate: 'desc' },
+      take: 7,
+    }),
+    // Active published assignments
+    prisma.assignment.count({ where: { schoolId, status: 'PUBLISHED' } }),
+    // Upcoming assessments
+    prisma.assessment.count({ where: { schoolId, assessmentDate: { gte: now } } }),
+    // Total assessments
+    prisma.assessment.count({ where: { schoolId } }),
+    // Recent assessments with subject and class information
+    prisma.assessment.findMany({
+      where: { schoolId },
+      orderBy: { assessmentDate: 'desc' },
+      take: 5,
+      include: {
+        courseOffering: {
+          include: {
+            subject: { select: { name: true } },
+            section: {
+              include: {
+                class: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+    // Recent registered students
+    prisma.studentProfile.findMany({
+      where: { schoolId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        studentIdNumber: true,
+        createdAt: true,
+      },
+    }),
+    // Recent audit events for this school
+    prisma.auditLog.findMany({
+      where: { schoolId },
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+      include: {
+        actor: { select: { email: true } },
+      },
+    }),
+    // Pending support flags
+    prisma.supportFlag.count({ where: { schoolId, status: 'PROPOSED' } }),
   ]);
 
   if (!school) {
     throw new NotFoundError('School not found.');
+  }
+
+  // Attendance computation
+  let attendance: SchoolAttendanceSummaryDto;
+  if (latestAttendanceRecord) {
+    const targetDate = latestAttendanceRecord.attendanceDate;
+    const targetDateRecords = await prisma.attendanceRecord.findMany({
+      where: { schoolId, attendanceDate: targetDate },
+      select: { status: true },
+    });
+
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+    let excused = 0;
+
+    for (const rec of targetDateRecords) {
+      if (rec.status === 'PRESENT') present++;
+      else if (rec.status === 'ABSENT') absent++;
+      else if (rec.status === 'LATE') late++;
+      else if (rec.status === 'EXCUSED') excused++;
+    }
+
+    const totalRecorded = targetDateRecords.length;
+    const attendanceRate =
+      totalRecorded > 0 ? Math.round(((present + late) / totalRecorded) * 100) : 0;
+
+    // Daily trend from recent dates
+    const trendDates = recentDatesWithAttendance.map((d) => d.attendanceDate).reverse();
+    const trend = await Promise.all(
+      trendDates.map(async (d) => {
+        const dayRecords = await prisma.attendanceRecord.findMany({
+          where: { schoolId, attendanceDate: d },
+          select: { status: true },
+        });
+        const dayPresent = dayRecords.filter(
+          (r) => r.status === 'PRESENT' || r.status === 'LATE',
+        ).length;
+        const dayAbsent = dayRecords.filter((r) => r.status === 'ABSENT').length;
+        const dayTotal = dayRecords.length;
+        const rate = dayTotal > 0 ? Math.round((dayPresent / dayTotal) * 100) : 0;
+        return {
+          date: d.toISOString().slice(0, 10),
+          present: dayPresent,
+          absent: dayAbsent,
+          total: dayTotal,
+          rate,
+        };
+      }),
+    );
+
+    attendance = {
+      recordedDate: targetDate.toISOString().slice(0, 10),
+      totalRecorded,
+      present,
+      absent,
+      late,
+      excused,
+      attendanceRate,
+      trend,
+    };
+  } else {
+    attendance = {
+      recordedDate: now.toISOString().slice(0, 10),
+      totalRecorded: 0,
+      present: 0,
+      absent: 0,
+      late: 0,
+      excused: 0,
+      attendanceRate: 0,
+      trend: [],
+    };
+  }
+
+  // Academic summary
+  const academic: SchoolAcademicSummaryDto = {
+    activeAssignments,
+    upcomingAssessments,
+    totalAssessments,
+    recentAssessments: recentAssessmentsRaw.map((a) => ({
+      id: a.id,
+      title: a.title,
+      assessmentDate: a.assessmentDate.toISOString().slice(0, 10),
+      subjectName: a.courseOffering.subject.name,
+      className: `${a.courseOffering.section.class.name} (${a.courseOffering.section.name})`,
+      maxMarks: Number(a.maxMarks),
+      weightPercentage: Number(a.weightPercentage),
+    })),
+  };
+
+  // Recent activity
+  const activity: SchoolRecentActivityDto = {
+    recentStudents: recentStudentsRaw.map((s) => ({
+      id: s.id,
+      name: `${s.firstName} ${s.lastName}`,
+      studentIdNumber: s.studentIdNumber,
+      createdAt: s.createdAt.toISOString(),
+    })),
+    recentAuditLogs: recentAuditLogsRaw.map((log) => ({
+      id: log.id,
+      schoolId: log.schoolId,
+      actorId: log.actorId,
+      actorEmail: log.actor?.email ?? null,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      delta: log.delta as Record<string, unknown> | null,
+      ipAddress: log.ipAddress,
+      createdAt: log.createdAt.toISOString(),
+    })),
+  };
+
+  // Actionable alerts & notifications
+  const alerts: SchoolAlertDto[] = [];
+  if (!activeYear) {
+    alerts.push({
+      id: 'no-active-year',
+      type: 'WARNING',
+      title: 'No Active Academic Year',
+      message:
+        'An active academic year must be designated before scheduling courses and recording attendance.',
+      actionUrl: '/admin/academic',
+      actionLabel: 'Configure Academic Year',
+    });
+  }
+
+  if (pendingFlagsCount > 0) {
+    alerts.push({
+      id: 'pending-support-flags',
+      type: 'ACTION_REQUIRED',
+      title: 'Student Support Flags Require Review',
+      message: `${pendingFlagsCount} student support flag${pendingFlagsCount > 1 ? 's' : ''} proposed by teachers require administrative review.`,
+      actionUrl: '/admin/settings',
+      actionLabel: 'Review Audit & Logs',
+    });
+  }
+
+  if (totalStaff === 0) {
+    alerts.push({
+      id: 'no-staff',
+      type: 'INFO',
+      title: 'No Teaching Staff Provisioned',
+      message: 'Add faculty members to assign them to courses and classroom sections.',
+      actionUrl: '/admin/staff',
+      actionLabel: 'Manage Staff',
+    });
+  }
+
+  if (totalStudents === 0) {
+    alerts.push({
+      id: 'no-students',
+      type: 'INFO',
+      title: 'No Students Enrolled',
+      message: 'Register students into your school directory to begin classroom allocations.',
+      actionUrl: '/admin/students',
+      actionLabel: 'Register Students',
+    });
   }
 
   return {
@@ -57,6 +291,10 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
     totalClasses,
     totalSections,
     activeSupportPlans,
+    attendance,
+    academic,
+    activity,
+    alerts,
   };
 }
 
