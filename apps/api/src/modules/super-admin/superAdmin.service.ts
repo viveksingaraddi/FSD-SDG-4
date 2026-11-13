@@ -4,6 +4,7 @@ import type {
   SchoolDetailDto,
   SchoolSummaryDto,
 } from '@fsd-sdg4/contracts';
+import type { SchoolStatus } from '@prisma/client';
 import type { CreateSchoolInput, UpdateSchoolInput } from '@fsd-sdg4/validation';
 import { prisma } from '../../shared/db/prisma.js';
 import { ConflictError, NotFoundError } from '../../shared/errors/appError.js';
@@ -112,10 +113,14 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
   };
 }
 
-export async function listSchools(search?: string): Promise<SchoolSummaryDto[]> {
+export async function listSchools(
+  search?: string,
+  status?: SchoolStatus,
+): Promise<SchoolSummaryDto[]> {
   const schools = await prisma.school.findMany({
     where: {
       deletedAt: null,
+      ...(status ? { status } : {}),
       ...(search
         ? {
             OR: [
@@ -159,6 +164,7 @@ export async function getSchoolById(id: string): Promise<SchoolDetailDto> {
           users: true,
           studentProfiles: true,
           classes: true,
+          sections: true,
           teacherProfiles: true,
         },
       },
@@ -173,6 +179,17 @@ export async function getSchoolById(id: string): Promise<SchoolDetailDto> {
     throw new NotFoundError('School tenant was not found.');
   }
 
+  const recentAuditLogs = await prisma.auditLog.findMany({
+    where: { schoolId: id },
+    orderBy: { createdAt: 'desc' },
+    take: 15,
+    include: {
+      actor: {
+        select: { email: true },
+      },
+    },
+  });
+
   return {
     id: school.id,
     name: school.name,
@@ -184,8 +201,19 @@ export async function getSchoolById(id: string): Promise<SchoolDetailDto> {
     userCount: school._count.users,
     studentCount: school._count.studentProfiles,
     classCount: school._count.classes,
+    sectionCount: school._count.sections,
     staffCount: school._count.teacherProfiles,
     activeAcademicYear: school.academicYears[0]?.name ?? null,
+    recentAuditLogs: recentAuditLogs.map((log) => ({
+      id: log.id,
+      schoolId: log.schoolId,
+      actorId: log.actorId,
+      actorEmail: log.actor?.email ?? null,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      createdAt: log.createdAt.toISOString(),
+    })),
   };
 }
 
@@ -285,11 +313,15 @@ export async function updateSchool(
   };
 }
 
-export async function listPlatformAuditLogs(actionFilter?: string): Promise<AuditLogDto[]> {
+export async function listPlatformAuditLogs(
+  actionFilter?: string,
+  schoolId?: string,
+): Promise<AuditLogDto[]> {
   const logs = await prisma.auditLog.findMany({
-    ...(actionFilter
-      ? { where: { action: { contains: actionFilter, mode: 'insensitive' as const } } }
-      : {}),
+    where: {
+      ...(actionFilter ? { action: { contains: actionFilter, mode: 'insensitive' as const } } : {}),
+      ...(schoolId ? { schoolId } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     take: 100,
     include: {

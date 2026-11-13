@@ -55,7 +55,7 @@ export function SearchInput({
 
 export interface DataTableColumn<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   render: (row: T) => ReactNode;
   align?: 'left' | 'right' | undefined;
   widthClass?: string | undefined;

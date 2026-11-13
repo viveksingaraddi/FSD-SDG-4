@@ -97,6 +97,8 @@ export interface SchoolDetailDto extends SchoolSummaryDto {
   classCount: number;
   staffCount: number;
   activeAcademicYear: string | null;
+  sectionCount?: number;
+  recentAuditLogs?: AuditLogDto[];
 }
 
 export interface PlatformUserBreakdownDto {

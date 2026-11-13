@@ -75,11 +75,11 @@ export function FormField({
 }
 
 const CONTROL_BASE_CLASS =
-  'w-full min-h-[44px] md:min-h-[40px] rounded-[var(--radius-md)] border bg-[var(--color-surface-elevated)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors duration-[var(--transition-fast)] disabled:cursor-not-allowed disabled:bg-[var(--color-surface-sunken)] disabled:opacity-70';
+  'w-full min-h-[44px] md:min-h-[40px] rounded-[var(--radius-md)] border bg-[var(--color-surface-card)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] transition-colors duration-[var(--transition-fast)] disabled:cursor-not-allowed disabled:bg-[var(--color-surface-sunken)] disabled:opacity-70';
 
 function getBorderClass(hasError: boolean): string {
   return hasError
-    ? 'border-[var(--color-semantic-danger-fg)]'
+    ? 'border-[var(--color-semantic-danger)]'
     : 'border-[var(--color-border-strong)] hover:border-[var(--color-text-muted)]';
 }
 

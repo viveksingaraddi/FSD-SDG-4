@@ -233,6 +233,12 @@ export function SuperAdminDashboardPage() {
             <Button
               variant="outline"
               size="sm"
+              leftIcon={
+                <RefreshCw
+                  className={`h-4 w-4 ${overviewQuery.isFetching ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+              }
               onClick={() => {
                 void overviewQuery.refetch();
                 void auditQuery.refetch();
@@ -240,10 +246,6 @@ export function SuperAdminDashboardPage() {
               disabled={overviewQuery.isFetching || auditQuery.isFetching}
               aria-label="Refresh platform telemetry"
             >
-              <RefreshCw
-                className={`h-4 w-4 mr-1.5 ${overviewQuery.isFetching ? 'animate-spin' : ''}`}
-                aria-hidden="true"
-              />
               Refresh
             </Button>
             <Link to="/super-admin/schools">
@@ -479,31 +481,33 @@ export function SuperAdminDashboardPage() {
                 </div>
 
                 {trends.length > 0 ? (
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3">
                     <div
-                      className="flex items-end gap-3 h-28 pt-2 pb-1"
+                      className="flex items-end gap-3 h-36 pt-3 pb-2 px-1"
                       role="img"
                       aria-label="School registration trends by period"
                     >
                       {trends.map((item) => {
                         const heightPct = Math.max(
-                          18,
+                          20,
                           Math.round((item.count / maxTrendCount) * 100),
                         );
                         return (
                           <div
                             key={item.period}
-                            className="flex flex-1 flex-col items-center gap-1.5 h-full justify-end"
+                            className="flex flex-1 flex-col items-center justify-end h-full"
                           >
-                            <span className="text-xs font-bold text-[var(--color-text-primary)]">
+                            <span className="text-xs font-bold text-[var(--color-text-primary)] mb-1.5">
                               {item.count}
                             </span>
-                            <div
-                              className="w-full max-w-[42px] rounded-t-[var(--radius-sm)] bg-[var(--color-brand-primary)] hover:opacity-90 transition-all"
-                              style={{ height: `${heightPct}%` }}
-                              title={`${item.period}: ${item.count} school(s)`}
-                            />
-                            <span className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[64px]">
+                            <div className="flex-1 w-full max-w-[44px] flex items-end justify-center">
+                              <div
+                                className="w-full rounded-t-[var(--radius-sm)] bg-[var(--color-brand-primary)] hover:opacity-90 transition-all shadow-xs"
+                                style={{ height: `${heightPct}%` }}
+                                title={`${item.period}: ${item.count} school(s)`}
+                              />
+                            </div>
+                            <span className="text-[11px] font-medium text-[var(--color-text-muted)] truncate max-w-[72px] mt-2 text-center">
                               {item.period}
                             </span>
                           </div>
