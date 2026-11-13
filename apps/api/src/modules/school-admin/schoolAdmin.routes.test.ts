@@ -350,4 +350,299 @@ describe('School Admin API routes', () => {
       expect.anything(),
     );
   });
+
+  it('updates academic year via PATCH /academic-years/:id with tenant isolation', async () => {
+    const yearId = '11111111-2222-4333-8444-555555555555';
+    const spy = vi.spyOn(schoolAdminService, 'updateAcademicYear').mockResolvedValue({
+      id: yearId,
+      name: '2026-2027 Revised',
+      startDate: '2026-06-01',
+      endDate: '2027-04-30',
+      status: 'ACTIVE',
+      sectionCount: 5,
+    });
+
+    const res = await request(app)
+      .patch(`${API_ROUTES.SCHOOL.ACADEMIC_YEARS}/${yearId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({
+        name: '2026-2027 Revised',
+        startDate: '2026-06-01',
+        endDate: '2027-04-30',
+        status: 'ACTIVE',
+      });
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      yearId,
+      expect.objectContaining({ name: '2026-2027 Revised', status: 'ACTIVE' }),
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+    expect(res.body.data.name).toBe('2026-2027 Revised');
+  });
+
+  it('updates class via PATCH /classes/:id and deletes via DELETE /classes/:id', async () => {
+    const classId = '11111111-2222-4333-8444-555555555555';
+    const updateSpy = vi.spyOn(schoolAdminService, 'updateClass').mockResolvedValue({
+      id: classId,
+      name: 'Grade 8 Updated',
+      stage: 'Middle School',
+      sortOrder: 8,
+      sections: [],
+      studentCount: 0,
+    });
+    const deleteSpy = vi
+      .spyOn(schoolAdminService, 'deleteClass')
+      .mockResolvedValue({ success: true });
+
+    const patchRes = await request(app)
+      .patch(`${API_ROUTES.SCHOOL.CLASSES}/${classId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({ name: 'Grade 8 Updated', stage: 'Middle School' });
+
+    expect(patchRes.status).toBe(200);
+    expect(updateSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      classId,
+      expect.objectContaining({ name: 'Grade 8 Updated' }),
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+
+    const deleteRes = await request(app)
+      .delete(`${API_ROUTES.SCHOOL.CLASSES}/${classId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      classId,
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+  });
+
+  it('updates section via PATCH /sections/:id and deletes via DELETE /sections/:id', async () => {
+    const sectionId = '11111111-2222-4333-8444-555555555555';
+    const updateSpy = vi.spyOn(schoolAdminService, 'updateSection').mockResolvedValue({
+      id: sectionId,
+      name: '8-B',
+      capacity: 35,
+      roomNumber: 'Room 202',
+      academicYearId: '11111111-1111-4111-8111-111111111111',
+      academicYearName: '2026-2027',
+      studentCount: 15,
+    });
+    const deleteSpy = vi
+      .spyOn(schoolAdminService, 'deleteSection')
+      .mockResolvedValue({ success: true });
+
+    const patchRes = await request(app)
+      .patch(`${API_ROUTES.SCHOOL.SECTIONS}/${sectionId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({ name: '8-B', capacity: 35 });
+
+    expect(patchRes.status).toBe(200);
+    expect(updateSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      sectionId,
+      expect.objectContaining({ name: '8-B', capacity: 35 }),
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+
+    const deleteRes = await request(app)
+      .delete(`${API_ROUTES.SCHOOL.SECTIONS}/${sectionId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      sectionId,
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+  });
+
+  it('updates subject via PATCH /subjects/:id and deletes via DELETE /subjects/:id', async () => {
+    const subjectId = '11111111-2222-4333-8444-555555555555';
+    const updateSpy = vi.spyOn(schoolAdminService, 'updateSubject').mockResolvedValue({
+      id: subjectId,
+      name: 'Advanced Science',
+      code: 'SCI-ADV',
+      description: 'Advanced curriculum',
+      credits: '4.00',
+      offeringCount: 0,
+    });
+    const deleteSpy = vi
+      .spyOn(schoolAdminService, 'deleteSubject')
+      .mockResolvedValue({ success: true });
+
+    const patchRes = await request(app)
+      .patch(`${API_ROUTES.SCHOOL.SUBJECTS}/${subjectId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({ name: 'Advanced Science', code: 'SCI-ADV' });
+
+    expect(patchRes.status).toBe(200);
+    expect(updateSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      subjectId,
+      expect.objectContaining({ name: 'Advanced Science' }),
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+
+    const deleteRes = await request(app)
+      .delete(`${API_ROUTES.SCHOOL.SUBJECTS}/${subjectId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      subjectId,
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+  });
+
+  it('manages course offerings and teacher allocations via /offerings', async () => {
+    const offeringId = '11111111-2222-4333-8444-555555555555';
+    const teacherId = '22222222-3333-4444-8555-666666666666';
+    const listSpy = vi.spyOn(schoolAdminService, 'listCourseOfferings').mockResolvedValue([
+      {
+        id: offeringId,
+        academicYearId: '11111111-1111-4111-8111-111111111111',
+        academicYearName: '2026-2027',
+        classId: '33333333-4444-4555-8666-777777777777',
+        className: 'Grade 8',
+        sectionId: '44444444-5555-4666-8777-888888888888',
+        sectionName: '8-A',
+        subjectId: '55555555-6666-4777-8888-999999999999',
+        subjectName: 'Mathematics',
+        subjectCode: 'MATH-8',
+        syllabus: null,
+        teachers: [],
+      },
+    ]);
+
+    const getRes = await request(app)
+      .get(API_ROUTES.SCHOOL.OFFERINGS)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(getRes.status).toBe(200);
+    expect(listSpy).toHaveBeenCalledWith('tenant-school-1', expect.anything());
+    expect(getRes.body.data).toHaveLength(1);
+
+    const createSpy = vi.spyOn(schoolAdminService, 'createCourseOffering').mockResolvedValue({
+      id: offeringId,
+      academicYearId: '11111111-1111-4111-8111-111111111111',
+      academicYearName: '2026-2027',
+      classId: '33333333-4444-4555-8666-777777777777',
+      className: 'Grade 8',
+      sectionId: '44444444-5555-4666-8777-888888888888',
+      sectionName: '8-A',
+      subjectId: '55555555-6666-4777-8888-999999999999',
+      subjectName: 'Mathematics',
+      subjectCode: 'MATH-8',
+      syllabus: null,
+      teachers: [],
+    });
+
+    const createRes = await request(app)
+      .post(API_ROUTES.SCHOOL.OFFERINGS)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({
+        academicYearId: '11111111-1111-4111-8111-111111111111',
+        sectionId: '44444444-5555-4666-8777-888888888888',
+        subjectId: '55555555-6666-4777-8888-999999999999',
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      expect.objectContaining({ subjectId: '55555555-6666-4777-8888-999999999999' }),
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+
+    const assignSpy = vi.spyOn(schoolAdminService, 'assignOfferingTeacher').mockResolvedValue({
+      allocationId: 'alloc-1',
+      teacherId,
+      teacherName: 'Ananya Verma',
+      employeeId: 'TCH-001',
+      role: 'PRIMARY',
+    });
+
+    const assignRes = await request(app)
+      .post(`${API_ROUTES.SCHOOL.OFFERINGS}/${offeringId}/teachers`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1')
+      .send({ teacherId, role: 'PRIMARY' });
+
+    expect(assignRes.status).toBe(201);
+    expect(assignSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      offeringId,
+      { teacherId, role: 'PRIMARY' },
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+
+    const removeSpy = vi
+      .spyOn(schoolAdminService, 'removeOfferingTeacher')
+      .mockResolvedValue({ success: true });
+
+    const removeRes = await request(app)
+      .delete(`${API_ROUTES.SCHOOL.OFFERINGS}/${offeringId}/teachers/${teacherId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(removeRes.status).toBe(200);
+    expect(removeSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      offeringId,
+      teacherId,
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+
+    const deleteOfferingSpy = vi
+      .spyOn(schoolAdminService, 'deleteCourseOffering')
+      .mockResolvedValue({ success: true });
+
+    const deleteRes = await request(app)
+      .delete(`${API_ROUTES.SCHOOL.OFFERINGS}/${offeringId}`)
+      .set('x-test-role', 'SCHOOL_ADMIN')
+      .set('X-Requested-With', 'XMLHttpRequest')
+      .set('x-test-school-id', 'tenant-school-1');
+
+    expect(deleteRes.status).toBe(200);
+    expect(deleteOfferingSpy).toHaveBeenCalledWith(
+      'tenant-school-1',
+      offeringId,
+      '11111111-1111-4111-8111-111111111111',
+      expect.anything(),
+    );
+  });
 });

@@ -3,6 +3,8 @@ import {
   type AcademicYearDto,
   type AuditLogDto,
   type ClassDto,
+  type CourseOfferingDto,
+  type OfferingTeacherDto,
   type SchoolOverviewDto,
   type SchoolSettingsDto,
   type SectionDto,
@@ -14,15 +16,22 @@ import {
 } from '@fsd-sdg4/contracts';
 import type {
   AllocateTeacherInput,
+  AssignOfferingTeacherInput,
   CreateAcademicYearInput,
   CreateClassInput,
+  CreateOfferingInput,
   CreateSectionInput,
   CreateStaffInput,
   CreateStudentInput,
   CreateSubjectInput,
+  OfferingFilterQuery,
   StaffFilterQuery,
+  UpdateAcademicYearInput,
+  UpdateClassInput,
   UpdateSchoolSettingsInput,
+  UpdateSectionInput,
   UpdateStaffInput,
+  UpdateSubjectInput,
 } from '@fsd-sdg4/validation';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
@@ -43,6 +52,16 @@ export function createAcademicYearRequest(
   return apiPost<AcademicYearDto>(API_ROUTES.SCHOOL.ACADEMIC_YEARS, input);
 }
 
+export function updateAcademicYearRequest(
+  id: string,
+  input: UpdateAcademicYearInput,
+): Promise<AcademicYearDto> {
+  return apiPatch<AcademicYearDto>(
+    `${API_ROUTES.SCHOOL.ACADEMIC_YEARS}/${encodeURIComponent(id)}`,
+    input,
+  );
+}
+
 export function activateAcademicYearRequest(id: string): Promise<AcademicYearDto> {
   return apiPatch<AcademicYearDto>(
     `${API_ROUTES.SCHOOL.ACADEMIC_YEARS}/${encodeURIComponent(id)}/activate`,
@@ -57,8 +76,24 @@ export function createClassRequest(input: CreateClassInput): Promise<ClassDto> {
   return apiPost<ClassDto>(API_ROUTES.SCHOOL.CLASSES, input);
 }
 
+export function updateClassRequest(id: string, input: UpdateClassInput): Promise<ClassDto> {
+  return apiPatch<ClassDto>(`${API_ROUTES.SCHOOL.CLASSES}/${encodeURIComponent(id)}`, input);
+}
+
+export function deleteClassRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.CLASSES}/${encodeURIComponent(id)}`);
+}
+
 export function createSectionRequest(input: CreateSectionInput): Promise<SectionDto> {
   return apiPost<SectionDto>(API_ROUTES.SCHOOL.SECTIONS, input);
+}
+
+export function updateSectionRequest(id: string, input: UpdateSectionInput): Promise<SectionDto> {
+  return apiPatch<SectionDto>(`${API_ROUTES.SCHOOL.SECTIONS}/${encodeURIComponent(id)}`, input);
+}
+
+export function deleteSectionRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.SECTIONS}/${encodeURIComponent(id)}`);
 }
 
 export function fetchSubjects(signal?: AbortSignal): Promise<SubjectDto[]> {
@@ -67,6 +102,62 @@ export function fetchSubjects(signal?: AbortSignal): Promise<SubjectDto[]> {
 
 export function createSubjectRequest(input: CreateSubjectInput): Promise<SubjectDto> {
   return apiPost<SubjectDto>(API_ROUTES.SCHOOL.SUBJECTS, input);
+}
+
+export function updateSubjectRequest(id: string, input: UpdateSubjectInput): Promise<SubjectDto> {
+  return apiPatch<SubjectDto>(`${API_ROUTES.SCHOOL.SUBJECTS}/${encodeURIComponent(id)}`, input);
+}
+
+export function deleteSubjectRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.SUBJECTS}/${encodeURIComponent(id)}`);
+}
+
+export function fetchCourseOfferings(
+  filter?: OfferingFilterQuery,
+  signal?: AbortSignal,
+): Promise<CourseOfferingDto[]> {
+  const params = new URLSearchParams();
+  if (filter?.academicYearId) params.set('academicYearId', filter.academicYearId);
+  if (filter?.classId) params.set('classId', filter.classId);
+  if (filter?.sectionId) params.set('sectionId', filter.sectionId);
+  if (filter?.subjectId) params.set('subjectId', filter.subjectId);
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<CourseOfferingDto[]>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function createCourseOfferingRequest(
+  input: CreateOfferingInput,
+): Promise<CourseOfferingDto> {
+  return apiPost<CourseOfferingDto>(API_ROUTES.SCHOOL.OFFERINGS, input);
+}
+
+export function deleteCourseOfferingRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/${encodeURIComponent(id)}`,
+  );
+}
+
+export function assignOfferingTeacherRequest(
+  id: string,
+  input: AssignOfferingTeacherInput,
+): Promise<OfferingTeacherDto> {
+  return apiPost<OfferingTeacherDto>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/${encodeURIComponent(id)}/teachers`,
+    input,
+  );
+}
+
+export function removeOfferingTeacherRequest(
+  id: string,
+  teacherId: string,
+): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/${encodeURIComponent(id)}/teachers/${encodeURIComponent(teacherId)}`,
+  );
 }
 
 export function fetchStaff(

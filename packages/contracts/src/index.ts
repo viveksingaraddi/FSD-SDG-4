@@ -221,6 +221,7 @@ export interface AcademicYearDto {
   startDate: string;
   endDate: string;
   status: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  sectionCount?: number;
 }
 
 export interface SectionDto {
@@ -230,6 +231,9 @@ export interface SectionDto {
   roomNumber: string | null;
   academicYearId: string;
   academicYearName: string;
+  classId?: string;
+  className?: string;
+  studentCount?: number;
 }
 
 export interface ClassDto {
@@ -238,6 +242,7 @@ export interface ClassDto {
   stage: string;
   sortOrder: number;
   sections: SectionDto[];
+  studentCount?: number;
 }
 
 export interface SubjectDto {
@@ -246,6 +251,30 @@ export interface SubjectDto {
   code: string;
   description: string | null;
   credits: string | null;
+  offeringCount?: number;
+}
+
+export interface OfferingTeacherDto {
+  allocationId: string;
+  teacherId: string;
+  teacherName: string;
+  employeeId: string;
+  role: 'PRIMARY' | 'ASSISTANT';
+}
+
+export interface CourseOfferingDto {
+  id: string;
+  academicYearId: string;
+  academicYearName: string;
+  classId: string;
+  className: string;
+  sectionId: string;
+  sectionName: string;
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string;
+  syllabus: string | null;
+  teachers: OfferingTeacherDto[];
 }
 
 export interface StaffMemberDto {

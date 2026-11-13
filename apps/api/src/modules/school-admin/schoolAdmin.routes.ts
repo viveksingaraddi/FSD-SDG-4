@@ -2,17 +2,24 @@ import { Router, type Router as ExpressRouter } from 'express';
 import { API_ROUTES } from '@fsd-sdg4/contracts';
 import {
   allocateTeacherSchema,
+  assignOfferingTeacherSchema,
   createAcademicYearSchema,
   createClassSchema,
+  createOfferingSchema,
   createSectionSchema,
   createStaffSchema,
   createStudentSchema,
   createSubjectSchema,
   idParamSchema,
+  offeringFilterQuerySchema,
   searchQuerySchema,
   staffFilterQuerySchema,
+  updateAcademicYearSchema,
+  updateClassSchema,
   updateSchoolSettingsSchema,
+  updateSectionSchema,
   updateStaffSchema,
+  updateSubjectSchema,
   updateUserStatusSchema,
   z,
 } from '@fsd-sdg4/validation';
@@ -26,31 +33,48 @@ import { resolveTenantSchoolId } from '../identity/tenantAuthorization.js';
 import {
   activateAcademicYear,
   allocateTeacher,
+  assignOfferingTeacher,
   createAcademicYear,
   createClass,
+  createCourseOffering,
   createSection,
   createStaff,
   createStudent,
   createSubject,
   deallocateTeacher,
+  deleteClass,
+  deleteCourseOffering,
+  deleteSection,
   deleteStaff,
+  deleteSubject,
   getSchoolOverview,
   getSchoolSettings,
   getStaffById,
   listAcademicYears,
   listClasses,
+  listCourseOfferings,
   listSchoolAuditLogs,
   listStaff,
   listStudents,
   listSubjects,
+  removeOfferingTeacher,
+  updateAcademicYear,
+  updateClass,
   updateSchoolSettings,
+  updateSection,
   updateStaff,
   updateStaffStatus,
+  updateSubject,
 } from './schoolAdmin.service.js';
 
 const allocationParamSchema = z.object({
   id: idParamSchema.shape.id,
   allocationId: idParamSchema.shape.id,
+});
+
+const offeringTeacherParamSchema = z.object({
+  id: idParamSchema.shape.id,
+  teacherId: idParamSchema.shape.id,
 });
 
 const searchParamsSchema = z.object({
@@ -104,6 +128,27 @@ export function createSchoolAdminRouter(): ExpressRouter {
   );
 
   router.patch(
+    `${API_ROUTES.SCHOOL.ACADEMIC_YEARS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema, body: updateAcademicYearSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const updated = await updateAcademicYear(
+        schoolId,
+        id,
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, updated);
+    },
+  );
+
+  router.patch(
     `${API_ROUTES.SCHOOL.ACADEMIC_YEARS}/:id/activate`,
     authenticate,
     requireCsrfHeader,
@@ -144,6 +189,36 @@ export function createSchoolAdminRouter(): ExpressRouter {
     },
   );
 
+  router.patch(
+    `${API_ROUTES.SCHOOL.CLASSES}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema, body: updateClassSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const updated = await updateClass(schoolId, id, req.body, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, updated);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.CLASSES}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const result = await deleteClass(schoolId, id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, result);
+    },
+  );
+
   router.post(
     API_ROUTES.SCHOOL.SECTIONS,
     authenticate,
@@ -155,6 +230,36 @@ export function createSchoolAdminRouter(): ExpressRouter {
       const schoolId = await resolveTenantSchoolId(req);
       const created = await createSection(schoolId, req.body, req.auth!.userId, req.ip ?? null);
       sendSuccess(res, created, 201);
+    },
+  );
+
+  router.patch(
+    `${API_ROUTES.SCHOOL.SECTIONS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema, body: updateSectionSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const updated = await updateSection(schoolId, id, req.body, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, updated);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.SECTIONS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const result = await deleteSection(schoolId, id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, result);
     },
   );
 
@@ -181,6 +286,125 @@ export function createSchoolAdminRouter(): ExpressRouter {
       const schoolId = await resolveTenantSchoolId(req);
       const created = await createSubject(schoolId, req.body, req.auth!.userId, req.ip ?? null);
       sendSuccess(res, created, 201);
+    },
+  );
+
+  router.patch(
+    `${API_ROUTES.SCHOOL.SUBJECTS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema, body: updateSubjectSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const updated = await updateSubject(schoolId, id, req.body, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, updated);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.SUBJECTS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const result = await deleteSubject(schoolId, id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, result);
+    },
+  );
+
+  router.get(
+    API_ROUTES.SCHOOL.OFFERINGS,
+    authenticate,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_READ),
+    validateRequest({ query: offeringFilterQuerySchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const offerings = await listCourseOfferings(schoolId, req.query);
+      sendSuccess(res, offerings);
+    },
+  );
+
+  router.post(
+    API_ROUTES.SCHOOL.OFFERINGS,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ body: createOfferingSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const created = await createCourseOffering(
+        schoolId,
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, created, 201);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const result = await deleteCourseOffering(schoolId, id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, result);
+    },
+  );
+
+  router.post(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/:id/teachers`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: idParamSchema, body: assignOfferingTeacherSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const created = await assignOfferingTeacher(
+        schoolId,
+        id,
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, created, 201);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/:id/teachers/:teacherId`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ params: offeringTeacherParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id, teacherId } = req.params as { id: string; teacherId: string };
+      const result = await removeOfferingTeacher(
+        schoolId,
+        id,
+        teacherId,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, result);
     },
   );
 

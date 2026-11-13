@@ -2,6 +2,8 @@ import type {
   AcademicYearDto,
   AuditLogDto,
   ClassDto,
+  CourseOfferingDto,
+  OfferingTeacherDto,
   SchoolAcademicSummaryDto,
   SchoolAlertDto,
   SchoolAttendanceSummaryDto,
@@ -17,17 +19,24 @@ import type {
 } from '@fsd-sdg4/contracts';
 import type {
   AllocateTeacherInput,
+  AssignOfferingTeacherInput,
   CreateAcademicYearInput,
   CreateClassInput,
+  CreateOfferingInput,
   CreateSectionInput,
   CreateStaffInput,
   CreateStudentInput,
   CreateSubjectInput,
+  OfferingFilterQuery,
   StaffFilterQuery,
+  UpdateAcademicYearInput,
+  UpdateClassInput,
   UpdateSchoolSettingsInput,
+  UpdateSectionInput,
   UpdateStaffInput,
+  UpdateSubjectInput,
 } from '@fsd-sdg4/validation';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../shared/db/prisma.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { hashPassword } from '../../shared/security/password.js';
@@ -308,6 +317,11 @@ export async function listAcademicYears(schoolId: string): Promise<AcademicYearD
   const rows = await prisma.academicYear.findMany({
     where: { schoolId },
     orderBy: { startDate: 'desc' },
+    include: {
+      _count: {
+        select: { sections: true },
+      },
+    },
   });
 
   return rows.map((row) => ({
@@ -316,6 +330,7 @@ export async function listAcademicYears(schoolId: string): Promise<AcademicYearD
     startDate: row.startDate.toISOString().slice(0, 10),
     endDate: row.endDate.toISOString().slice(0, 10),
     status: row.status,
+    sectionCount: row._count.sections,
   }));
 }
 
@@ -349,6 +364,9 @@ export async function createAcademicYear(
       endDate: new Date(input.endDate),
       status: hasActive ? 'ARCHIVED' : 'ACTIVE',
     },
+    include: {
+      _count: { select: { sections: true } },
+    },
   });
 
   await recordAuditEvent({
@@ -367,6 +385,83 @@ export async function createAcademicYear(
     startDate: created.startDate.toISOString().slice(0, 10),
     endDate: created.endDate.toISOString().slice(0, 10),
     status: created.status,
+    sectionCount: created._count.sections,
+  };
+}
+
+export async function updateAcademicYear(
+  schoolId: string,
+  academicYearId: string,
+  input: UpdateAcademicYearInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<AcademicYearDto> {
+  const existing = await prisma.academicYear.findFirst({
+    where: { id: academicYearId, schoolId },
+  });
+  if (!existing) {
+    throw new NotFoundError('Academic year not found.');
+  }
+
+  const startDate = input.startDate ? new Date(input.startDate) : existing.startDate;
+  const endDate = input.endDate ? new Date(input.endDate) : existing.endDate;
+
+  if (endDate <= startDate) {
+    throw new BadRequestError('End date must be after start date.');
+  }
+
+  if (input.name && input.name !== existing.name) {
+    const duplicate = await prisma.academicYear.findFirst({
+      where: { schoolId, name: input.name, id: { not: academicYearId } },
+    });
+    if (duplicate) {
+      throw new ConflictError('An academic year with this name already exists.');
+    }
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    if (input.status === 'ACTIVE') {
+      await tx.academicYear.updateMany({
+        where: { schoolId, status: 'ACTIVE', id: { not: academicYearId } },
+        data: { status: 'ARCHIVED' },
+      });
+    }
+
+    await tx.academicYear.update({
+      where: { id: academicYearId },
+      data: {
+        ...(input.name ? { name: input.name } : {}),
+        ...(input.startDate ? { startDate: new Date(input.startDate) } : {}),
+        ...(input.endDate ? { endDate: new Date(input.endDate) } : {}),
+        ...(input.status ? { status: input.status } : {}),
+      },
+    });
+
+    return tx.academicYear.findUniqueOrThrow({
+      where: { id: academicYearId },
+      include: {
+        _count: { select: { sections: true } },
+      },
+    });
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_ACADEMIC_YEAR_UPDATED',
+    entityType: 'AcademicYear',
+    entityId: updated.id,
+    delta: input,
+    ipAddress,
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    startDate: updated.startDate.toISOString().slice(0, 10),
+    endDate: updated.endDate.toISOString().slice(0, 10),
+    status: updated.status,
+    sectionCount: updated._count.sections,
   };
 }
 
@@ -389,9 +484,16 @@ export async function activateAcademicYear(
       data: { status: 'ARCHIVED' },
     });
 
-    return tx.academicYear.update({
+    await tx.academicYear.update({
       where: { id: academicYearId },
       data: { status: 'ACTIVE' },
+    });
+
+    return tx.academicYear.findUniqueOrThrow({
+      where: { id: academicYearId },
+      include: {
+        _count: { select: { sections: true } },
+      },
     });
   });
 
@@ -410,6 +512,7 @@ export async function activateAcademicYear(
     startDate: updated.startDate.toISOString().slice(0, 10),
     endDate: updated.endDate.toISOString().slice(0, 10),
     status: updated.status,
+    sectionCount: updated._count.sections,
   };
 }
 
@@ -422,25 +525,39 @@ export async function listClasses(schoolId: string): Promise<ClassDto[]> {
         orderBy: { name: 'asc' },
         include: {
           academicYear: { select: { name: true } },
+          _count: { select: { enrollments: true } },
         },
       },
     },
   });
 
-  return rows.map((cls) => ({
-    id: cls.id,
-    name: cls.name,
-    stage: cls.stage,
-    sortOrder: cls.sortOrder,
-    sections: cls.sections.map((sec) => ({
-      id: sec.id,
-      name: sec.name,
-      capacity: sec.capacity,
-      roomNumber: sec.roomNumber,
-      academicYearId: sec.academicYearId,
-      academicYearName: sec.academicYear.name,
-    })),
-  }));
+  return rows.map((cls) => {
+    let totalClassStudents = 0;
+    const sections = cls.sections.map((sec) => {
+      const studentCount = sec._count.enrollments;
+      totalClassStudents += studentCount;
+      return {
+        id: sec.id,
+        name: sec.name,
+        capacity: sec.capacity,
+        roomNumber: sec.roomNumber,
+        academicYearId: sec.academicYearId,
+        academicYearName: sec.academicYear.name,
+        classId: cls.id,
+        className: cls.name,
+        studentCount,
+      };
+    });
+
+    return {
+      id: cls.id,
+      name: cls.name,
+      stage: cls.stage,
+      sortOrder: cls.sortOrder,
+      sections,
+      studentCount: totalClassStudents,
+    };
+  });
 }
 
 export async function createClass(
@@ -481,7 +598,124 @@ export async function createClass(
     stage: created.stage,
     sortOrder: created.sortOrder,
     sections: [],
+    studentCount: 0,
   };
+}
+
+export async function updateClass(
+  schoolId: string,
+  classId: string,
+  input: UpdateClassInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<ClassDto> {
+  const existing = await prisma.class.findFirst({
+    where: { id: classId, schoolId },
+    include: {
+      sections: {
+        include: {
+          academicYear: { select: { name: true } },
+          _count: { select: { enrollments: true } },
+        },
+      },
+    },
+  });
+  if (!existing) {
+    throw new NotFoundError('Class not found.');
+  }
+
+  if (input.name && input.name !== existing.name) {
+    const duplicate = await prisma.class.findFirst({
+      where: { schoolId, name: input.name, id: { not: classId } },
+    });
+    if (duplicate) {
+      throw new ConflictError('A class with this name already exists.');
+    }
+  }
+
+  const updated = await prisma.class.update({
+    where: { id: classId },
+    data: {
+      ...(input.name ? { name: input.name } : {}),
+      ...(input.stage ? { stage: input.stage } : {}),
+      ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+    },
+    include: {
+      sections: {
+        include: {
+          academicYear: { select: { name: true } },
+          _count: { select: { enrollments: true } },
+        },
+      },
+    },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_CLASS_UPDATED',
+    entityType: 'Class',
+    entityId: updated.id,
+    delta: input,
+    ipAddress,
+  });
+
+  let totalStudents = 0;
+  const sections = updated.sections.map((sec) => {
+    totalStudents += sec._count.enrollments;
+    return {
+      id: sec.id,
+      name: sec.name,
+      capacity: sec.capacity,
+      roomNumber: sec.roomNumber,
+      academicYearId: sec.academicYearId,
+      academicYearName: sec.academicYear.name,
+      classId: updated.id,
+      className: updated.name,
+      studentCount: sec._count.enrollments,
+    };
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    stage: updated.stage,
+    sortOrder: updated.sortOrder,
+    sections,
+    studentCount: totalStudents,
+  };
+}
+
+export async function deleteClass(
+  schoolId: string,
+  classId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ success: true }> {
+  const existing = await prisma.class.findFirst({
+    where: { id: classId, schoolId },
+    include: { _count: { select: { sections: true } } },
+  });
+  if (!existing) {
+    throw new NotFoundError('Class not found.');
+  }
+  if (existing._count.sections > 0) {
+    throw new ConflictError('Cannot delete a class that contains active sections.');
+  }
+
+  await prisma.class.delete({ where: { id: classId } });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_CLASS_DELETED',
+    entityType: 'Class',
+    entityId: classId,
+    delta: { name: existing.name },
+    ipAddress,
+  });
+
+  return { success: true };
 }
 
 export async function createSection(
@@ -527,6 +761,7 @@ export async function createSection(
     },
     include: {
       academicYear: { select: { name: true } },
+      class: { select: { name: true } },
     },
   });
 
@@ -547,13 +782,140 @@ export async function createSection(
     roomNumber: created.roomNumber,
     academicYearId: created.academicYearId,
     academicYearName: created.academicYear.name,
+    classId: created.classId,
+    className: created.class.name,
+    studentCount: 0,
   };
+}
+
+export async function updateSection(
+  schoolId: string,
+  sectionId: string,
+  input: UpdateSectionInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<SectionDto> {
+  const existing = await prisma.section.findFirst({
+    where: { id: sectionId, schoolId },
+    include: {
+      academicYear: { select: { name: true } },
+      class: { select: { name: true } },
+      _count: { select: { enrollments: true } },
+    },
+  });
+  if (!existing) {
+    throw new NotFoundError('Section not found.');
+  }
+
+  if (input.name && input.name !== existing.name) {
+    const duplicate = await prisma.section.findFirst({
+      where: {
+        schoolId,
+        academicYearId: existing.academicYearId,
+        classId: existing.classId,
+        name: input.name,
+        id: { not: sectionId },
+      },
+    });
+    if (duplicate) {
+      throw new ConflictError(
+        'A section with this name already exists in this class and academic year.',
+      );
+    }
+  }
+
+  const updated = await prisma.section.update({
+    where: { id: sectionId },
+    data: {
+      ...(input.name ? { name: input.name } : {}),
+      ...(input.capacity !== undefined ? { capacity: input.capacity } : {}),
+      ...(input.roomNumber !== undefined ? { roomNumber: input.roomNumber } : {}),
+    },
+    include: {
+      academicYear: { select: { name: true } },
+      class: { select: { name: true } },
+      _count: { select: { enrollments: true } },
+    },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_SECTION_UPDATED',
+    entityType: 'Section',
+    entityId: updated.id,
+    delta: input,
+    ipAddress,
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    capacity: updated.capacity,
+    roomNumber: updated.roomNumber,
+    academicYearId: updated.academicYearId,
+    academicYearName: updated.academicYear.name,
+    classId: updated.classId,
+    className: updated.class.name,
+    studentCount: updated._count.enrollments,
+  };
+}
+
+export async function deleteSection(
+  schoolId: string,
+  sectionId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ success: true }> {
+  const existing = await prisma.section.findFirst({
+    where: { id: sectionId, schoolId },
+    include: {
+      _count: {
+        select: {
+          enrollments: true,
+          courseOfferings: true,
+          attendanceRecords: true,
+        },
+      },
+    },
+  });
+  if (!existing) {
+    throw new NotFoundError('Section not found.');
+  }
+  if (
+    existing._count.enrollments > 0 ||
+    existing._count.courseOfferings > 0 ||
+    existing._count.attendanceRecords > 0
+  ) {
+    throw new ConflictError(
+      'Cannot delete a section with associated enrollments, course offerings, or attendance records.',
+    );
+  }
+
+  await prisma.section.delete({ where: { id: sectionId } });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_SECTION_DELETED',
+    entityType: 'Section',
+    entityId: sectionId,
+    delta: { name: existing.name },
+    ipAddress,
+  });
+
+  return { success: true };
 }
 
 export async function listSubjects(schoolId: string): Promise<SubjectDto[]> {
   const rows = await prisma.subject.findMany({
     where: { schoolId },
     orderBy: { name: 'asc' },
+    include: {
+      _count: {
+        select: { courseOfferings: true },
+      },
+    },
   });
 
   return rows.map((sub) => ({
@@ -562,6 +924,7 @@ export async function listSubjects(schoolId: string): Promise<SubjectDto[]> {
     code: sub.code,
     description: sub.description,
     credits: sub.credits ? sub.credits.toString() : null,
+    offeringCount: sub._count.courseOfferings,
   }));
 }
 
@@ -585,6 +948,9 @@ export async function createSubject(
       code: input.code,
       description: input.description ?? null,
     },
+    include: {
+      _count: { select: { courseOfferings: true } },
+    },
   });
 
   await recordAuditEvent({
@@ -603,7 +969,412 @@ export async function createSubject(
     code: created.code,
     description: created.description,
     credits: created.credits ? created.credits.toString() : null,
+    offeringCount: created._count.courseOfferings,
   };
+}
+
+export async function updateSubject(
+  schoolId: string,
+  subjectId: string,
+  input: UpdateSubjectInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<SubjectDto> {
+  const existing = await prisma.subject.findFirst({
+    where: { id: subjectId, schoolId },
+  });
+  if (!existing) {
+    throw new NotFoundError('Subject not found.');
+  }
+
+  if (input.code && input.code !== existing.code) {
+    const duplicate = await prisma.subject.findFirst({
+      where: { schoolId, code: input.code, id: { not: subjectId } },
+    });
+    if (duplicate) {
+      throw new ConflictError('A subject with this code already exists.');
+    }
+  }
+
+  const updated = await prisma.subject.update({
+    where: { id: subjectId },
+    data: {
+      ...(input.name ? { name: input.name } : {}),
+      ...(input.code ? { code: input.code } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.credits !== undefined
+        ? { credits: input.credits !== null ? new Prisma.Decimal(input.credits) : null }
+        : {}),
+    },
+    include: {
+      _count: { select: { courseOfferings: true } },
+    },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_SUBJECT_UPDATED',
+    entityType: 'Subject',
+    entityId: updated.id,
+    delta: input,
+    ipAddress,
+  });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    code: updated.code,
+    description: updated.description,
+    credits: updated.credits ? updated.credits.toString() : null,
+    offeringCount: updated._count.courseOfferings,
+  };
+}
+
+export async function deleteSubject(
+  schoolId: string,
+  subjectId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ success: true }> {
+  const existing = await prisma.subject.findFirst({
+    where: { id: subjectId, schoolId },
+    include: { _count: { select: { courseOfferings: true } } },
+  });
+  if (!existing) {
+    throw new NotFoundError('Subject not found.');
+  }
+  if (existing._count.courseOfferings > 0) {
+    throw new ConflictError('Cannot delete a subject currently assigned to course offerings.');
+  }
+
+  await prisma.subject.delete({ where: { id: subjectId } });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_SUBJECT_DELETED',
+    entityType: 'Subject',
+    entityId: subjectId,
+    delta: { code: existing.code },
+    ipAddress,
+  });
+
+  return { success: true };
+}
+
+export async function listCourseOfferings(
+  schoolId: string,
+  filter?: OfferingFilterQuery,
+): Promise<CourseOfferingDto[]> {
+  const where: Prisma.CourseOfferingWhereInput = {
+    schoolId,
+    ...(filter?.academicYearId ? { academicYearId: filter.academicYearId } : {}),
+    ...(filter?.sectionId ? { sectionId: filter.sectionId } : {}),
+    ...(filter?.subjectId ? { subjectId: filter.subjectId } : {}),
+    ...(filter?.classId ? { section: { classId: filter.classId } } : {}),
+  };
+
+  const rows = await prisma.courseOffering.findMany({
+    where,
+    orderBy: [
+      { academicYear: { startDate: 'desc' } },
+      { section: { name: 'asc' } },
+      { subject: { name: 'asc' } },
+    ],
+    include: {
+      academicYear: { select: { name: true } },
+      section: {
+        include: {
+          class: { select: { id: true, name: true } },
+        },
+      },
+      subject: true,
+      courseTeachers: {
+        include: {
+          teacher: true,
+        },
+      },
+    },
+  });
+
+  return rows.map((offering) => ({
+    id: offering.id,
+    academicYearId: offering.academicYearId,
+    academicYearName: offering.academicYear.name,
+    classId: offering.section.class.id,
+    className: offering.section.class.name,
+    sectionId: offering.sectionId,
+    sectionName: offering.section.name,
+    subjectId: offering.subjectId,
+    subjectName: offering.subject.name,
+    subjectCode: offering.subject.code,
+    syllabus: offering.syllabus,
+    teachers: offering.courseTeachers.map((ct) => ({
+      allocationId: ct.id,
+      teacherId: ct.teacherId,
+      teacherName: `${ct.teacher.firstName} ${ct.teacher.lastName}`,
+      employeeId: ct.teacher.employeeId,
+      role: ct.role,
+    })),
+  }));
+}
+
+export async function createCourseOffering(
+  schoolId: string,
+  input: CreateOfferingInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<CourseOfferingDto> {
+  const [year, section, subject] = await Promise.all([
+    prisma.academicYear.findFirst({ where: { id: input.academicYearId, schoolId } }),
+    prisma.section.findFirst({
+      where: { id: input.sectionId, schoolId },
+      include: { class: true },
+    }),
+    prisma.subject.findFirst({ where: { id: input.subjectId, schoolId } }),
+  ]);
+
+  if (!year) throw new NotFoundError('Academic year not found in this school.');
+  if (!section) throw new NotFoundError('Section not found in this school.');
+  if (!subject) throw new NotFoundError('Subject not found in this school.');
+
+  if (section.academicYearId !== input.academicYearId) {
+    throw new BadRequestError('Section does not belong to the specified academic year.');
+  }
+
+  const existing = await prisma.courseOffering.findUnique({
+    where: {
+      schoolId_academicYearId_sectionId_subjectId: {
+        schoolId,
+        academicYearId: input.academicYearId,
+        sectionId: input.sectionId,
+        subjectId: input.subjectId,
+      },
+    },
+  });
+  if (existing) {
+    throw new ConflictError('A course offering for this subject and section already exists.');
+  }
+
+  if (input.teacherId) {
+    const teacher = await prisma.teacherProfile.findFirst({
+      where: { id: input.teacherId, schoolId },
+    });
+    if (!teacher) throw new NotFoundError('Teacher not found in this school.');
+  }
+
+  const created = await prisma.$transaction(async (tx) => {
+    const offering = await tx.courseOffering.create({
+      data: {
+        schoolId,
+        academicYearId: input.academicYearId,
+        sectionId: input.sectionId,
+        subjectId: input.subjectId,
+        syllabus: input.syllabus ?? null,
+      },
+    });
+
+    if (input.teacherId) {
+      await tx.courseTeacher.create({
+        data: {
+          schoolId,
+          courseOfferingId: offering.id,
+          teacherId: input.teacherId,
+          role: input.role,
+        },
+      });
+    }
+
+    return tx.courseOffering.findUniqueOrThrow({
+      where: { id: offering.id },
+      include: {
+        academicYear: { select: { name: true } },
+        section: {
+          include: { class: { select: { id: true, name: true } } },
+        },
+        subject: true,
+        courseTeachers: {
+          include: { teacher: true },
+        },
+      },
+    });
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_OFFERING_CREATED',
+    entityType: 'CourseOffering',
+    entityId: created.id,
+    delta: {
+      sectionId: input.sectionId,
+      subjectId: input.subjectId,
+      teacherId: input.teacherId,
+    },
+    ipAddress,
+  });
+
+  return {
+    id: created.id,
+    academicYearId: created.academicYearId,
+    academicYearName: created.academicYear.name,
+    classId: created.section.class.id,
+    className: created.section.class.name,
+    sectionId: created.sectionId,
+    sectionName: created.section.name,
+    subjectId: created.subjectId,
+    subjectName: created.subject.name,
+    subjectCode: created.subject.code,
+    syllabus: created.syllabus,
+    teachers: created.courseTeachers.map((ct) => ({
+      allocationId: ct.id,
+      teacherId: ct.teacherId,
+      teacherName: `${ct.teacher.firstName} ${ct.teacher.lastName}`,
+      employeeId: ct.teacher.employeeId,
+      role: ct.role,
+    })),
+  };
+}
+
+export async function deleteCourseOffering(
+  schoolId: string,
+  offeringId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ success: true }> {
+  const existing = await prisma.courseOffering.findFirst({
+    where: { id: offeringId, schoolId },
+    include: {
+      _count: {
+        select: {
+          assignments: true,
+          assessments: true,
+          learningResources: true,
+        },
+      },
+    },
+  });
+  if (!existing) {
+    throw new NotFoundError('Course offering not found.');
+  }
+
+  if (
+    existing._count.assignments > 0 ||
+    existing._count.assessments > 0 ||
+    existing._count.learningResources > 0
+  ) {
+    throw new ConflictError(
+      'Cannot delete course offering with existing assignments, assessments, or resources.',
+    );
+  }
+
+  await prisma.courseOffering.delete({ where: { id: offeringId } });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_OFFERING_DELETED',
+    entityType: 'CourseOffering',
+    entityId: offeringId,
+    ipAddress,
+  });
+
+  return { success: true };
+}
+
+export async function assignOfferingTeacher(
+  schoolId: string,
+  offeringId: string,
+  input: AssignOfferingTeacherInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<OfferingTeacherDto> {
+  const [offering, teacher] = await Promise.all([
+    prisma.courseOffering.findFirst({ where: { id: offeringId, schoolId } }),
+    prisma.teacherProfile.findFirst({ where: { id: input.teacherId, schoolId } }),
+  ]);
+
+  if (!offering) throw new NotFoundError('Course offering not found.');
+  if (!teacher) throw new NotFoundError('Teacher not found in this school.');
+
+  const existingAssignment = await prisma.courseTeacher.findUnique({
+    where: {
+      schoolId_courseOfferingId_teacherId: {
+        schoolId,
+        courseOfferingId: offeringId,
+        teacherId: input.teacherId,
+      },
+    },
+  });
+  if (existingAssignment) {
+    throw new ConflictError('This teacher is already assigned to this course offering.');
+  }
+
+  const assignment = await prisma.courseTeacher.create({
+    data: {
+      schoolId,
+      courseOfferingId: offeringId,
+      teacherId: input.teacherId,
+      role: input.role,
+    },
+    include: { teacher: true },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_TEACHER_ALLOCATED',
+    entityType: 'CourseTeacher',
+    entityId: assignment.id,
+    delta: { offeringId, teacherId: input.teacherId, role: input.role },
+    ipAddress,
+  });
+
+  return {
+    allocationId: assignment.id,
+    teacherId: assignment.teacherId,
+    teacherName: `${assignment.teacher.firstName} ${assignment.teacher.lastName}`,
+    employeeId: assignment.teacher.employeeId,
+    role: assignment.role,
+  };
+}
+
+export async function removeOfferingTeacher(
+  schoolId: string,
+  offeringId: string,
+  teacherId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ success: true }> {
+  const assignment = await prisma.courseTeacher.findUnique({
+    where: {
+      schoolId_courseOfferingId_teacherId: {
+        schoolId,
+        courseOfferingId: offeringId,
+        teacherId,
+      },
+    },
+  });
+  if (!assignment) {
+    throw new NotFoundError('Teacher allocation not found.');
+  }
+
+  await prisma.courseTeacher.delete({
+    where: { id: assignment.id },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_TEACHER_DEALLOCATED',
+    entityType: 'CourseTeacher',
+    entityId: assignment.id,
+    delta: { offeringId, teacherId },
+    ipAddress,
+  });
+
+  return { success: true };
 }
 
 export async function listStaff(

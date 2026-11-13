@@ -373,6 +373,68 @@ describe('School Admin Portal', () => {
           ),
         );
       }
+      if (url.includes('/api/v1/school/classes')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'cls-1',
+                  name: 'Grade 8',
+                  stage: 'Middle School',
+                  sortOrder: 8,
+                  studentCount: 30,
+                  sections: [
+                    {
+                      id: 'sec-1',
+                      name: '8-A',
+                      capacity: 35,
+                      roomNumber: 'Room 101',
+                      academicYearId: 'ay-1',
+                      academicYearName: '2026-2027',
+                      studentCount: 30,
+                    },
+                  ],
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+      if (url.includes('/api/v1/school/offerings')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'off-1',
+                  academicYearId: 'ay-1',
+                  academicYearName: '2026-2027',
+                  classId: 'cls-1',
+                  className: 'Grade 8',
+                  sectionId: 'sec-1',
+                  sectionName: '8-A',
+                  subjectId: 'sub-1',
+                  subjectName: 'Mathematics',
+                  subjectCode: 'MATH-8',
+                  syllabus: null,
+                  teachers: [
+                    {
+                      allocationId: 'alloc-1',
+                      teacherId: 'tch-1',
+                      teacherName: 'Ananya Verma',
+                      employeeId: 'GF-TCH-001',
+                      role: 'PRIMARY',
+                    },
+                  ],
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
       return Promise.resolve(
         new Response(JSON.stringify({ data: [] }), {
           status: 200,
@@ -388,9 +450,21 @@ describe('School Admin Portal', () => {
       expect(screen.getByRole('cell', { name: '2026-2027' })).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('tab', { name: /classes/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Grade 8' })).toBeInTheDocument();
+      expect(screen.getByText(/Section 8-A/i)).toBeInTheDocument();
+    });
+
     fireEvent.click(screen.getByRole('tab', { name: /subjects/i }));
     await waitFor(() => {
       expect(screen.getByText('MATH-8')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: /course allocations/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Ananya Verma')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create course offering/i })).toBeInTheDocument();
     });
   });
 

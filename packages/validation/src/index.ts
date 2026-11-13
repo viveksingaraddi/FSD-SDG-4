@@ -150,10 +150,23 @@ export const createAcademicYearSchema = z.object({
   endDate: isoDateString,
 });
 
+export const updateAcademicYearSchema = z.object({
+  name: nonEmptyString('Academic year name').max(64).optional(),
+  startDate: isoDateString.optional(),
+  endDate: isoDateString.optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
+});
+
 export const createClassSchema = z.object({
   name: nonEmptyString('Class name').max(100),
   stage: nonEmptyString('Stage').max(64),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
+});
+
+export const updateClassSchema = z.object({
+  name: nonEmptyString('Class name').max(100).optional(),
+  stage: nonEmptyString('Stage').max(64).optional(),
+  sortOrder: z.coerce.number().int().min(0).max(999).optional(),
 });
 
 export const createSectionSchema = z.object({
@@ -162,6 +175,12 @@ export const createSectionSchema = z.object({
   name: nonEmptyString('Section name').max(64),
   capacity: z.coerce.number().int().min(1).max(500).optional(),
   roomNumber: z.string().trim().max(32).optional(),
+});
+
+export const updateSectionSchema = z.object({
+  name: nonEmptyString('Section name').max(64).optional(),
+  capacity: z.coerce.number().int().min(1).max(500).nullable().optional(),
+  roomNumber: z.string().trim().max(32).nullable().optional(),
 });
 
 export const createSubjectSchema = z.object({
@@ -173,6 +192,40 @@ export const createSubjectSchema = z.object({
     .min(2, 'Subject code must be at least 2 characters')
     .max(32),
   description: z.string().trim().max(500).optional(),
+});
+
+export const updateSubjectSchema = z.object({
+  name: nonEmptyString('Subject name').max(120).optional(),
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(2, 'Subject code must be at least 2 characters')
+    .max(32)
+    .optional(),
+  description: z.string().trim().max(500).nullable().optional(),
+  credits: z.coerce.number().min(0).max(99.99).nullable().optional(),
+});
+
+export const createOfferingSchema = z.object({
+  academicYearId: uuidSchema,
+  sectionId: uuidSchema,
+  subjectId: uuidSchema,
+  syllabus: z.string().trim().max(5000).optional(),
+  teacherId: uuidSchema.optional(),
+  role: z.enum(['PRIMARY', 'ASSISTANT']).default('PRIMARY'),
+});
+
+export const offeringFilterQuerySchema = z.object({
+  academicYearId: uuidSchema.optional(),
+  classId: uuidSchema.optional(),
+  sectionId: uuidSchema.optional(),
+  subjectId: uuidSchema.optional(),
+});
+
+export const assignOfferingTeacherSchema = z.object({
+  teacherId: uuidSchema,
+  role: z.enum(['PRIMARY', 'ASSISTANT']).default('PRIMARY'),
 });
 
 export const createStaffSchema = z.object({
@@ -244,9 +297,16 @@ export const updateSchoolSettingsSchema = z.object({
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;
 export type UpdateSchoolInput = z.infer<typeof updateSchoolSchema>;
 export type CreateAcademicYearInput = z.infer<typeof createAcademicYearSchema>;
+export type UpdateAcademicYearInput = z.infer<typeof updateAcademicYearSchema>;
 export type CreateClassInput = z.infer<typeof createClassSchema>;
+export type UpdateClassInput = z.infer<typeof updateClassSchema>;
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
+export type UpdateSectionInput = z.infer<typeof updateSectionSchema>;
 export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
+export type UpdateSubjectInput = z.infer<typeof updateSubjectSchema>;
+export type CreateOfferingInput = z.infer<typeof createOfferingSchema>;
+export type OfferingFilterQuery = z.infer<typeof offeringFilterQuerySchema>;
+export type AssignOfferingTeacherInput = z.infer<typeof assignOfferingTeacherSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
 export type StaffFilterQuery = z.infer<typeof staffFilterQuerySchema>;
