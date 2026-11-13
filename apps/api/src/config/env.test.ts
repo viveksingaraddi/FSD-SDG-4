@@ -9,6 +9,13 @@ describe('API environment validation', () => {
     expect(parsed.LOG_LEVEL).toBe('info');
     expect(parsed.CORS_ORIGIN).toBe('http://localhost:5173');
     expect(parsed.API_VERSION).toBe('0.0.0');
+    expect(parsed.APP_BASE_URL).toBe('http://localhost:5173');
+    expect(parsed.MAIL_HOST).toBe('smtp.gmail.com');
+    expect(parsed.MAIL_PORT).toBe(465);
+    expect(parsed.MAIL_SECURE).toBe(true);
+    expect(parsed.MAIL_USER).toBe('');
+    expect(parsed.MAIL_APP_PASSWORD).toBe('');
+    expect(parsed.MAIL_FROM_NAME).toBe('FSD-SDG-4 Quality Education');
   });
 
   it('accepts a valid explicit configuration', () => {
@@ -19,11 +26,24 @@ describe('API environment validation', () => {
       DATABASE_URL: 'postgresql://user:pass@localhost:5432/fsd_sdg4_test',
       CORS_ORIGIN: 'http://localhost:5173',
       API_VERSION: '0.1.0',
+      APP_BASE_URL: 'https://app.fsd-sdg4.edu',
+      MAIL_HOST: 'smtp.gmail.com',
+      MAIL_PORT: '587',
+      MAIL_SECURE: 'false',
+      MAIL_USER: 'notifications@fsd-sdg4.edu',
+      MAIL_APP_PASSWORD: 'abcd-efgh-ijkl-mnop',
+      MAIL_FROM_NAME: 'FSD-SDG-4 Notifications',
     });
 
     expect(parsed.NODE_ENV).toBe('test');
     expect(parsed.PORT).toBe(4000);
     expect(parsed.DATABASE_URL).toBe('postgresql://user:pass@localhost:5432/fsd_sdg4_test');
+    expect(parsed.APP_BASE_URL).toBe('https://app.fsd-sdg4.edu');
+    expect(parsed.MAIL_PORT).toBe(587);
+    expect(parsed.MAIL_SECURE).toBe(false);
+    expect(parsed.MAIL_USER).toBe('notifications@fsd-sdg4.edu');
+    expect(parsed.MAIL_APP_PASSWORD).toBe('abcd-efgh-ijkl-mnop');
+    expect(parsed.MAIL_FROM_NAME).toBe('FSD-SDG-4 Notifications');
   });
 
   it('rejects an invalid NODE_ENV value', () => {

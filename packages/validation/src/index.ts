@@ -336,6 +336,7 @@ export const invitationFilterQuerySchema = z.object({
   search: searchQuerySchema,
   status: z.enum(['ALL', 'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED']).optional(),
   role: z.enum(['ALL', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).optional(),
+  deliveryStatus: z.enum(['ALL', 'PENDING', 'SENT', 'FAILED']).optional(),
 });
 
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;

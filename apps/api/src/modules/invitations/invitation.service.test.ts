@@ -10,6 +10,14 @@ import {
 } from './invitation.service.js';
 import { prisma } from '../../shared/db/prisma.js';
 import { BadRequestError, NotFoundError } from '../../shared/errors/appError.js';
+import { dispatchInvitationEmail } from '../mail/mail.service.js';
+
+vi.mock('../mail/mail.service.js', () => ({
+  dispatchInvitationEmail: vi.fn().mockResolvedValue({
+    delivered: true,
+    outboxId: 'mock-outbox-id',
+  }),
+}));
 
 vi.mock('../../shared/db/prisma.js', () => ({
   prisma: {
@@ -98,6 +106,14 @@ describe('Invitation Service', () => {
       expect(result.invitation.id).toBe('inv-123');
       expect(result.rawToken).toHaveLength(64);
       expect(result.invitationUrl).toContain(result.rawToken);
+      expect(dispatchInvitationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          invitationId: 'inv-123',
+          recipientEmail: 'teacher@school.edu',
+          role: 'TEACHER',
+          type: 'INVITATION_INITIAL',
+        }),
+      );
     });
   });
 
@@ -303,6 +319,14 @@ describe('Invitation Service', () => {
       });
       expect(resent.id).toBe('inv-fresh');
       expect(resent.invitationUrl).toBeDefined();
+      expect(dispatchInvitationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          invitationId: 'inv-fresh',
+          recipientEmail: 'teacher@school.edu',
+          role: 'TEACHER',
+          type: 'INVITATION_RESEND',
+        }),
+      );
     });
 
     it('enforces tenant isolation and throws NotFoundError on cross-tenant resend', async () => {
