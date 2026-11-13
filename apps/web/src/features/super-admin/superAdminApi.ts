@@ -15,9 +15,15 @@ export function fetchPlatformOverview(signal?: AbortSignal): Promise<PlatformOve
   );
 }
 
-export function fetchSchools(search?: string, signal?: AbortSignal): Promise<SchoolSummaryDto[]> {
-  const qs =
-    search && search.trim().length > 0 ? `?search=${encodeURIComponent(search.trim())}` : '';
+export function fetchSchools(
+  search?: string,
+  status?: string,
+  signal?: AbortSignal,
+): Promise<SchoolSummaryDto[]> {
+  const params = new URLSearchParams();
+  if (search && search.trim().length > 0) params.set('search', search.trim());
+  if (status && status !== 'ALL') params.set('status', status);
+  const qs = params.toString() ? `?${params.toString()}` : '';
   return apiGet<SchoolSummaryDto[]>(
     `${API_ROUTES.SUPER_ADMIN.SCHOOLS}${qs}`,
     signal ? { signal } : undefined,
@@ -48,12 +54,32 @@ export function updateSchoolRequest(
   );
 }
 
+export interface FetchAuditLogsParams {
+  action?: string;
+  schoolId?: string;
+}
+
 export function fetchPlatformAuditLogs(
-  action?: string,
-  signal?: AbortSignal,
+  filterOrAction?: string | FetchAuditLogsParams,
+  maybeSignal?: AbortSignal,
 ): Promise<AuditLogDto[]> {
-  const qs =
-    action && action.trim().length > 0 ? `?action=${encodeURIComponent(action.trim())}` : '';
+  const params = new URLSearchParams();
+  const signal = maybeSignal;
+
+  if (typeof filterOrAction === 'string') {
+    if (filterOrAction.trim().length > 0) {
+      params.set('action', filterOrAction.trim());
+    }
+  } else if (filterOrAction && typeof filterOrAction === 'object') {
+    if (filterOrAction.action && filterOrAction.action.trim().length > 0) {
+      params.set('action', filterOrAction.action.trim());
+    }
+    if (filterOrAction.schoolId && filterOrAction.schoolId.trim().length > 0) {
+      params.set('schoolId', filterOrAction.schoolId.trim());
+    }
+  }
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
   return apiGet<AuditLogDto[]>(
     `${API_ROUTES.SUPER_ADMIN.AUDIT_LOGS}${qs}`,
     signal ? { signal } : undefined,

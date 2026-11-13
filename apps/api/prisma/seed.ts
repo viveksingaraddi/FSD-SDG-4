@@ -6,7 +6,12 @@
 
 import { PrismaClient } from '@prisma/client';
 
-const SYNTHETIC_PASSWORD_HASH = 'SYNTHETIC_DEV_HASH_NOT_FOR_PRODUCTION_USE';
+/**
+ * Deterministic Argon2id hash for local synthetic accounts with development password:
+ * "SuperAdmin@2026!" (satisfies 12+ chars, uppercase, lowercase, digit, symbol).
+ */
+const SYNTHETIC_PASSWORD_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$wq0lQ+cPmKQSmI5yu/Yuvg$7jlh3YGctwG75macj3VjzHGG3Tfa/BvWn3CP0LraalU';
 
 // Deterministic UUIDs for idempotent seeding
 const IDS = {
@@ -67,7 +72,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   // 1. Platform Super Admin (schoolId = null)
   await db.user.upsert({
     where: { id: IDS.superAdmin },
-    update: {},
+    update: {
+      passwordHash: SYNTHETIC_PASSWORD_HASH,
+      status: 'ACTIVE',
+    },
     create: {
       id: IDS.superAdmin,
       schoolId: null,
@@ -155,7 +163,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   for (const u of gfUsers) {
     await db.user.upsert({
       where: { id: u.id },
-      update: {},
+      update: {
+        passwordHash: SYNTHETIC_PASSWORD_HASH,
+        status: 'ACTIVE',
+      },
       create: {
         id: u.id,
         schoolId: IDS.schGreenfield,
@@ -667,7 +678,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   ]) {
     await db.user.upsert({
       where: { id: u.id },
-      update: {},
+      update: {
+        passwordHash: SYNTHETIC_PASSWORD_HASH,
+        status: 'ACTIVE',
+      },
       create: {
         id: u.id,
         schoolId: IDS.schHighcrest,
@@ -790,7 +804,10 @@ export async function seedDatabase(db: PrismaClient): Promise<void> {
   // 9. Tenant 3: Empty Horizon Academy (admin only)
   await db.user.upsert({
     where: { id: IDS.ehAdmin },
-    update: {},
+    update: {
+      passwordHash: SYNTHETIC_PASSWORD_HASH,
+      status: 'ACTIVE',
+    },
     create: {
       id: IDS.ehAdmin,
       schoolId: IDS.schEmpty,

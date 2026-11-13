@@ -19,11 +19,11 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   secondary:
     'bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] hover:bg-[var(--color-border-default)] border border-[var(--color-border-default)]',
   outline:
-    'bg-[var(--color-surface-elevated)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] border border-[var(--color-border-strong)]',
+    'bg-[var(--color-surface-card)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] border border-[var(--color-border-strong)]',
   ghost:
     'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)] border border-transparent',
   danger:
-    'bg-[var(--color-semantic-danger-fg)] text-[var(--color-text-inverse)] hover:opacity-90 border border-transparent shadow-xs',
+    'bg-[var(--color-semantic-danger)] text-[var(--color-text-inverse)] hover:bg-[#991b1b] active:bg-[#7f1d1d] border border-transparent shadow-xs font-semibold',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -57,7 +57,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={isDisabled}
       aria-busy={loading ? 'true' : undefined}
       className={[
-        'inline-flex items-center justify-center rounded-[var(--radius-md)] font-medium transition-colors duration-[var(--transition-fast)]',
+        'inline-flex items-center justify-center rounded-[var(--radius-md)] font-medium transition-colors duration-[var(--transition-fast)] whitespace-nowrap',
         'disabled:cursor-not-allowed disabled:opacity-50',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],

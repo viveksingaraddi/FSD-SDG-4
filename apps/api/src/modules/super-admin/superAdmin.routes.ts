@@ -3,8 +3,10 @@ import { API_ROUTES } from '@fsd-sdg4/contracts';
 import {
   createSchoolSchema,
   idParamSchema,
+  schoolStatusSchema,
   searchQuerySchema,
   updateSchoolSchema,
+  uuidSchema,
   z,
 } from '@fsd-sdg4/validation';
 import { authenticate } from '../../middleware/authenticate.js';
@@ -24,10 +26,12 @@ import {
 
 const searchParamsSchema = z.object({
   search: searchQuerySchema,
+  status: schoolStatusSchema.optional(),
 });
 
 const auditQuerySchema = z.object({
   action: searchQuerySchema,
+  schoolId: uuidSchema.optional(),
 });
 
 export function createSuperAdminRouter(): ExpressRouter {
@@ -51,8 +55,11 @@ export function createSuperAdminRouter(): ExpressRouter {
     requirePermission(PERMISSIONS.PLATFORM_SCHOOLS_READ),
     validateRequest({ query: searchParamsSchema }),
     async (req, res) => {
-      const { search } = req.query as { search?: string };
-      const schools = await listSchools(search);
+      const { search, status } = req.query as {
+        search?: string;
+        status?: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+      };
+      const schools = await listSchools(search, status);
       sendSuccess(res, schools);
     },
   );
@@ -104,8 +111,8 @@ export function createSuperAdminRouter(): ExpressRouter {
     requirePermission(PERMISSIONS.PLATFORM_AUDIT_READ),
     validateRequest({ query: auditQuerySchema }),
     async (req, res) => {
-      const { action } = req.query as { action?: string };
-      const logs = await listPlatformAuditLogs(action);
+      const { action, schoolId } = req.query as { action?: string; schoolId?: string };
+      const logs = await listPlatformAuditLogs(action, schoolId);
       sendSuccess(res, logs);
     },
   );

@@ -4,34 +4,123 @@ import type {
   SchoolDetailDto,
   SchoolSummaryDto,
 } from '@fsd-sdg4/contracts';
+import type { SchoolStatus } from '@prisma/client';
 import type { CreateSchoolInput, UpdateSchoolInput } from '@fsd-sdg4/validation';
 import { prisma } from '../../shared/db/prisma.js';
 import { ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { recordAuditEvent } from '../audit/audit.service.js';
 
 export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
-  const [totalSchools, activeSchools, suspendedSchools, totalUsers, recentAuditEvents] =
-    await Promise.all([
-      prisma.school.count({ where: { deletedAt: null } }),
-      prisma.school.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
-      prisma.school.count({ where: { deletedAt: null, status: 'SUSPENDED' } }),
-      prisma.user.count({ where: { deletedAt: null } }),
-      prisma.auditLog.count(),
-    ]);
+  const [
+    totalSchools,
+    activeSchools,
+    suspendedSchools,
+    archivedSchools,
+    totalUsers,
+    recentAuditEvents,
+    usersGroupedByRole,
+    totalClasses,
+    totalSections,
+    allSchools,
+  ] = await Promise.all([
+    prisma.school.count({ where: { deletedAt: null } }),
+    prisma.school.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
+    prisma.school.count({ where: { deletedAt: null, status: 'SUSPENDED' } }),
+    prisma.school.count({ where: { deletedAt: null, status: 'ARCHIVED' } }),
+    prisma.user.count({ where: { deletedAt: null } }),
+    prisma.auditLog.count(),
+    prisma.user.groupBy({
+      by: ['role'],
+      where: { deletedAt: null },
+      _count: { id: true },
+    }),
+    prisma.class.count(),
+    prisma.section.count(),
+    prisma.school.findMany({
+      where: { deletedAt: null },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
+
+  const roleMap: Record<string, number> = {};
+  for (const group of usersGroupedByRole) {
+    roleMap[group.role] = group._count.id;
+  }
+
+  const trendMap = new Map<string, number>();
+  for (const s of allSchools) {
+    const key = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
+      s.createdAt,
+    );
+    trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
+  }
+  const registrationTrends = Array.from(trendMap.entries()).map(([period, count]) => ({
+    period,
+    count,
+  }));
+
+  const usersByRole = {
+    teachers: roleMap['TEACHER'] ?? 0,
+    students: roleMap['STUDENT'] ?? 0,
+    schoolAdmins: roleMap['SCHOOL_ADMIN'] ?? 0,
+    parents: roleMap['PARENT'] ?? 0,
+    superAdmins: roleMap['SUPER_ADMIN'] ?? 0,
+  };
+
+  const schoolsAnalytics = {
+    active: activeSchools,
+    suspended: suspendedSchools,
+    archived: archivedSchools,
+    totalClasses,
+    totalSections,
+    registrationTrends,
+  };
+
+  const alerts = [];
+  if (suspendedSchools > 0) {
+    alerts.push({
+      id: 'alert-suspended-tenants',
+      level: 'warning' as const,
+      title: `${suspendedSchools} Suspended School Tenant${suspendedSchools > 1 ? 's' : ''}`,
+      description: 'Tenants under administrative suspension require compliance inspection.',
+      actionUrl: '/super-admin/schools',
+      actionLabel: 'Inspect Tenants',
+    });
+  }
+
+  if (archivedSchools > 0) {
+    alerts.push({
+      id: 'alert-archived-tenants',
+      level: 'info' as const,
+      title: `${archivedSchools} Archived School Tenant${archivedSchools > 1 ? 's' : ''}`,
+      description: 'Archived tenant data is stored under immutable regulatory retention policy.',
+      actionUrl: '/super-admin/schools',
+      actionLabel: 'View Directory',
+    });
+  }
 
   return {
     totalSchools,
     activeSchools,
     suspendedSchools,
+    archivedSchools,
     totalUsers,
     recentAuditEvents,
+    usersByRole,
+    schoolsAnalytics,
+    alerts,
   };
 }
 
-export async function listSchools(search?: string): Promise<SchoolSummaryDto[]> {
+export async function listSchools(
+  search?: string,
+  status?: SchoolStatus,
+): Promise<SchoolSummaryDto[]> {
   const schools = await prisma.school.findMany({
     where: {
       deletedAt: null,
+      ...(status ? { status } : {}),
       ...(search
         ? {
             OR: [
@@ -75,6 +164,7 @@ export async function getSchoolById(id: string): Promise<SchoolDetailDto> {
           users: true,
           studentProfiles: true,
           classes: true,
+          sections: true,
           teacherProfiles: true,
         },
       },
@@ -89,6 +179,17 @@ export async function getSchoolById(id: string): Promise<SchoolDetailDto> {
     throw new NotFoundError('School tenant was not found.');
   }
 
+  const recentAuditLogs = await prisma.auditLog.findMany({
+    where: { schoolId: id },
+    orderBy: { createdAt: 'desc' },
+    take: 15,
+    include: {
+      actor: {
+        select: { email: true },
+      },
+    },
+  });
+
   return {
     id: school.id,
     name: school.name,
@@ -100,8 +201,19 @@ export async function getSchoolById(id: string): Promise<SchoolDetailDto> {
     userCount: school._count.users,
     studentCount: school._count.studentProfiles,
     classCount: school._count.classes,
+    sectionCount: school._count.sections,
     staffCount: school._count.teacherProfiles,
     activeAcademicYear: school.academicYears[0]?.name ?? null,
+    recentAuditLogs: recentAuditLogs.map((log) => ({
+      id: log.id,
+      schoolId: log.schoolId,
+      actorId: log.actorId,
+      actorEmail: log.actor?.email ?? null,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      createdAt: log.createdAt.toISOString(),
+    })),
   };
 }
 
@@ -201,11 +313,15 @@ export async function updateSchool(
   };
 }
 
-export async function listPlatformAuditLogs(actionFilter?: string): Promise<AuditLogDto[]> {
+export async function listPlatformAuditLogs(
+  actionFilter?: string,
+  schoolId?: string,
+): Promise<AuditLogDto[]> {
   const logs = await prisma.auditLog.findMany({
-    ...(actionFilter
-      ? { where: { action: { contains: actionFilter, mode: 'insensitive' as const } } }
-      : {}),
+    where: {
+      ...(actionFilter ? { action: { contains: actionFilter, mode: 'insensitive' as const } } : {}),
+      ...(schoolId ? { schoolId } : {}),
+    },
     orderBy: { createdAt: 'desc' },
     take: 100,
     include: {

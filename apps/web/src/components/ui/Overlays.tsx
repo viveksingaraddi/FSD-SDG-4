@@ -64,7 +64,7 @@ export function Modal({
           onClose();
         }
       }}
-      className={`m-auto w-[calc(100%-2rem)] ${MODAL_SIZE_CLASSES[size]} rounded-[var(--radius-xl)] border border-[var(--color-border-default)] bg-[var(--color-surface-elevated)] p-0 text-[var(--color-text-primary)] shadow-xl`}
+      className={`m-auto w-[calc(100%-2rem)] ${MODAL_SIZE_CLASSES[size]} rounded-[var(--radius-xl)] border border-[var(--color-border-default)] bg-[var(--color-surface-card)] p-0 text-[var(--color-text-primary)] shadow-2xl`}
     >
       <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-default)] px-6 py-4">
         <div>
@@ -198,7 +198,7 @@ export function Drawer({ open, onClose, title, side = 'right', children }: Drawe
           onClose();
         }
       }}
-      className={`${alignmentClass} my-0 h-dvh max-h-dvh w-full max-w-sm border-[var(--color-border-default)] bg-[var(--color-surface-elevated)] p-0 text-[var(--color-text-primary)] shadow-2xl ${
+      className={`${alignmentClass} my-0 h-dvh max-h-dvh w-full max-w-sm border-[var(--color-border-default)] bg-[var(--color-surface-card)] p-0 text-[var(--color-text-primary)] shadow-2xl ${
         side === 'left' ? 'border-r' : 'border-l'
       }`}
     >
@@ -291,7 +291,7 @@ export function DropdownMenu({
         <div
           id={menuId}
           role="menu"
-          className={`absolute z-[var(--z-dropdown)] mt-1.5 min-w-[12rem] rounded-[var(--radius-lg)] border border-[var(--color-border-default)] bg-[var(--color-surface-elevated)] py-1 shadow-lg ${
+          className={`absolute z-[var(--z-dropdown)] mt-1.5 min-w-[13rem] rounded-[var(--radius-lg)] border border-[var(--color-border-default)] bg-[var(--color-surface-card)] py-1.5 shadow-xl ${
             align === 'left' ? 'left-0' : 'right-0'
           }`}
         >
@@ -308,7 +308,7 @@ export function DropdownMenu({
               className={[
                 'flex w-full min-h-[40px] items-center gap-2.5 px-3.5 py-2 text-left text-sm transition-colors',
                 item.danger
-                  ? 'text-[var(--color-semantic-danger-fg)] hover:bg-[var(--color-semantic-danger-bg)]'
+                  ? 'text-[var(--color-semantic-danger)] hover:bg-[var(--color-semantic-danger-bg)] font-medium'
                   : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)]',
                 item.disabled ? 'cursor-not-allowed opacity-50' : '',
               ]
