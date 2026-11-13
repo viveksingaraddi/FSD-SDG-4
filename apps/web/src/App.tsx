@@ -22,6 +22,8 @@ const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPag
 const TeacherProfilePage = lazy(() => import('@/features/admin/TeacherProfilePage'));
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
+const UserInvitationsPage = lazy(() => import('@/features/admin/UserInvitationsPage'));
+const AcceptInvitationPage = lazy(() => import('@/features/auth/AcceptInvitationPage'));
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -75,6 +77,7 @@ export function App() {
             <Routes>
               <Route path="/" element={<RootRedirect />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
               <Route
@@ -155,6 +158,14 @@ export function App() {
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
                     <StudentDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/invitations"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <UserInvitationsPage />
                   </ProtectedRoute>
                 }
               />

@@ -36,7 +36,7 @@ export const API_ROUTES = {
   V1_HEALTH: '/api/v1/health',
   READY: '/api/v1/ready',
   OPENAPI: '/api/v1/openapi.json',
-  // Authentication (Phase 7)
+  // Authentication (Phase 7 & 10)
   AUTH: {
     LOGIN: '/api/v1/auth/login',
     LOGOUT: '/api/v1/auth/logout',
@@ -45,12 +45,15 @@ export const API_ROUTES = {
     RESET_PASSWORD: '/api/v1/auth/reset-password',
     CHANGE_PASSWORD: '/api/v1/auth/change-password',
     SESSIONS: '/api/v1/auth/sessions',
+    INVITATIONS_VERIFY: '/api/v1/auth/invitations/verify',
+    INVITATIONS_ACCEPT: '/api/v1/auth/invitations/accept',
   },
   // Super Admin (Phase 10)
   SUPER_ADMIN: {
     OVERVIEW: '/api/v1/super-admin/overview',
     SCHOOLS: '/api/v1/super-admin/schools',
     AUDIT_LOGS: '/api/v1/super-admin/audit-logs',
+    INVITATIONS: '/api/v1/super-admin/invitations',
   },
   // School admin (Phase 10)
   SCHOOL: {
@@ -64,6 +67,7 @@ export const API_ROUTES = {
     STUDENTS: '/api/v1/school/students',
     AUDIT_LOGS: '/api/v1/school/audit-logs',
     SETTINGS: '/api/v1/school/settings',
+    INVITATIONS: '/api/v1/school/invitations',
   },
   // Teacher (Phase 10–12)
   TEACHER: {
@@ -397,4 +401,35 @@ export interface SchoolSettingsDto {
   subdomain: string;
   contactEmail: string;
   status: SchoolStatus;
+}
+
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+
+export interface UserInvitationDto {
+  id: string;
+  schoolId: string | null;
+  schoolName?: string | null;
+  userId: string;
+  email: string;
+  role: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+  status: InvitationStatus;
+  expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  invitationUrl?: string;
+}
+
+export interface InvitationVerificationDto {
+  valid: boolean;
+  email?: string;
+  role?: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+  schoolName?: string | null;
+  reason?: 'EXPIRED' | 'REVOKED' | 'ACCEPTED' | 'NOT_FOUND' | 'INVALID';
+}
+
+export interface ProvisionSchoolResultDto extends SchoolSummaryDto {
+  adminEmail?: string | undefined;
+  invitationUrl?: string | undefined;
+  invitationId?: string | undefined;
 }

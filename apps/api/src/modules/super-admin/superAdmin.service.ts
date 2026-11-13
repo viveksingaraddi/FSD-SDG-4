@@ -1,14 +1,27 @@
+import crypto from 'node:crypto';
 import type {
   AuditLogDto,
   PlatformOverviewDto,
+  ProvisionSchoolResultDto,
   SchoolDetailDto,
   SchoolSummaryDto,
+  UserInvitationDto,
 } from '@fsd-sdg4/contracts';
 import type { SchoolStatus } from '@prisma/client';
-import type { CreateSchoolInput, UpdateSchoolInput } from '@fsd-sdg4/validation';
+import type {
+  CreateSchoolInput,
+  InvitationFilterQuery,
+  UpdateSchoolInput,
+} from '@fsd-sdg4/validation';
 import { prisma } from '../../shared/db/prisma.js';
 import { ConflictError, NotFoundError } from '../../shared/errors/appError.js';
-import { recordAuditEvent } from '../audit/audit.service.js';
+import { AUDIT_ACTIONS, recordAuditEvent } from '../audit/audit.service.js';
+import {
+  createInvitation,
+  listInvitations,
+  resendInvitation,
+  revokeInvitation,
+} from '../invitations/invitation.service.js';
 
 export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
   const [
@@ -221,7 +234,7 @@ export async function createSchool(
   input: CreateSchoolInput,
   actorId: string,
   ipAddress: string | null,
-): Promise<SchoolSummaryDto> {
+): Promise<ProvisionSchoolResultDto> {
   const existing = await prisma.school.findFirst({
     where: {
       OR: [{ code: input.code }, { subdomain: input.subdomain }],
@@ -232,37 +245,122 @@ export async function createSchool(
     throw new ConflictError('A school with this code or subdomain already exists.');
   }
 
-  const created = await prisma.school.create({
-    data: {
-      name: input.name,
-      code: input.code,
-      subdomain: input.subdomain,
-      contactEmail: input.contactEmail,
-      status: 'ACTIVE',
-    },
-  });
+  if (input.adminEmail) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: input.adminEmail.toLowerCase().trim() },
+    });
+    if (existingUser) {
+      throw new ConflictError('A user with this administrator email already exists.');
+    }
+  }
 
-  await recordAuditEvent({
-    schoolId: created.id,
-    actorId,
-    action: 'PLATFORM_SCHOOL_CREATED',
-    entityType: 'School',
-    entityId: created.id,
-    delta: { code: created.code, subdomain: created.subdomain },
-    ipAddress,
+  const result = await prisma.$transaction(async (tx) => {
+    const createdSchool = await tx.school.create({
+      data: {
+        name: input.name,
+        code: input.code,
+        subdomain: input.subdomain,
+        contactEmail: input.contactEmail,
+        status: 'ACTIVE',
+      },
+    });
+
+    let adminInvitation:
+      { invitation: UserInvitationDto; rawToken: string; invitationUrl: string } | undefined;
+
+    if (input.adminEmail) {
+      // Secure random placeholder password hash - zero default plaintext passwords
+      const placeholderHash = `!INVITED_PENDING_ACTIVATION_${crypto.randomBytes(16).toString('hex')}`;
+      const initialAdmin = await tx.user.create({
+        data: {
+          schoolId: createdSchool.id,
+          email: input.adminEmail.toLowerCase().trim(),
+          role: 'SCHOOL_ADMIN',
+          status: 'INACTIVE',
+          passwordHash: placeholderHash,
+        },
+      });
+
+      adminInvitation = await createInvitation({
+        tx,
+        schoolId: createdSchool.id,
+        userId: initialAdmin.id,
+        email: initialAdmin.email,
+        role: 'SCHOOL_ADMIN',
+        invitedByUserId: actorId,
+      });
+
+      await recordAuditEvent({
+        schoolId: createdSchool.id,
+        actorId,
+        action: AUDIT_ACTIONS.TENANT_INITIAL_ADMIN_INVITED,
+        entityType: 'UserInvitation',
+        entityId: adminInvitation.invitation.id,
+        delta: {
+          adminEmail: initialAdmin.email,
+          role: 'SCHOOL_ADMIN',
+          userId: initialAdmin.id,
+        },
+        ipAddress,
+      });
+    }
+
+    await recordAuditEvent({
+      schoolId: createdSchool.id,
+      actorId,
+      action: AUDIT_ACTIONS.PLATFORM_TENANT_PROVISIONED,
+      entityType: 'School',
+      entityId: createdSchool.id,
+      delta: {
+        code: createdSchool.code,
+        subdomain: createdSchool.subdomain,
+        hasInitialAdmin: Boolean(input.adminEmail),
+      },
+      ipAddress,
+    });
+
+    return {
+      createdSchool,
+      adminInvitation,
+    };
   });
 
   return {
-    id: created.id,
-    name: created.name,
-    code: created.code,
-    subdomain: created.subdomain,
-    contactEmail: created.contactEmail,
-    status: created.status,
-    createdAt: created.createdAt.toISOString(),
-    userCount: 0,
+    id: result.createdSchool.id,
+    name: result.createdSchool.name,
+    code: result.createdSchool.code,
+    subdomain: result.createdSchool.subdomain,
+    contactEmail: result.createdSchool.contactEmail,
+    status: result.createdSchool.status,
+    createdAt: result.createdSchool.createdAt.toISOString(),
+    userCount: result.adminInvitation ? 1 : 0,
     studentCount: 0,
+    adminEmail: input.adminEmail ?? undefined,
+    invitationUrl: result.adminInvitation?.invitationUrl,
+    invitationId: result.adminInvitation?.invitation.id,
   };
+}
+
+export async function listPlatformInvitations(
+  query: InvitationFilterQuery,
+): Promise<UserInvitationDto[]> {
+  return listInvitations({ query });
+}
+
+export async function resendPlatformInvitation(
+  invitationId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<UserInvitationDto> {
+  return resendInvitation({ invitationId, actorId, ipAddress });
+}
+
+export async function revokePlatformInvitation(
+  invitationId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<UserInvitationDto> {
+  return revokeInvitation({ invitationId, actorId, ipAddress });
 }
 
 export async function updateSchool(

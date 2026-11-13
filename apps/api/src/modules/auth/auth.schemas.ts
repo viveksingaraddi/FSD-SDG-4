@@ -23,8 +23,19 @@ export const sessionIdParamsSchema = z.object({
   sessionId: uuidSchema,
 });
 
+export const verifyInvitationQuerySchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+});
+
+export const acceptInvitationBodySchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  password: passwordSchema,
+});
+
 export type LoginBody = z.infer<typeof loginBodySchema>;
 export type ForgotPasswordBody = z.infer<typeof forgotPasswordBodySchema>;
 export type ResetPasswordBody = z.infer<typeof resetPasswordBodySchema>;
 export type ChangePasswordBody = z.infer<typeof changePasswordBodySchema>;
 export type SessionIdParams = z.infer<typeof sessionIdParamsSchema>;
+export type VerifyInvitationQuery = z.infer<typeof verifyInvitationQuerySchema>;
+export type AcceptInvitationBody = z.infer<typeof acceptInvitationBodySchema>;

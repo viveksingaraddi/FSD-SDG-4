@@ -11,6 +11,9 @@ import {
   createStudentSchema,
   createSubjectSchema,
   idParamSchema,
+  invitationFilterQuerySchema,
+  type InvitationFilterQuery,
+  inviteUserSchema,
   offeringFilterQuerySchema,
   searchQuerySchema,
   staffFilterQuerySchema,
@@ -50,14 +53,18 @@ import {
   getSchoolOverview,
   getSchoolSettings,
   getStaffById,
+  inviteSchoolUser,
   listAcademicYears,
   listClasses,
   listCourseOfferings,
   listSchoolAuditLogs,
+  listSchoolInvitations,
   listStaff,
   listStudents,
   listSubjects,
   removeOfferingTeacher,
+  resendSchoolInvitation,
+  revokeSchoolInvitation,
   updateAcademicYear,
   updateClass,
   updateSchoolSettings,
@@ -611,6 +618,71 @@ export function createSchoolAdminRouter(): ExpressRouter {
         req.ip ?? null,
       );
       sendSuccess(res, updated);
+    },
+  );
+
+  router.post(
+    API_ROUTES.SCHOOL.INVITATIONS,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_CREATE),
+    validateRequest({ body: inviteUserSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const invitation = await inviteSchoolUser(
+        schoolId,
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, invitation, 201);
+    },
+  );
+
+  router.get(
+    API_ROUTES.SCHOOL.INVITATIONS,
+    authenticate,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_READ),
+    validateRequest({ query: invitationFilterQuerySchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const invitations = await listSchoolInvitations(
+        schoolId,
+        req.query as unknown as InvitationFilterQuery,
+      );
+      sendSuccess(res, invitations);
+    },
+  );
+
+  router.post(
+    `${API_ROUTES.SCHOOL.INVITATIONS}/:id/resend`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_CREATE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const resent = await resendSchoolInvitation(schoolId, id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, resent);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.INVITATIONS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_DEACTIVATE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const revoked = await revokeSchoolInvitation(schoolId, id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, revoked);
     },
   );
 

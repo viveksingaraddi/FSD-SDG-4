@@ -119,24 +119,41 @@ export const passwordSchema = z
 
 export const schoolStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'ARCHIVED']);
 
-export const createSchoolSchema = z.object({
-  name: nonEmptyString('School name').max(200),
-  code: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .min(2, 'School code must be at least 2 characters')
-    .max(64)
-    .regex(/^[A-Z0-9_-]+$/, 'School code may contain letters, numbers, hyphens, and underscores'),
-  subdomain: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .min(2, 'Subdomain must be at least 2 characters')
-    .max(64)
-    .regex(/^[a-z0-9-]+$/, 'Subdomain may contain lowercase letters, numbers, and hyphens'),
-  contactEmail: emailSchema,
-});
+export const createSchoolSchema = z
+  .object({
+    name: nonEmptyString('School name').max(200),
+    code: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .min(2, 'School code must be at least 2 characters')
+      .max(64)
+      .regex(/^[A-Z0-9_-]+$/, 'School code may contain letters, numbers, hyphens, and underscores'),
+    subdomain: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(2, 'Subdomain must be at least 2 characters')
+      .max(64)
+      .regex(/^[a-z0-9-]+$/, 'Subdomain may contain lowercase letters, numbers, and hyphens'),
+    contactEmail: emailSchema,
+    adminFirstName: z.string().trim().max(100).optional(),
+    adminLastName: z.string().trim().max(100).optional(),
+    adminEmail: emailSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.adminEmail || data.adminFirstName || data.adminLastName) {
+        return !!data.adminEmail && !!data.adminFirstName && !!data.adminLastName;
+      }
+      return true;
+    },
+    {
+      message:
+        'When provisioning an initial administrator, first name, last name, and admin email are all required.',
+      path: ['adminEmail'],
+    },
+  );
 
 export const updateSchoolSchema = z.object({
   name: nonEmptyString('School name').max(200).optional(),
@@ -294,6 +311,33 @@ export const updateSchoolSettingsSchema = z.object({
   contactEmail: emailSchema,
 });
 
+export const inviteUserSchema = z.object({
+  email: emailSchema,
+  role: z.enum(['TEACHER', 'STUDENT', 'PARENT']),
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  employeeId: z.string().trim().max(64).optional(),
+  specialization: z.string().trim().max(150).optional(),
+  studentIdNumber: z.string().trim().max(64).optional(),
+  dateOfBirth: isoDateString.optional(),
+  gender: z.string().trim().max(32).optional(),
+  admissionDate: isoDateString.optional(),
+  sectionId: uuidSchema.optional(),
+  phone: z.string().trim().max(32).optional(),
+  studentId: uuidSchema.optional(),
+});
+
+export const acceptInvitationSchema = z.object({
+  token: z.string().trim().min(32, 'Invitation token must be at least 32 characters'),
+  password: passwordSchema,
+});
+
+export const invitationFilterQuerySchema = z.object({
+  search: searchQuerySchema,
+  status: z.enum(['ALL', 'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED']).optional(),
+  role: z.enum(['ALL', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).optional(),
+});
+
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;
 export type UpdateSchoolInput = z.infer<typeof updateSchoolSchema>;
 export type CreateAcademicYearInput = z.infer<typeof createAcademicYearSchema>;
@@ -315,3 +359,6 @@ export type CreateStudentInput = z.infer<typeof createStudentSchema>;
 export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
 export type StudentFilterQuery = z.infer<typeof studentFilterQuerySchema>;
 export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchema>;
+export type InviteUserInput = z.infer<typeof inviteUserSchema>;
+export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
+export type InvitationFilterQuery = z.infer<typeof invitationFilterQuerySchema>;

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Settings,
   Shield,
+  UserPlus,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -47,6 +48,7 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { id: 'academic', label: 'Academic Setup', to: '/admin/academic', icon: BookOpen },
     { id: 'staff', label: 'Staff & Teachers', to: '/admin/staff', icon: Users },
     { id: 'students', label: 'Students', to: '/admin/students', icon: GraduationCap },
+    { id: 'invitations', label: 'Invitations', to: '/admin/invitations', icon: UserPlus },
     { id: 'settings', label: 'Settings & Audit', to: '/admin/settings', icon: Settings },
   ],
   TEACHER: [

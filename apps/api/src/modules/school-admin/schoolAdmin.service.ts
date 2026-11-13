@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type {
   AcademicYearDto,
   AuditLogDto,
@@ -16,6 +17,7 @@ import type {
   SubjectDto,
   TeacherAllocationDto,
   TeacherDetailDto,
+  UserInvitationDto,
 } from '@fsd-sdg4/contracts';
 import type {
   AllocateTeacherInput,
@@ -27,6 +29,8 @@ import type {
   CreateStaffInput,
   CreateStudentInput,
   CreateSubjectInput,
+  InvitationFilterQuery,
+  InviteUserInput,
   OfferingFilterQuery,
   StaffFilterQuery,
   UpdateAcademicYearInput,
@@ -40,7 +44,13 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../shared/db/prisma.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { hashPassword } from '../../shared/security/password.js';
-import { recordAuditEvent } from '../audit/audit.service.js';
+import { AUDIT_ACTIONS, recordAuditEvent } from '../audit/audit.service.js';
+import {
+  createInvitation,
+  listInvitations,
+  resendInvitation,
+  revokeInvitation,
+} from '../invitations/invitation.service.js';
 
 export async function getSchoolOverview(schoolId: string): Promise<SchoolOverviewDto> {
   const now = new Date();
@@ -2055,4 +2065,184 @@ export async function updateSchoolSettings(
     contactEmail: updated.contactEmail,
     status: updated.status,
   };
+}
+
+export async function inviteSchoolUser(
+  schoolId: string,
+  input: InviteUserInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<UserInvitationDto> {
+  const allowedRoles = ['TEACHER', 'STUDENT', 'PARENT'];
+  if (!allowedRoles.includes(input.role)) {
+    throw new BadRequestError(
+      'School administrators can only provision TEACHER, STUDENT, or PARENT accounts.',
+    );
+  }
+
+  const normalizedEmail = input.email.toLowerCase().trim();
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (existingUser) {
+    throw new ConflictError('A user with this email address already exists.');
+  }
+
+  // Role-specific identifier validation
+  let employeeId = input.employeeId?.trim();
+  if (input.role === 'TEACHER') {
+    if (!employeeId) {
+      employeeId = `EMP-${Date.now().toString().slice(-6)}`;
+    }
+    const existingTeacher = await prisma.teacherProfile.findUnique({
+      where: { schoolId_employeeId: { schoolId, employeeId } },
+    });
+    if (existingTeacher) {
+      throw new ConflictError('A teacher with this employee ID already exists.');
+    }
+  }
+
+  let studentIdNumber = input.studentIdNumber?.trim();
+  if (input.role === 'STUDENT') {
+    if (!studentIdNumber) {
+      studentIdNumber = `STU-${Date.now().toString().slice(-6)}`;
+    }
+    const existingStudent = await prisma.studentProfile.findUnique({
+      where: { schoolId_studentIdNumber: { schoolId, studentIdNumber } },
+    });
+    if (existingStudent) {
+      throw new ConflictError('A student with this student ID already exists.');
+    }
+  }
+
+  if (input.role === 'PARENT' && input.studentId) {
+    const student = await prisma.studentProfile.findFirst({
+      where: { id: input.studentId, schoolId },
+    });
+    if (!student) {
+      throw new NotFoundError('Referenced student does not exist in this school.');
+    }
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Generate secure unguessable placeholder password hash
+    const placeholderHash = `!INVITED_PENDING_ACTIVATION_${crypto.randomBytes(16).toString('hex')}`;
+    const user = await tx.user.create({
+      data: {
+        schoolId,
+        email: normalizedEmail,
+        role: input.role,
+        status: 'INACTIVE',
+        passwordHash: placeholderHash,
+      },
+    });
+
+    if (input.role === 'TEACHER') {
+      await tx.teacherProfile.create({
+        data: {
+          schoolId,
+          userId: user.id,
+          employeeId: employeeId!,
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          specialization: input.specialization?.trim() ?? null,
+        },
+      });
+    } else if (input.role === 'STUDENT') {
+      const studentProfile = await tx.studentProfile.create({
+        data: {
+          schoolId,
+          userId: user.id,
+          studentIdNumber: studentIdNumber!,
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          admissionDate: input.admissionDate ? new Date(input.admissionDate) : new Date(),
+          dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
+          gender: input.gender?.trim() ?? null,
+        },
+      });
+
+      if (input.sectionId) {
+        const activeYear = await tx.academicYear.findFirst({
+          where: { schoolId, status: 'ACTIVE' },
+        });
+        if (activeYear) {
+          await tx.enrollment.create({
+            data: {
+              schoolId,
+              studentId: studentProfile.id,
+              sectionId: input.sectionId,
+              academicYearId: activeYear.id,
+              status: 'ACTIVE',
+            },
+          });
+        }
+      }
+    } else if (input.role === 'PARENT' && input.studentId) {
+      await tx.guardianRelationship.create({
+        data: {
+          schoolId,
+          guardianUserId: user.id,
+          studentId: input.studentId,
+          relationshipType: 'LEGAL_GUARDIAN',
+          isPrimaryContact: true,
+          isVerified: false,
+        },
+      });
+    }
+
+    const invitationResult = await createInvitation({
+      tx,
+      schoolId,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      invitedByUserId: actorId,
+    });
+
+    await recordAuditEvent({
+      schoolId,
+      actorId,
+      action: AUDIT_ACTIONS.USER_INVITED,
+      entityType: 'UserInvitation',
+      entityId: invitationResult.invitation.id,
+      delta: {
+        email: user.email,
+        role: user.role,
+        firstName: input.firstName,
+        lastName: input.lastName,
+      },
+      ipAddress,
+    });
+
+    return invitationResult.invitation;
+  });
+
+  return result;
+}
+
+export async function listSchoolInvitations(
+  schoolId: string,
+  query: InvitationFilterQuery,
+): Promise<UserInvitationDto[]> {
+  return listInvitations({ schoolId, query });
+}
+
+export async function resendSchoolInvitation(
+  schoolId: string,
+  invitationId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<UserInvitationDto> {
+  return resendInvitation({ invitationId, schoolId, actorId, ipAddress });
+}
+
+export async function revokeSchoolInvitation(
+  schoolId: string,
+  invitationId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<UserInvitationDto> {
+  return revokeInvitation({ invitationId, schoolId, actorId, ipAddress });
 }

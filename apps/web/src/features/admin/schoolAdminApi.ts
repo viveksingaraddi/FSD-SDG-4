@@ -13,6 +13,7 @@ import {
   type SubjectDto,
   type TeacherAllocationDto,
   type TeacherDetailDto,
+  type UserInvitationDto,
 } from '@fsd-sdg4/contracts';
 import type {
   AllocateTeacherInput,
@@ -24,6 +25,8 @@ import type {
   CreateStaffInput,
   CreateStudentInput,
   CreateSubjectInput,
+  InvitationFilterQuery,
+  InviteUserInput,
   OfferingFilterQuery,
   StaffFilterQuery,
   UpdateAcademicYearInput,
@@ -251,4 +254,33 @@ export function updateSchoolSettingsRequest(
   input: UpdateSchoolSettingsInput,
 ): Promise<SchoolSettingsDto> {
   return apiPatch<SchoolSettingsDto>(API_ROUTES.SCHOOL.SETTINGS, input);
+}
+
+export function fetchSchoolInvitations(
+  query?: InvitationFilterQuery,
+  signal?: AbortSignal,
+): Promise<UserInvitationDto[]> {
+  const params = new URLSearchParams();
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<UserInvitationDto[]>(
+    `${API_ROUTES.SCHOOL.INVITATIONS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function inviteSchoolUserRequest(input: InviteUserInput): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(API_ROUTES.SCHOOL.INVITATIONS, input);
+}
+
+export function resendSchoolInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(
+    `${API_ROUTES.SCHOOL.INVITATIONS}/${encodeURIComponent(id)}/resend`,
+  );
+}
+
+export function revokeSchoolInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiDelete<UserInvitationDto>(`${API_ROUTES.SCHOOL.INVITATIONS}/${encodeURIComponent(id)}`);
 }

@@ -34,6 +34,13 @@ enum UserStatus {
   LOCKED
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
 enum AcademicYearStatus {
   ACTIVE
   COMPLETED
@@ -171,6 +178,7 @@ model School {
   supportPlanActions    SupportPlanAction[]
   supportReviews        SupportReview[]
   auditLogs             AuditLog[]
+  invitations           UserInvitation[]
 
   @@index([status])
   @@map("schools")
@@ -206,6 +214,8 @@ model User {
   assignedSupportActions    SupportPlanAction[]
   authoredSupportReviews    SupportReview[]
   auditLogs                 AuditLog[]
+  invitations               UserInvitation[]       @relation("UserInvitations")
+  sentInvitations           UserInvitation[]       @relation("SentInvitations")
 
   @@unique([schoolId, id])
   @@index([schoolId, role, status])
@@ -242,6 +252,31 @@ model PasswordResetToken {
 
   @@index([userId, expiresAt])
   @@map("password_reset_tokens")
+}
+
+model UserInvitation {
+  id              String           @id @default(uuid()) @db.Uuid
+  schoolId        String?          @map("school_id") @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  email           String           @db.VarChar(255)
+  role            UserRole
+  tokenHash       String           @unique @map("token_hash") @db.VarChar(255)
+  status          InvitationStatus @default(PENDING)
+  expiresAt       DateTime         @map("expires_at") @db.Timestamptz(6)
+  acceptedAt      DateTime?        @map("accepted_at") @db.Timestamptz(6)
+  revokedAt       DateTime?        @map("revoked_at") @db.Timestamptz(6)
+  invitedByUserId String?          @map("invited_by_user_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school    School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user      User    @relation("UserInvitations", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User?   @relation("SentInvitations", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId, status])
+  @@index([userId, status])
+  @@index([email])
+  @@map("user_invitations")
 }
 
 // ============================================================================

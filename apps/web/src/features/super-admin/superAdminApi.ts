@@ -2,11 +2,17 @@ import {
   API_ROUTES,
   type AuditLogDto,
   type PlatformOverviewDto,
+  type ProvisionSchoolResultDto,
   type SchoolDetailDto,
   type SchoolSummaryDto,
+  type UserInvitationDto,
 } from '@fsd-sdg4/contracts';
-import type { CreateSchoolInput, UpdateSchoolInput } from '@fsd-sdg4/validation';
-import { apiGet, apiPatch, apiPost } from '@/lib/apiClient';
+import type {
+  CreateSchoolInput,
+  InvitationFilterQuery,
+  UpdateSchoolInput,
+} from '@fsd-sdg4/validation';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
 export function fetchPlatformOverview(signal?: AbortSignal): Promise<PlatformOverviewDto> {
   return apiGet<PlatformOverviewDto>(
@@ -40,8 +46,8 @@ export function fetchSchoolDetail(
   );
 }
 
-export function createSchoolRequest(input: CreateSchoolInput): Promise<SchoolSummaryDto> {
-  return apiPost<SchoolSummaryDto>(API_ROUTES.SUPER_ADMIN.SCHOOLS, input);
+export function createSchoolRequest(input: CreateSchoolInput): Promise<ProvisionSchoolResultDto> {
+  return apiPost<ProvisionSchoolResultDto>(API_ROUTES.SUPER_ADMIN.SCHOOLS, input);
 }
 
 export function updateSchoolRequest(
@@ -51,6 +57,33 @@ export function updateSchoolRequest(
   return apiPatch<SchoolSummaryDto>(
     `${API_ROUTES.SUPER_ADMIN.SCHOOLS}/${encodeURIComponent(schoolId)}`,
     input,
+  );
+}
+
+export function fetchPlatformInvitations(
+  query?: InvitationFilterQuery,
+  signal?: AbortSignal,
+): Promise<UserInvitationDto[]> {
+  const params = new URLSearchParams();
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<UserInvitationDto[]>(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function resendPlatformInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}/${encodeURIComponent(id)}/resend`,
+  );
+}
+
+export function revokePlatformInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiDelete<UserInvitationDto>(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}/${encodeURIComponent(id)}`,
   );
 }
 

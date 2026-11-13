@@ -3,6 +3,8 @@ import { API_ROUTES } from '@fsd-sdg4/contracts';
 import {
   createSchoolSchema,
   idParamSchema,
+  invitationFilterQuerySchema,
+  type InvitationFilterQuery,
   schoolStatusSchema,
   searchQuerySchema,
   updateSchoolSchema,
@@ -20,7 +22,10 @@ import {
   getPlatformOverview,
   getSchoolById,
   listPlatformAuditLogs,
+  listPlatformInvitations,
   listSchools,
+  resendPlatformInvitation,
+  revokePlatformInvitation,
   updateSchool,
 } from './superAdmin.service.js';
 
@@ -114,6 +119,48 @@ export function createSuperAdminRouter(): ExpressRouter {
       const { action, schoolId } = req.query as { action?: string; schoolId?: string };
       const logs = await listPlatformAuditLogs(action, schoolId);
       sendSuccess(res, logs);
+    },
+  );
+
+  router.get(
+    API_ROUTES.SUPER_ADMIN.INVITATIONS,
+    authenticate,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_SCHOOLS_READ),
+    validateRequest({ query: invitationFilterQuerySchema }),
+    async (req, res) => {
+      const invitations = await listPlatformInvitations(
+        req.query as unknown as InvitationFilterQuery,
+      );
+      sendSuccess(res, invitations);
+    },
+  );
+
+  router.post(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}/:id/resend`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_SCHOOLS_CREATE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const { id } = req.params as { id: string };
+      const resent = await resendPlatformInvitation(id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, resent);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}/:id`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_SCHOOLS_DEACTIVATE),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const { id } = req.params as { id: string };
+      const revoked = await revokePlatformInvitation(id, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, revoked);
     },
   );
 
