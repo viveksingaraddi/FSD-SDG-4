@@ -51,6 +51,7 @@ import {
   resendInvitation,
   revokeInvitation,
 } from '../invitations/invitation.service.js';
+import { dispatchInvitationEmail } from '../mail/mail.service.js';
 
 export async function getSchoolOverview(schoolId: string): Promise<SchoolOverviewDto> {
   const now = new Date();
@@ -2216,10 +2217,36 @@ export async function inviteSchoolUser(
       ipAddress,
     });
 
-    return invitationResult.invitation;
+    const school = await tx.school.findUnique({
+      where: { id: schoolId },
+      select: { name: true },
+    });
+
+    return {
+      invitation: invitationResult.invitation,
+      rawToken: invitationResult.rawToken,
+      invitationUrl: invitationResult.invitationUrl,
+      schoolName: school?.name ?? null,
+    };
   });
 
-  return result;
+  const dispatchResult = await dispatchInvitationEmail({
+    invitationId: result.invitation.id,
+    rawToken: result.rawToken,
+    invitationUrl: result.invitationUrl,
+    recipientEmail: input.email,
+    recipientName: `${input.firstName} ${input.lastName}`,
+    role: input.role,
+    schoolId,
+    schoolName: result.schoolName,
+    expiresAt: new Date(result.invitation.expiresAt),
+    type: 'INVITATION_INITIAL',
+  });
+
+  result.invitation.deliveryStatus = dispatchResult.delivered ? 'SENT' : 'FAILED';
+  result.invitation.deliveryError = dispatchResult.error ?? null;
+
+  return result.invitation;
 }
 
 export async function listSchoolInvitations(

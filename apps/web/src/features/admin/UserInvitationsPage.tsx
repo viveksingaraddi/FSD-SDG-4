@@ -55,7 +55,12 @@ export function UserInvitationsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   // Success Link Dialog
-  const [successLink, setSuccessLink] = useState<{ email: string; url: string } | null>(null);
+  const [successLink, setSuccessLink] = useState<{
+    email: string;
+    url: string;
+    deliveryStatus?: string | undefined;
+    deliveryError?: string | null | undefined;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Action Loading states
@@ -117,7 +122,12 @@ export function UserInvitationsPage() {
       loadInvitations();
 
       if (result.invitationUrl) {
-        setSuccessLink({ email: result.email, url: result.invitationUrl });
+        setSuccessLink({
+          email: result.email,
+          url: result.invitationUrl,
+          deliveryStatus: result.deliveryStatus,
+          deliveryError: result.deliveryError,
+        });
       } else {
         showToast({
           title: 'Invitation Sent',
@@ -148,7 +158,12 @@ export function UserInvitationsPage() {
       const result = await resendSchoolInvitationRequest(invitation.id);
       loadInvitations();
       if (result.invitationUrl) {
-        setSuccessLink({ email: result.email, url: result.invitationUrl });
+        setSuccessLink({
+          email: result.email,
+          url: result.invitationUrl,
+          deliveryStatus: result.deliveryStatus,
+          deliveryError: result.deliveryError,
+        });
       } else {
         showToast({
           title: 'Invitation Resent',
@@ -399,6 +414,7 @@ export function UserInvitationsPage() {
                       <th className="py-3.5 px-4 sm:px-6">Recipient Email</th>
                       <th className="py-3.5 px-4">Role</th>
                       <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-4">Email Delivery</th>
                       <th className="py-3.5 px-4">Expires</th>
                       <th className="py-3.5 px-4">Issued On</th>
                       <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
@@ -458,6 +474,30 @@ export function UserInvitationsPage() {
                               <Badge variant="neutral" className="gap-1">
                                 <ShieldAlert className="h-3 w-3" />
                                 <span>Revoked</span>
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {inv.deliveryStatus === 'SENT' && (
+                              <Badge variant="success" className="gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                <span>Delivered</span>
+                              </Badge>
+                            )}
+                            {inv.deliveryStatus === 'FAILED' && (
+                              <Badge
+                                variant="danger"
+                                className="gap-1 cursor-help"
+                                title={inv.deliveryError ?? 'SMTP delivery failed'}
+                              >
+                                <AlertCircle className="h-3 w-3" />
+                                <span>Failed</span>
+                              </Badge>
+                            )}
+                            {(!inv.deliveryStatus || inv.deliveryStatus === 'PENDING') && (
+                              <Badge variant="neutral" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>Pending</span>
                               </Badge>
                             )}
                           </td>
@@ -704,6 +744,26 @@ export function UserInvitationsPage() {
               Share this single-use activation link with the recipient. The link is valid for 7 days
               and allows them to create their password securely.
             </p>
+
+            {successLink?.deliveryStatus === 'SENT' && (
+              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-800">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span>
+                  Invitation email successfully dispatched to <strong>{successLink.email}</strong>{' '}
+                  via Gmail SMTP.
+                </span>
+              </div>
+            )}
+
+            {successLink?.deliveryStatus === 'FAILED' && (
+              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>
+                  Automatic email transmission encountered an issue (
+                  {successLink.deliveryError ?? 'SMTP error'}). Please share the link manually.
+                </span>
+              </div>
+            )}
 
             <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
               <label className="block text-[11px] font-semibold uppercase text-[var(--color-text-muted)] mb-1">

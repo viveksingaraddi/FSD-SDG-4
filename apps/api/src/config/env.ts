@@ -17,6 +17,19 @@ export const envSchema = z.object({
     .or(z.literal('')),
   CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
   API_VERSION: z.string().default('0.0.0'),
+  APP_BASE_URL: z.string().url('APP_BASE_URL must be a valid URL').default('http://localhost:5173'),
+  // Mail configuration (Gmail SMTP)
+  MAIL_HOST: z.string().min(1).default('smtp.gmail.com'),
+  MAIL_PORT: z.coerce.number().int().min(1).max(65535).default(465),
+  MAIL_SECURE: z.preprocess((val) => {
+    if (val === undefined || val === '') return true;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') return val.toLowerCase() === 'true' || val === '1';
+    return Boolean(val);
+  }, z.boolean().default(true)),
+  MAIL_USER: z.string().default(''),
+  MAIL_APP_PASSWORD: z.string().default(''),
+  MAIL_FROM_NAME: z.string().default('FSD-SDG-4 Quality Education'),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

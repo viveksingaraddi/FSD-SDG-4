@@ -22,6 +22,7 @@ import {
   resendInvitation,
   revokeInvitation,
 } from '../invitations/invitation.service.js';
+import { dispatchInvitationEmail } from '../mail/mail.service.js';
 
 export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
   const [
@@ -324,6 +325,27 @@ export async function createSchool(
       adminInvitation,
     };
   });
+
+  if (result.adminInvitation && input.adminEmail) {
+    const dispatchResult = await dispatchInvitationEmail({
+      invitationId: result.adminInvitation.invitation.id,
+      rawToken: result.adminInvitation.rawToken,
+      invitationUrl: result.adminInvitation.invitationUrl,
+      recipientEmail: input.adminEmail,
+      recipientName:
+        input.adminFirstName && input.adminLastName
+          ? `${input.adminFirstName} ${input.adminLastName}`
+          : null,
+      role: 'SCHOOL_ADMIN',
+      schoolId: result.createdSchool.id,
+      schoolName: result.createdSchool.name,
+      expiresAt: new Date(result.adminInvitation.invitation.expiresAt),
+      type: 'INVITATION_INITIAL',
+    });
+
+    result.adminInvitation.invitation.deliveryStatus = dispatchResult.delivered ? 'SENT' : 'FAILED';
+    result.adminInvitation.invitation.deliveryError = dispatchResult.error ?? null;
+  }
 
   return {
     id: result.createdSchool.id,

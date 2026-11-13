@@ -404,6 +404,7 @@ export interface SchoolSettingsDto {
 }
 
 export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+export type DeliveryStatus = 'PENDING' | 'SENT' | 'FAILED';
 
 export interface UserInvitationDto {
   id: string;
@@ -413,6 +414,10 @@ export interface UserInvitationDto {
   email: string;
   role: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
   status: InvitationStatus;
+  deliveryStatus?: DeliveryStatus;
+  deliveryAttempts?: number;
+  deliveredAt?: string | null;
+  deliveryError?: string | null;
   expiresAt: string;
   acceptedAt: string | null;
   revokedAt: string | null;

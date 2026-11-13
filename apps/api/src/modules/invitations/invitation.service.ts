@@ -1,11 +1,12 @@
 import crypto from 'node:crypto';
-import type { Prisma, UserRole } from '@prisma/client';
+import type { DeliveryStatus, Prisma, UserRole } from '@prisma/client';
 import type { InvitationVerificationDto, UserInvitationDto } from '@fsd-sdg4/contracts';
 import type { InvitationFilterQuery } from '@fsd-sdg4/validation';
 import { prisma } from '../../shared/db/prisma.js';
 import { BadRequestError, NotFoundError } from '../../shared/errors/appError.js';
 import { hashPassword } from '../../shared/security/password.js';
 import { AUDIT_ACTIONS, recordAuditEvent } from '../audit/audit.service.js';
+import { dispatchInvitationEmail } from '../mail/mail.service.js';
 
 export const DEFAULT_INVITATION_EXPIRATION_HOURS = 168; // 7 days
 
@@ -22,13 +23,15 @@ export function buildInvitationUrl(rawToken: string): string {
 }
 
 export interface CreateInvitationParams {
-  tx?: Prisma.TransactionClient;
-  schoolId?: string | null;
+  tx?: Prisma.TransactionClient | undefined;
+  schoolId?: string | null | undefined;
   userId: string;
   email: string;
   role: UserRole;
-  invitedByUserId?: string | null;
-  expirationHours?: number;
+  recipientName?: string | null | undefined;
+  invitedByUserId?: string | null | undefined;
+  expirationHours?: number | undefined;
+  sendEmail?: boolean | undefined;
 }
 
 export interface CreatedInvitationResult {
@@ -54,6 +57,8 @@ export async function createInvitation(
       role: params.role,
       tokenHash,
       status: 'PENDING',
+      deliveryStatus: 'PENDING',
+      deliveryAttempts: 0,
       expiresAt,
       invitedByUserId: params.invitedByUserId ?? null,
     },
@@ -66,6 +71,26 @@ export async function createInvitation(
 
   const invitationUrl = buildInvitationUrl(rawToken);
 
+  let currentDeliveryStatus: DeliveryStatus = created.deliveryStatus;
+  let currentDeliveryError: string | null = created.deliveryError;
+
+  if (!params.tx && params.sendEmail !== false) {
+    const dispatchResult = await dispatchInvitationEmail({
+      invitationId: created.id,
+      rawToken,
+      invitationUrl,
+      recipientEmail: created.email,
+      recipientName: params.recipientName,
+      role: created.role,
+      schoolId: created.schoolId,
+      schoolName: created.school?.name,
+      expiresAt: created.expiresAt,
+      type: 'INVITATION_INITIAL',
+    });
+    currentDeliveryStatus = dispatchResult.delivered ? 'SENT' : 'FAILED';
+    currentDeliveryError = dispatchResult.error ?? null;
+  }
+
   return {
     invitation: {
       id: created.id,
@@ -75,6 +100,10 @@ export async function createInvitation(
       email: created.email,
       role: created.role,
       status: created.status,
+      deliveryStatus: currentDeliveryStatus,
+      deliveryAttempts: created.deliveryAttempts,
+      deliveredAt: created.deliveredAt?.toISOString() ?? null,
+      deliveryError: currentDeliveryError,
       expiresAt: created.expiresAt.toISOString(),
       acceptedAt: created.acceptedAt?.toISOString() ?? null,
       revokedAt: created.revokedAt?.toISOString() ?? null,
@@ -283,6 +312,18 @@ export async function resendInvitation(params: {
 
   const invitationUrl = buildInvitationUrl(rawToken);
 
+  const dispatchResult = await dispatchInvitationEmail({
+    invitationId: result.id,
+    rawToken,
+    invitationUrl,
+    recipientEmail: result.email,
+    role: result.role,
+    schoolId: result.schoolId,
+    schoolName: result.school?.name,
+    expiresAt: result.expiresAt,
+    type: 'INVITATION_RESEND',
+  });
+
   return {
     id: result.id,
     schoolId: result.schoolId,
@@ -291,6 +332,10 @@ export async function resendInvitation(params: {
     email: result.email,
     role: result.role,
     status: result.status,
+    deliveryStatus: dispatchResult.delivered ? 'SENT' : 'FAILED',
+    deliveryAttempts: 1,
+    deliveredAt: dispatchResult.delivered ? new Date().toISOString() : null,
+    deliveryError: dispatchResult.error ?? null,
     expiresAt: result.expiresAt.toISOString(),
     acceptedAt: result.acceptedAt?.toISOString() ?? null,
     revokedAt: result.revokedAt?.toISOString() ?? null,
@@ -354,6 +399,10 @@ export async function revokeInvitation(params: {
     email: updated.email,
     role: updated.role,
     status: updated.status,
+    deliveryStatus: updated.deliveryStatus,
+    deliveryAttempts: updated.deliveryAttempts,
+    deliveredAt: updated.deliveredAt?.toISOString() ?? null,
+    deliveryError: updated.deliveryError ?? null,
     expiresAt: updated.expiresAt.toISOString(),
     acceptedAt: updated.acceptedAt?.toISOString() ?? null,
     revokedAt: updated.revokedAt?.toISOString() ?? null,
@@ -377,6 +426,9 @@ export async function listInvitations(params: {
             OR: [{ status: 'EXPIRED' }, { status: 'PENDING', expiresAt: { lt: now } }],
           }
         : { status: params.query.status }
+      : {}),
+    ...(params.query.deliveryStatus && params.query.deliveryStatus !== 'ALL'
+      ? { deliveryStatus: params.query.deliveryStatus as DeliveryStatus }
       : {}),
     ...(params.query.search
       ? {
@@ -407,6 +459,10 @@ export async function listInvitations(params: {
       email: inv.email,
       role: inv.role,
       status: effectiveStatus,
+      deliveryStatus: inv.deliveryStatus,
+      deliveryAttempts: inv.deliveryAttempts,
+      deliveredAt: inv.deliveredAt?.toISOString() ?? null,
+      deliveryError: inv.deliveryError ?? null,
       expiresAt: inv.expiresAt.toISOString(),
       acceptedAt: inv.acceptedAt?.toISOString() ?? null,
       revokedAt: inv.revokedAt?.toISOString() ?? null,
