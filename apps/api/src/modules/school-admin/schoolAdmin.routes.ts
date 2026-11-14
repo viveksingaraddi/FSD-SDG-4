@@ -15,6 +15,7 @@ import {
   type InvitationFilterQuery,
   inviteUserSchema,
   offeringFilterQuerySchema,
+  saveOnboardingProgressSchema,
   searchQuerySchema,
   staffFilterQuerySchema,
   updateAcademicYearSchema,
@@ -37,6 +38,7 @@ import {
   activateAcademicYear,
   allocateTeacher,
   assignOfferingTeacher,
+  completeSchoolOnboarding,
   createAcademicYear,
   createClass,
   createCourseOffering,
@@ -50,6 +52,7 @@ import {
   deleteSection,
   deleteStaff,
   deleteSubject,
+  getSchoolOnboarding,
   getSchoolOverview,
   getSchoolSettings,
   getStaffById,
@@ -65,6 +68,7 @@ import {
   removeOfferingTeacher,
   resendSchoolInvitation,
   revokeSchoolInvitation,
+  saveOnboardingProgress,
   updateAcademicYear,
   updateClass,
   updateSchoolSettings,
@@ -100,6 +104,50 @@ export function createSchoolAdminRouter(): ExpressRouter {
       const schoolId = await resolveTenantSchoolId(req);
       const overview = await getSchoolOverview(schoolId);
       sendSuccess(res, overview);
+    },
+  );
+
+  router.get(
+    API_ROUTES.SCHOOL.ONBOARDING,
+    authenticate,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_READ),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const status = await getSchoolOnboarding(schoolId);
+      sendSuccess(res, status);
+    },
+  );
+
+  router.post(
+    API_ROUTES.SCHOOL.ONBOARDING_PROGRESS,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    validateRequest({ body: saveOnboardingProgressSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const result = await saveOnboardingProgress(
+        schoolId,
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, result);
+    },
+  );
+
+  router.post(
+    API_ROUTES.SCHOOL.ONBOARDING_COMPLETE,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_CLASSES_MANAGE),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const result = await completeSchoolOnboarding(schoolId, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, result);
     },
   );
 

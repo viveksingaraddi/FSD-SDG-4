@@ -58,6 +58,9 @@ export const API_ROUTES = {
   // School admin (Phase 10)
   SCHOOL: {
     OVERVIEW: '/api/v1/school/overview',
+    ONBOARDING: '/api/v1/school/onboarding',
+    ONBOARDING_PROGRESS: '/api/v1/school/onboarding/progress',
+    ONBOARDING_COMPLETE: '/api/v1/school/onboarding/complete',
     ACADEMIC_YEARS: '/api/v1/school/academic-years',
     CLASSES: '/api/v1/school/classes',
     SECTIONS: '/api/v1/school/sections',
@@ -437,4 +440,82 @@ export interface ProvisionSchoolResultDto extends SchoolSummaryDto {
   adminEmail?: string | undefined;
   invitationUrl?: string | undefined;
   invitationId?: string | undefined;
+}
+
+export type OnboardingStepKey =
+  | 'profile'
+  | 'academic-year'
+  | 'classes-sections'
+  | 'subjects'
+  | 'teachers'
+  | 'students'
+  | 'parents'
+  | 'summary';
+
+export interface SchoolOnboardingStatusDto {
+  schoolId: string;
+  schoolName: string;
+  isComplete: boolean;
+  completionPercentage: number;
+  currentStep: OnboardingStepKey;
+  completedSteps: OnboardingStepKey[];
+  pendingSteps: OnboardingStepKey[];
+  steps: {
+    profile: {
+      isComplete: boolean;
+      name: string;
+      code: string;
+      subdomain: string;
+      contactEmail: string;
+      status: string;
+    };
+    academicYear: {
+      isComplete: boolean;
+      count: number;
+      activeYear: AcademicYearDto | null;
+    };
+    classesSections: {
+      isComplete: boolean;
+      classCount: number;
+      sectionCount: number;
+    };
+    subjects: {
+      isComplete: boolean;
+      count: number;
+    };
+    teachers: {
+      isComplete: boolean;
+      count: number;
+      invitedCount: number;
+    };
+    students: {
+      isComplete: boolean;
+      count: number;
+    };
+    parents: {
+      isComplete: boolean;
+      count: number;
+      invitedCount: number;
+    };
+  };
+  summary: {
+    totalStudents: number;
+    totalTeachers: number;
+    totalClasses: number;
+    totalSections: number;
+    totalSubjects: number;
+    hasActiveYear: boolean;
+  };
+  lastSavedAt: string | null;
+}
+
+export interface SaveOnboardingProgressResultDto {
+  success: boolean;
+  savedStep: OnboardingStepKey;
+  savedAt: string;
+}
+
+export interface CompleteOnboardingResultDto {
+  success: boolean;
+  completedAt: string;
 }

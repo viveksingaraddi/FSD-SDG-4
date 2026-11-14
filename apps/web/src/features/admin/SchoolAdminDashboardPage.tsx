@@ -10,6 +10,7 @@ import {
   Layers,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   UserCheck,
   UserPlus,
   Users,
@@ -26,12 +27,17 @@ import {
   Skeleton,
   Text,
 } from '@/components/ui';
-import { fetchSchoolOverview } from './schoolAdminApi';
+import { fetchSchoolOnboarding, fetchSchoolOverview } from './schoolAdminApi';
 
 export function SchoolAdminDashboardPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['school-admin', 'overview'],
     queryFn: ({ signal }) => fetchSchoolOverview(signal),
+  });
+
+  const { data: onboarding } = useQuery({
+    queryKey: ['school-admin', 'onboarding'],
+    queryFn: ({ signal }) => fetchSchoolOnboarding(signal),
   });
 
   return (
@@ -60,6 +66,15 @@ export function SchoolAdminDashboardPage() {
             >
               Refresh
             </Button>
+            <Link to="/admin/onboarding">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Sparkles className="h-4 w-4 text-primary" />}
+              >
+                Setup Guide
+              </Button>
+            </Link>
             <Link to="/admin/academic">
               <Button variant="primary" size="sm">
                 Academic Setup
@@ -77,6 +92,59 @@ export function SchoolAdminDashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Initial Onboarding Setup Banner */}
+        {onboarding && !onboarding.isComplete && onboarding.completionPercentage < 100 && (
+          <div
+            role="region"
+            aria-label="Initial school setup reminder"
+            className="rounded-[var(--radius-lg)] border border-primary/20 bg-primary/5 p-5 shadow-xs"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
+                  <Heading level={3} size="h4">
+                    Initial School Setup in Progress
+                  </Heading>
+                  <Badge variant="warning">{onboarding.completionPercentage}% Configured</Badge>
+                </div>
+                <Text variant="small" className="text-muted-foreground">
+                  {onboarding.completedSteps.length} of 7 foundation steps completed. Continue
+                  configuring your academic schedule, faculty, and student rosters.
+                </Text>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link to="/admin/onboarding">
+                  <Button variant="primary" size="sm">
+                    Resume Setup Wizard
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+                <span>Setup Completion</span>
+                <span>{onboarding.completionPercentage}%</span>
+              </div>
+              <div
+                role="progressbar"
+                aria-label="Onboarding progress"
+                aria-valuenow={onboarding.completionPercentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-2 w-full overflow-hidden rounded-full bg-primary/10"
+              >
+                <div
+                  className="h-full bg-primary transition-all duration-300 ease-out"
+                  style={{ width: `${onboarding.completionPercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tenant Scoping Isolation Verification Badge */}
         {data && (

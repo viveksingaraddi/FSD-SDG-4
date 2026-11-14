@@ -23,6 +23,7 @@ const TeacherProfilePage = lazy(() => import('@/features/admin/TeacherProfilePag
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
 const UserInvitationsPage = lazy(() => import('@/features/admin/UserInvitationsPage'));
+const SchoolOnboardingPage = lazy(() => import('@/features/admin/SchoolOnboardingPage'));
 const AcceptInvitationPage = lazy(() => import('@/features/auth/AcceptInvitationPage'));
 
 function RootRedirect() {
@@ -126,6 +127,14 @@ export function App() {
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
                     <SchoolAdminDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/onboarding"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <SchoolOnboardingPage />
                   </ProtectedRoute>
                 }
               />
