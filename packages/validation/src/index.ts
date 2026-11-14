@@ -363,3 +363,19 @@ export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchem
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
 export type InvitationFilterQuery = z.infer<typeof invitationFilterQuerySchema>;
+
+export const saveOnboardingProgressSchema = z.object({
+  step: z.enum([
+    'profile',
+    'academic-year',
+    'classes-sections',
+    'subjects',
+    'teachers',
+    'students',
+    'parents',
+    'summary',
+  ]),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export type SaveOnboardingProgressInput = z.infer<typeof saveOnboardingProgressSchema>;

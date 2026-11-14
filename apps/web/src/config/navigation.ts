@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Settings,
   Shield,
+  Sparkles,
   UserPlus,
   Users,
   type LucideIcon,
@@ -45,6 +46,7 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
   SCHOOL_ADMIN: [
     { id: 'overview', label: 'School Overview', to: '/admin', icon: LayoutDashboard, end: true },
+    { id: 'onboarding', label: 'Setup Guide', to: '/admin/onboarding', icon: Sparkles },
     { id: 'academic', label: 'Academic Setup', to: '/admin/academic', icon: BookOpen },
     { id: 'staff', label: 'Staff & Teachers', to: '/admin/staff', icon: Users },
     { id: 'students', label: 'Students', to: '/admin/students', icon: GraduationCap },

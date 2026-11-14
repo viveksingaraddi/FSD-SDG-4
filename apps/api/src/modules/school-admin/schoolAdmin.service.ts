@@ -3,11 +3,15 @@ import type {
   AcademicYearDto,
   AuditLogDto,
   ClassDto,
+  CompleteOnboardingResultDto,
   CourseOfferingDto,
   OfferingTeacherDto,
+  OnboardingStepKey,
+  SaveOnboardingProgressResultDto,
   SchoolAcademicSummaryDto,
   SchoolAlertDto,
   SchoolAttendanceSummaryDto,
+  SchoolOnboardingStatusDto,
   SchoolOverviewDto,
   SchoolRecentActivityDto,
   SchoolSettingsDto,
@@ -32,6 +36,7 @@ import type {
   InvitationFilterQuery,
   InviteUserInput,
   OfferingFilterQuery,
+  SaveOnboardingProgressInput,
   StaffFilterQuery,
   UpdateAcademicYearInput,
   UpdateClassInput,
@@ -2272,4 +2277,259 @@ export async function revokeSchoolInvitation(
   ipAddress: string | null,
 ): Promise<UserInvitationDto> {
   return revokeInvitation({ invitationId, schoolId, actorId, ipAddress });
+}
+
+export async function getSchoolOnboarding(schoolId: string): Promise<SchoolOnboardingStatusDto> {
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+  });
+  if (!school) {
+    throw new NotFoundError('School not found.');
+  }
+
+  const [
+    academicYears,
+    classes,
+    subjects,
+    teacherCount,
+    teacherInvitedCount,
+    studentCount,
+    studentInvitedCount,
+    parentCount,
+    parentInvitedCount,
+    latestProgressAudit,
+    completionAudit,
+  ] = await Promise.all([
+    prisma.academicYear.findMany({
+      where: { schoolId },
+      orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { sections: true } } },
+    }),
+    prisma.class.findMany({
+      where: { schoolId },
+      orderBy: { sortOrder: 'asc' },
+      include: {
+        sections: {
+          include: {
+            academicYear: { select: { name: true } },
+            _count: { select: { enrollments: true } },
+          },
+        },
+      },
+    }),
+    prisma.subject.findMany({
+      where: { schoolId },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.teacherProfile.count({ where: { schoolId } }),
+    prisma.userInvitation.count({
+      where: { schoolId, role: 'TEACHER', status: { in: ['PENDING', 'ACCEPTED'] } },
+    }),
+    prisma.studentProfile.count({ where: { schoolId, deletedAt: null } }),
+    prisma.userInvitation.count({
+      where: { schoolId, role: 'STUDENT', status: { in: ['PENDING', 'ACCEPTED'] } },
+    }),
+    prisma.guardianRelationship.count({ where: { schoolId } }),
+    prisma.userInvitation.count({
+      where: { schoolId, role: 'PARENT', status: { in: ['PENDING', 'ACCEPTED'] } },
+    }),
+    prisma.auditLog.findFirst({
+      where: { schoolId, action: 'SCHOOL_ONBOARDING_PROGRESS_SAVED' },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.auditLog.findFirst({
+      where: { schoolId, action: 'SCHOOL_ONBOARDING_COMPLETED' },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
+
+  const activeYear = academicYears.find((y) => y.status === 'ACTIVE') ?? null;
+  const totalSections = classes.reduce((acc, c) => acc + c.sections.length, 0);
+
+  const isProfileComplete = Boolean(school.name && school.contactEmail && school.code);
+  const isAcademicYearComplete = academicYears.length > 0;
+  const isClassesSectionsComplete = classes.length > 0 && totalSections > 0;
+  const isSubjectsComplete = subjects.length > 0;
+  const isTeachersComplete = teacherCount > 0 || teacherInvitedCount > 0;
+  const isStudentsComplete = studentCount > 0 || studentInvitedCount > 0;
+  const isParentsComplete = parentCount > 0 || parentInvitedCount > 0;
+
+  const stepsMap: Record<string, boolean> = {
+    profile: isProfileComplete,
+    'academic-year': isAcademicYearComplete,
+    'classes-sections': isClassesSectionsComplete,
+    subjects: isSubjectsComplete,
+    teachers: isTeachersComplete,
+    students: isStudentsComplete,
+    parents: isParentsComplete,
+  };
+
+  const allStepKeys: OnboardingStepKey[] = [
+    'profile',
+    'academic-year',
+    'classes-sections',
+    'subjects',
+    'teachers',
+    'students',
+    'parents',
+  ];
+
+  const completedSteps: OnboardingStepKey[] = allStepKeys.filter((k) => stepsMap[k]);
+  const pendingSteps: OnboardingStepKey[] = allStepKeys.filter((k) => !stepsMap[k]);
+
+  const isFormallyCompleted = Boolean(completionAudit);
+  const completionPercentage = isFormallyCompleted
+    ? 100
+    : Math.round((completedSteps.length / allStepKeys.length) * 100);
+
+  const isComplete = isFormallyCompleted || completedSteps.length === allStepKeys.length;
+
+  let currentStep: OnboardingStepKey = 'profile';
+  if (latestProgressAudit?.delta && typeof latestProgressAudit.delta === 'object') {
+    const savedStep = (latestProgressAudit.delta as Record<string, unknown>)[
+      'step'
+    ] as OnboardingStepKey;
+    if (allStepKeys.includes(savedStep) || savedStep === 'summary') {
+      currentStep = savedStep;
+    }
+  } else if (pendingSteps.length > 0) {
+    currentStep = pendingSteps[0] ?? 'profile';
+  } else {
+    currentStep = 'summary';
+  }
+
+  return {
+    schoolId: school.id,
+    schoolName: school.name,
+    isComplete,
+    completionPercentage,
+    currentStep,
+    completedSteps,
+    pendingSteps,
+    steps: {
+      profile: {
+        isComplete: isProfileComplete,
+        name: school.name,
+        code: school.code,
+        subdomain: school.subdomain,
+        contactEmail: school.contactEmail,
+        status: school.status,
+      },
+      academicYear: {
+        isComplete: isAcademicYearComplete,
+        count: academicYears.length,
+        activeYear: activeYear
+          ? {
+              id: activeYear.id,
+              name: activeYear.name,
+              startDate: activeYear.startDate.toISOString().slice(0, 10),
+              endDate: activeYear.endDate.toISOString().slice(0, 10),
+              status: activeYear.status,
+              sectionCount: activeYear._count.sections,
+            }
+          : null,
+      },
+      classesSections: {
+        isComplete: isClassesSectionsComplete,
+        classCount: classes.length,
+        sectionCount: totalSections,
+      },
+      subjects: {
+        isComplete: isSubjectsComplete,
+        count: subjects.length,
+      },
+      teachers: {
+        isComplete: isTeachersComplete,
+        count: teacherCount,
+        invitedCount: teacherInvitedCount,
+      },
+      students: {
+        isComplete: isStudentsComplete,
+        count: studentCount,
+      },
+      parents: {
+        isComplete: isParentsComplete,
+        count: parentCount,
+        invitedCount: parentInvitedCount,
+      },
+    },
+    summary: {
+      totalStudents: studentCount,
+      totalTeachers: teacherCount + teacherInvitedCount,
+      totalClasses: classes.length,
+      totalSections,
+      totalSubjects: subjects.length,
+      hasActiveYear: Boolean(activeYear),
+    },
+    lastSavedAt: latestProgressAudit?.createdAt.toISOString() ?? null,
+  };
+}
+
+export async function saveOnboardingProgress(
+  schoolId: string,
+  input: SaveOnboardingProgressInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<SaveOnboardingProgressResultDto> {
+  const school = await prisma.school.findUnique({ where: { id: schoolId } });
+  if (!school) {
+    throw new NotFoundError('School not found.');
+  }
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_ONBOARDING_PROGRESS_SAVED',
+    entityType: 'School',
+    entityId: schoolId,
+    delta: {
+      step: input.step,
+      notes: input.notes,
+    },
+    ipAddress,
+  });
+
+  return {
+    success: true,
+    savedStep: input.step as OnboardingStepKey,
+    savedAt: new Date().toISOString(),
+  };
+}
+
+export async function completeSchoolOnboarding(
+  schoolId: string,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<CompleteOnboardingResultDto> {
+  const school = await prisma.school.findUnique({ where: { id: schoolId } });
+  if (!school) {
+    throw new NotFoundError('School not found.');
+  }
+
+  const [academicYearCount, classCount, sectionCount] = await Promise.all([
+    prisma.academicYear.count({ where: { schoolId } }),
+    prisma.class.count({ where: { schoolId } }),
+    prisma.section.count({ where: { schoolId } }),
+  ]);
+
+  if (academicYearCount === 0 || classCount === 0 || sectionCount === 0) {
+    throw new BadRequestError(
+      'Cannot complete onboarding without at least one Academic Year, Class, and Section configured.',
+    );
+  }
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: 'SCHOOL_ONBOARDING_COMPLETED',
+    entityType: 'School',
+    entityId: schoolId,
+    delta: { completedBy: actorId },
+    ipAddress,
+  });
+
+  return {
+    success: true,
+    completedAt: new Date().toISOString(),
+  };
 }

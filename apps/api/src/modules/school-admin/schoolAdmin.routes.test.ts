@@ -645,4 +645,134 @@ describe('School Admin API routes', () => {
       expect.anything(),
     );
   });
+
+  describe('School Onboarding endpoints', () => {
+    it('returns 200 with onboarding status for authenticated SCHOOL_ADMIN', async () => {
+      const getOnboardingSpy = vi
+        .spyOn(schoolAdminService, 'getSchoolOnboarding')
+        .mockResolvedValueOnce({
+          schoolId: 'tenant-school-1',
+          schoolName: 'Summit Academy',
+          isComplete: false,
+          completionPercentage: 43,
+          currentStep: 'classes-sections',
+          completedSteps: ['profile', 'academic-year', 'classes-sections'],
+          pendingSteps: ['subjects', 'teachers', 'students', 'parents'],
+          steps: {
+            profile: {
+              isComplete: true,
+              name: 'Summit Academy',
+              code: 'SUMMIT-1',
+              subdomain: 'summit',
+              contactEmail: 'admin@summit.edu',
+              status: 'ACTIVE',
+            },
+            academicYear: {
+              isComplete: true,
+              count: 1,
+              activeYear: {
+                id: 'year-1',
+                name: '2026-2027 Academic Year',
+                startDate: '2026-08-01',
+                endDate: '2027-06-30',
+                status: 'ACTIVE',
+                sectionCount: 2,
+              },
+            },
+            classesSections: { isComplete: true, classCount: 1, sectionCount: 2 },
+            subjects: { isComplete: false, count: 0 },
+            teachers: { isComplete: false, count: 0, invitedCount: 0 },
+            students: { isComplete: false, count: 0 },
+            parents: { isComplete: false, count: 0, invitedCount: 0 },
+          },
+          summary: {
+            totalStudents: 0,
+            totalTeachers: 0,
+            totalClasses: 1,
+            totalSections: 2,
+            totalSubjects: 0,
+            hasActiveYear: true,
+          },
+          lastSavedAt: new Date().toISOString(),
+        });
+
+      const res = await request(app)
+        .get(API_ROUTES.SCHOOL.ONBOARDING)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', 'tenant-school-1');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.schoolName).toBe('Summit Academy');
+      expect(res.body.data.completionPercentage).toBe(43);
+      expect(getOnboardingSpy).toHaveBeenCalledWith('tenant-school-1');
+    });
+
+    it('rejects unauthorized role from accessing onboarding with 403', async () => {
+      const res = await request(app)
+        .get(API_ROUTES.SCHOOL.ONBOARDING)
+        .set('x-test-role', 'STUDENT')
+        .set('x-test-school-id', 'tenant-school-1');
+
+      expect(res.status).toBe(403);
+    });
+
+    it('saves onboarding progress bookmark with 200', async () => {
+      const saveSpy = vi.spyOn(schoolAdminService, 'saveOnboardingProgress').mockResolvedValueOnce({
+        success: true,
+        savedStep: 'teachers',
+        savedAt: new Date().toISOString(),
+      });
+
+      const res = await request(app)
+        .post(API_ROUTES.SCHOOL.ONBOARDING_PROGRESS)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', 'tenant-school-1')
+        .set('X-Requested-With', 'XMLHttpRequest')
+        .send({ step: 'teachers', notes: 'Configuring initial staff roster' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.success).toBe(true);
+      expect(res.body.data.savedStep).toBe('teachers');
+      expect(saveSpy).toHaveBeenCalledWith(
+        'tenant-school-1',
+        { step: 'teachers', notes: 'Configuring initial staff roster' },
+        '11111111-1111-4111-8111-111111111111',
+        expect.anything(),
+      );
+    });
+
+    it('rejects state-changing request without CSRF protection with 403', async () => {
+      const res = await request(app)
+        .post(API_ROUTES.SCHOOL.ONBOARDING_PROGRESS)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', '33333333-3333-4333-8333-333333333333')
+        .type('text/plain')
+        .send('invalid-csrf-payload');
+
+      expect(res.status).toBe(403);
+    });
+
+    it('completes onboarding and records audit with 200', async () => {
+      const completeSpy = vi
+        .spyOn(schoolAdminService, 'completeSchoolOnboarding')
+        .mockResolvedValueOnce({
+          success: true,
+          completedAt: new Date().toISOString(),
+        });
+
+      const res = await request(app)
+        .post(API_ROUTES.SCHOOL.ONBOARDING_COMPLETE)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', 'tenant-school-1')
+        .set('X-Requested-With', 'XMLHttpRequest');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.success).toBe(true);
+      expect(completeSpy).toHaveBeenCalledWith(
+        'tenant-school-1',
+        '11111111-1111-4111-8111-111111111111',
+        expect.anything(),
+      );
+    });
+  });
 });

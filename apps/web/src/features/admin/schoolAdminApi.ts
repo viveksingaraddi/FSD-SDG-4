@@ -3,8 +3,11 @@ import {
   type AcademicYearDto,
   type AuditLogDto,
   type ClassDto,
+  type CompleteOnboardingResultDto,
   type CourseOfferingDto,
   type OfferingTeacherDto,
+  type SaveOnboardingProgressResultDto,
+  type SchoolOnboardingStatusDto,
   type SchoolOverviewDto,
   type SchoolSettingsDto,
   type SectionDto,
@@ -28,6 +31,7 @@ import type {
   InvitationFilterQuery,
   InviteUserInput,
   OfferingFilterQuery,
+  SaveOnboardingProgressInput,
   StaffFilterQuery,
   UpdateAcademicYearInput,
   UpdateClassInput,
@@ -283,4 +287,21 @@ export function resendSchoolInvitationRequest(id: string): Promise<UserInvitatio
 
 export function revokeSchoolInvitationRequest(id: string): Promise<UserInvitationDto> {
   return apiDelete<UserInvitationDto>(`${API_ROUTES.SCHOOL.INVITATIONS}/${encodeURIComponent(id)}`);
+}
+
+export function fetchSchoolOnboarding(signal?: AbortSignal): Promise<SchoolOnboardingStatusDto> {
+  return apiGet<SchoolOnboardingStatusDto>(
+    API_ROUTES.SCHOOL.ONBOARDING,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function saveOnboardingProgressRequest(
+  input: SaveOnboardingProgressInput,
+): Promise<SaveOnboardingProgressResultDto> {
+  return apiPost<SaveOnboardingProgressResultDto>(API_ROUTES.SCHOOL.ONBOARDING_PROGRESS, input);
+}
+
+export function completeSchoolOnboardingRequest(): Promise<CompleteOnboardingResultDto> {
+  return apiPost<CompleteOnboardingResultDto>(API_ROUTES.SCHOOL.ONBOARDING_COMPLETE, {});
 }
