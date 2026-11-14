@@ -30,6 +30,16 @@ export function LoginPage() {
   const location = useLocation();
   const [serverError, setServerError] = useState<string | null>(null);
 
+  const locationState = location.state as {
+    from?: { pathname?: string };
+    email?: string;
+    activated?: boolean;
+  } | null;
+
+  const [activationSuccess, setActivationSuccess] = useState<boolean>(
+    Boolean(locationState?.activated),
+  );
+
   const {
     register,
     handleSubmit,
@@ -37,7 +47,7 @@ export function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: createZodResolver(loginFormSchema),
     defaultValues: {
-      email: '',
+      email: locationState?.email ?? '',
       password: '',
     },
   });
@@ -80,6 +90,18 @@ export function LoginPage() {
         </div>
 
         <Card padding="lg">
+          {activationSuccess && !serverError && (
+            <Alert
+              variant="success"
+              title="Account Activated"
+              className="mb-4"
+              onDismiss={() => setActivationSuccess(false)}
+            >
+              Your account has been successfully activated. Sign in below with your new password to
+              access your portal.
+            </Alert>
+          )}
+
           {serverError && (
             <Alert
               variant="danger"

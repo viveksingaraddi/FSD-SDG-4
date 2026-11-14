@@ -304,7 +304,14 @@ export function AcceptInvitationPage() {
                 <Button
                   variant="primary"
                   className="w-full justify-center gap-2 py-3 text-base shadow-sm"
-                  onClick={() => navigate('/login')}
+                  onClick={() =>
+                    navigate('/login', {
+                      state: {
+                        email: verification?.email ?? '',
+                        activated: true,
+                      },
+                    })
+                  }
                 >
                   <span>Sign In to Platform</span>
                   <ArrowRight className="h-5 w-5" aria-hidden="true" />

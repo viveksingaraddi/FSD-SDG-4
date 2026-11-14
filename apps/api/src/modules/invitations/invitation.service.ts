@@ -125,12 +125,16 @@ export async function verifyInvitation(rawToken: string): Promise<InvitationVeri
   const invitation = await prisma.userInvitation.findUnique({
     where: { tokenHash },
     include: {
-      school: { select: { name: true } },
+      school: { select: { name: true, status: true } },
     },
   });
 
   if (!invitation) {
     return { valid: false, reason: 'NOT_FOUND' };
+  }
+
+  if (invitation.schoolId && invitation.school && invitation.school.status !== 'ACTIVE') {
+    return { valid: false, reason: 'INVALID' };
   }
 
   if (invitation.status === 'ACCEPTED') {
@@ -168,15 +172,24 @@ export interface AcceptInvitationParams {
 
 export async function acceptInvitation(
   params: AcceptInvitationParams,
-): Promise<{ success: boolean; email: string; role: UserRole }> {
+): Promise<{ success: boolean; email: string; role: UserRole; schoolName?: string | null }> {
   const tokenHash = crypto.createHash('sha256').update(params.rawToken.trim()).digest('hex');
 
   const invitation = await prisma.userInvitation.findUnique({
     where: { tokenHash },
+    include: {
+      school: { select: { id: true, name: true, status: true } },
+    },
   });
 
   if (!invitation) {
     throw new NotFoundError('Invitation was not found or is invalid.');
+  }
+
+  if (invitation.schoolId && invitation.school && invitation.school.status !== 'ACTIVE') {
+    throw new BadRequestError(
+      'The associated educational institution is inactive or suspended. Please contact platform support.',
+    );
   }
 
   if (invitation.status === 'ACCEPTED') {
@@ -237,6 +250,7 @@ export async function acceptInvitation(
     success: true,
     email: invitation.email,
     role: invitation.role,
+    schoolName: invitation.school?.name ?? null,
   };
 }
 
