@@ -191,6 +191,22 @@ describe('Invitation Service', () => {
         data: { status: 'EXPIRED' },
       });
     });
+
+    it('returns valid: false, reason: INVALID when associated school is suspended or inactive', async () => {
+      vi.mocked(prisma.userInvitation.findUnique).mockResolvedValue({
+        id: 'inv-123',
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 3600 * 1000),
+        email: 'teacher@school.edu',
+        role: 'TEACHER',
+        schoolId: 'school-1',
+        school: { name: 'Suspended High', status: 'SUSPENDED' },
+      } as never);
+
+      const res = await verifyInvitation('suspended-school-token');
+      expect(res.valid).toBe(false);
+      expect(res.reason).toBe('INVALID');
+    });
   });
 
   describe('acceptInvitation', () => {
@@ -264,6 +280,25 @@ describe('Invitation Service', () => {
       await expect(
         acceptInvitation({
           rawToken: 'expired-token',
+          password: 'ValidPassword123!',
+          ipAddress: '127.0.0.1',
+        }),
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    it('rejects acceptance if associated school is inactive or suspended', async () => {
+      vi.mocked(prisma.userInvitation.findUnique).mockResolvedValue({
+        id: 'inv-123',
+        userId: 'user-123',
+        schoolId: 'school-1',
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 3600 * 1000),
+        school: { id: 'school-1', name: 'Suspended High', status: 'INACTIVE' },
+      } as never);
+
+      await expect(
+        acceptInvitation({
+          rawToken: 'inactive-school-token',
           password: 'ValidPassword123!',
           ipAddress: '127.0.0.1',
         }),
