@@ -4,7 +4,29 @@
  * No secrets are logged or exposed in error messages.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
+
+// Automatically load local .env if present and process.loadEnvFile is available
+if (process.env['NODE_ENV'] !== 'test' && typeof process.loadEnvFile === 'function') {
+  const envCandidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(process.cwd(), 'apps/api/.env'),
+    path.resolve(import.meta.dirname, '../../../.env'),
+    path.resolve(import.meta.dirname, '../../.env'),
+  ];
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      try {
+        process.loadEnvFile(envPath);
+        break;
+      } catch {
+        // Fall through if file cannot be parsed
+      }
+    }
+  }
+}
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
@@ -27,8 +49,8 @@ export const envSchema = z.object({
     if (typeof val === 'string') return val.toLowerCase() === 'true' || val === '1';
     return Boolean(val);
   }, z.boolean().default(true)),
-  MAIL_USER: z.string().default(''),
-  MAIL_APP_PASSWORD: z.string().default(''),
+  MAIL_USER: z.string().trim().default(''),
+  MAIL_APP_PASSWORD: z.string().trim().default(''),
   MAIL_FROM_NAME: z.string().default('FSD-SDG-4 Quality Education'),
 });
 

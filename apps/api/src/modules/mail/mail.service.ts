@@ -66,8 +66,8 @@ export function getMailTransporter(): Transporter {
     secure: env.MAIL_SECURE,
     auth: isConfigured
       ? {
-          user: env.MAIL_USER,
-          pass: env.MAIL_APP_PASSWORD,
+          user: env.MAIL_USER.trim(),
+          pass: env.MAIL_APP_PASSWORD.trim(),
         }
       : undefined,
     tls: {

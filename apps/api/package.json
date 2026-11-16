@@ -18,6 +18,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "mail:verify": "tsx src/scripts/verify-mail.ts",
     "clean": "rimraf dist"
   },
   "prisma": {
