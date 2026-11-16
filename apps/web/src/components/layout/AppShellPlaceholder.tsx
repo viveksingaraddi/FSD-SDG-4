@@ -13,13 +13,13 @@ export function AppShellPlaceholder(): JSX.Element {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Global Header */}
       <header
-        className="h-16 bg-blue-700 text-white flex items-center px-6 shadow-md"
+        className="h-16 bg-[var(--color-brand-primary)] text-white flex items-center px-6 shadow-md"
         role="banner"
       >
         <span className="font-semibold text-lg tracking-tight">
-          FSD-SDG-4 | Quality Education Platform
+          EDVARQ | Enterprise Education Management Platform
         </span>
-        <span className="ml-auto text-sm text-blue-200 font-mono">Phase 4 — Foundation</span>
+        <span className="ml-auto text-sm text-slate-300 font-mono">Phase 4 — Foundation</span>
       </header>
 
       {/* Main Content */}
@@ -29,17 +29,18 @@ export function AppShellPlaceholder(): JSX.Element {
         tabIndex={-1}
       >
         <div className="max-w-lg w-full text-center space-y-6">
-          {/* SDG 4 Brand Accent */}
-          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-medium">
-            <span aria-hidden="true">🎯</span>
-            <span>Aligned with UN SDG 4 — Quality Education</span>
+          {/* Brand Tagline Accent */}
+          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-900 px-4 py-2 rounded-full text-sm font-medium">
+            <span aria-hidden="true">✦</span>
+            <span>One institution. One connected intelligence platform.</span>
           </div>
 
-          <h1 className="text-3xl font-bold text-slate-900">Repository scaffold ready</h1>
+          <h1 className="text-3xl font-bold text-slate-900">EDVARQ Platform Foundation</h1>
 
           <p className="text-slate-600 text-base leading-relaxed">
-            Phase 4 scaffolding is complete. The monorepo structure, TypeScript configuration,
-            shared packages, and development tooling are established.
+            Enterprise Education Management &amp; Institutional Intelligence SaaS. The monorepo
+            architecture, design system, zero-trust tenant isolation, and modular monolith
+            foundation are established.
           </p>
 
           {/* Status Cards */}
@@ -75,7 +76,7 @@ export function AppShellPlaceholder(): JSX.Element {
 
       {/* Footer */}
       <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200">
-        FSD-SDG-4 Quality Education SaaS — Phase 4 Foundation &nbsp;|&nbsp;
+        EDVARQ Enterprise SaaS Platform &nbsp;|&nbsp;
         <span className="font-mono">v0.0.0-dev</span>
       </footer>
     </div>

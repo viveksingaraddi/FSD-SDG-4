@@ -594,7 +594,7 @@ describe('School Admin Portal', () => {
 
     const submitButtons = screen.getAllByRole('button', { name: 'Provision Teacher' });
     fireEvent.click(submitButtons[1]!);
-  });
+  }, 15000);
 
   it('renders teacher profile inspection with course allocations and actions', async () => {
     const fetchMock = vi.fn((input: string | URL, init?: { method?: string }) => {

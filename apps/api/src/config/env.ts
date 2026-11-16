@@ -51,7 +51,7 @@ export const envSchema = z.object({
   }, z.boolean().default(true)),
   MAIL_USER: z.string().trim().default(''),
   MAIL_APP_PASSWORD: z.string().trim().default(''),
-  MAIL_FROM_NAME: z.string().default('FSD-SDG-4 Quality Education'),
+  MAIL_FROM_NAME: z.string().default('EDVARQ'),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

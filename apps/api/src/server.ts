@@ -17,7 +17,7 @@ const server = app.listen(env.PORT, async () => {
       env: env.NODE_ENV,
       version: env.API_VERSION,
     },
-    'FSD-SDG-4 API server started',
+    'EDVARQ API server started',
   );
 
   if (isMailConfigured()) {

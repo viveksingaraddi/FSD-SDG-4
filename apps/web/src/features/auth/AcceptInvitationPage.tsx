@@ -16,7 +16,7 @@ import {
   ShieldAlert,
   UserCheck,
 } from 'lucide-react';
-import { Button, Card, Input, Skeleton } from '@/components/ui';
+import { Button, Card, EdvarqLogo, Input, Skeleton } from '@/components/ui';
 import { apiGet, apiPost } from '@/lib/apiClient';
 
 const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
@@ -145,18 +145,8 @@ export function AcceptInvitationPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--color-surface-canvas)] p-4 sm:p-6 lg:p-8">
       {/* Platform Brand Header */}
-      <div className="mb-6 flex items-center gap-3 text-center">
-        <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-primary)] text-white shadow-md">
-          <GraduationCap className="h-6 w-6" aria-hidden="true" />
-        </div>
-        <div className="text-left">
-          <h1 className="text-lg font-bold tracking-tight text-[var(--color-text-primary)]">
-            FSD-SDG-4
-          </h1>
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            Quality Education SaaS Platform
-          </p>
-        </div>
+      <div className="mb-6 flex flex-col items-center text-center">
+        <EdvarqLogo size="lg" subtitle="Institutional Intelligence & Management" />
       </div>
 
       <div className="w-full max-w-lg">
@@ -583,6 +573,10 @@ export function AcceptInvitationPage() {
             Sign in here
           </Link>
         </div>
+
+        <p className="mt-4 text-center text-[11px] text-[var(--color-text-muted)]">
+          The Edvarq name is a working brand pending trademark and domain clearance.
+        </p>
       </div>
     </div>
   );

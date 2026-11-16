@@ -10,7 +10,7 @@ import { getMailTransporter, isMailConfigured } from '../modules/mail/mail.servi
 
 async function main(): Promise<void> {
   console.log('=====================================================');
-  console.log('   FSD-SDG-4 Nodemailer SMTP Connection Verification');
+  console.log('   EDVARQ Nodemailer SMTP Connection Verification');
   console.log('=====================================================\n');
 
   console.log('Configuration Settings:');

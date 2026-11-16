@@ -48,9 +48,9 @@ function getRoleDescription(role: UserRole, schoolName: string): string {
     case 'PARENT':
       return `Your parent/guardian account has been created for ${schoolName}. You will be able to monitor your child's attendance records, academic achievements, and school communications.`;
     case 'SUPER_ADMIN':
-      return `You have been granted platform administrator privileges on FSD-SDG-4 Quality Education SaaS.`;
+      return `You have been granted platform administrator privileges on the EDVARQ Enterprise Education Management Platform.`;
     default:
-      return `You have been invited to access the FSD-SDG-4 portal for ${schoolName}.`;
+      return `You have been invited to access the EDVARQ portal for ${schoolName}.`;
   }
 }
 
@@ -60,14 +60,14 @@ export function renderInvitationEmail(params: InvitationEmailTemplateParams): Re
     recipientEmail,
     recipientName,
     role,
-    schoolName = 'FSD-SDG-4 Quality Education',
+    schoolName = 'EDVARQ Institutional Intelligence',
     invitationUrl,
     expiresAt,
     supportEmail = 'support@fsd-sdg4.edu',
   } = params;
 
   const roleLabel = getRoleLabel(role);
-  const targetSchool = schoolName || 'FSD-SDG-4 Quality Education';
+  const targetSchool = schoolName || 'EDVARQ Institutional Intelligence';
   const formattedExpiry = expiresAt.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -95,7 +95,7 @@ export function renderInvitationEmail(params: InvitationEmailTemplateParams): Re
   } else {
     subject = `Welcome to ${targetSchool} — Activate Your ${roleLabel} Account`;
     headline = `Welcome to ${targetSchool}`;
-    subheadline = `You have been invited to join the FSD-SDG-4 Quality Education Platform as a ${roleLabel}.`;
+    subheadline = `You have been invited to join the EDVARQ Platform as a ${roleLabel}.`;
   }
 
   const roleDescription = getRoleDescription(role, targetSchool);
@@ -126,12 +126,15 @@ export function renderInvitationEmail(params: InvitationEmailTemplateParams): Re
               <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
                 <tr>
                   <td>
-                    <span style="display: inline-block; background-color: #2563EB; color: #FFFFFF; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 6px; text-transform: uppercase;">
-                      SDG-4 • Quality Education
+                    <span style="display: inline-block; background-color: #2563EB; color: #FFFFFF; font-weight: 700; font-size: 11px; letter-spacing: 0.5px; padding: 4px 10px; border-radius: 6px; text-transform: uppercase;">
+                      EDVARQ INTELLIGENCE
                     </span>
-                    <h1 style="margin: 12px 0 0 0; color: #FFFFFF; font-size: 20px; font-weight: 700; line-height: 1.3;">
-                      FSD-SDG-4 Platform
+                    <h1 style="margin: 12px 0 0 0; color: #FFFFFF; font-size: 22px; font-weight: 700; line-height: 1.3;">
+                      EDVARQ
                     </h1>
+                    <p style="margin: 4px 0 0 0; color: #94A3B8; font-size: 13px; font-weight: 400;">
+                      One institution. One connected intelligence platform.
+                    </p>
                   </td>
                 </tr>
               </table>
@@ -204,7 +207,7 @@ export function renderInvitationEmail(params: InvitationEmailTemplateParams): Re
                 <tr>
                   <td style="padding: 12px 16px;">
                     <p style="margin: 0; color: #713F12; font-size: 12px; line-height: 1.5;">
-                      <strong>Security Notice:</strong> This activation link is unique to you, single-use, and valid for 7 days. Once activated, you will establish your private password. FSD-SDG-4 administrators will never ask for your password.
+                      <strong>Security Notice:</strong> This activation link is unique to you, single-use, and valid for 7 days. Once activated, you will establish your private password. EDVARQ administrators will never ask for your password.
                     </p>
                   </td>
                 </tr>
@@ -220,11 +223,17 @@ export function renderInvitationEmail(params: InvitationEmailTemplateParams): Re
           <!-- Footer -->
           <tr>
             <td style="background-color: #F8FAFC; padding: 20px 32px; border-top: 1px solid #E2E8F0; text-align: center;">
-              <p style="margin: 0 0 6px 0; color: #94A3B8; font-size: 11px;">
-                United Nations Sustainable Development Goal 4 • Inclusive and Equitable Quality Education
+              <p style="margin: 0 0 6px 0; color: #64748B; font-size: 12px; font-weight: 600;">
+                EDVARQ &bull; Enterprise Education Management
               </p>
-              <p style="margin: 0; color: #94A3B8; font-size: 11px;">
-                &copy; ${new Date().getFullYear()} FSD-SDG-4 Platform. All rights reserved. Automated security notification.
+              <p style="margin: 0 0 6px 0; color: #94A3B8; font-size: 11px;">
+                One institution. One connected intelligence platform.
+              </p>
+              <p style="margin: 0 0 6px 0; color: #94A3B8; font-size: 11px;">
+                &copy; ${new Date().getFullYear()} EDVARQ. All rights reserved. Automated security notification.
+              </p>
+              <p style="margin: 0; color: #94A3B8; font-size: 10px;">
+                The Edvarq name is a working brand pending trademark and domain clearance.
               </p>
             </td>
           </tr>
@@ -237,7 +246,8 @@ export function renderInvitationEmail(params: InvitationEmailTemplateParams): Re
 
   // Clean, structured plain-text fallback
   const text = `=======================================================
-FSD-SDG-4 QUALITY EDUCATION PLATFORM
+EDVARQ — ENTERPRISE EDUCATION MANAGEMENT
+One institution. One connected intelligence platform.
 =======================================================
 
 ${headline.toUpperCase()}
@@ -257,14 +267,14 @@ ${invitationUrl}
 
 SECURITY NOTICE:
 This activation link is unique to you, single-use, and expires after 7 days.
-Platform administrators will never ask for your password.
+EDVARQ administrators will never ask for your password.
 
 NEED HELP?
 If you did not expect this email, contact your school administrator or email ${supportEmail}.
 
 -------------------------------------------------------
-UN SDG 4: Ensure inclusive and equitable quality education.
-(c) ${new Date().getFullYear()} FSD-SDG-4 Platform. All rights reserved.
+(c) ${new Date().getFullYear()} EDVARQ. All rights reserved.
+The Edvarq name is a working brand pending trademark and domain clearance.
 `;
 
   return { subject, html, text };

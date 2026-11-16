@@ -46,22 +46,30 @@ describe('Mail Service & Gmail SMTP Integration', () => {
       expect(subject).toContain(
         'Welcome to Oakridge High School — Activate Your School Administrator Account',
       );
-      expect(html).toContain('FSD-SDG-4 Platform');
-      expect(html).toContain('SDG-4 • Quality Education');
+      expect(html).toContain('EDVARQ');
+      expect(html).toContain('EDVARQ INTELLIGENCE');
+      expect(html).toContain('One institution. One connected intelligence platform.');
       expect(html).toContain('Sarah Jenkins');
       expect(html).toContain('Oakridge High School');
       expect(html).toContain('School Administrator');
       expect(html).toContain('Activate My Account');
       expect(html).toContain('https://app.fsd-sdg4.edu/accept-invitation?token=test-token-1234');
       expect(html).toContain('support@fsd-sdg4.edu');
+      expect(html).toContain(
+        'The Edvarq name is a working brand pending trademark and domain clearance.',
+      );
       expect(html).not.toContain('temporary password');
       expect(html).not.toContain('initial password');
 
-      expect(text).toContain('FSD-SDG-4 QUALITY EDUCATION PLATFORM');
+      expect(text).toContain('EDVARQ — ENTERPRISE EDUCATION MANAGEMENT');
+      expect(text).toContain('One institution. One connected intelligence platform.');
       expect(text).toContain('Sarah Jenkins');
       expect(text).toContain('Oakridge High School');
       expect(text).toContain('School Administrator');
       expect(text).toContain('https://app.fsd-sdg4.edu/accept-invitation?token=test-token-1234');
+      expect(text).toContain(
+        'The Edvarq name is a working brand pending trademark and domain clearance.',
+      );
     });
 
     it('renders Teacher invitation with appropriate faculty description', () => {
