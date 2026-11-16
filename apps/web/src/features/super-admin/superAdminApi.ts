@@ -154,11 +154,15 @@ export function fetchPlatformUsers(
   const params = new URLSearchParams();
   if (query?.role && query.role !== 'ALL') params.set('role', query.role);
   if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.invitationStatus && query.invitationStatus !== 'ALL')
+    params.set('invitationStatus', query.invitationStatus);
   if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
   if (query?.schoolId && query.schoolId.trim().length > 0)
     params.set('schoolId', query.schoolId.trim());
   if (query?.page) params.set('page', String(query.page));
   if (query?.limit) params.set('limit', String(query.limit));
+  if (query?.sortBy) params.set('sortBy', query.sortBy);
+  if (query?.sortOrder) params.set('sortOrder', query.sortOrder);
 
   const qs = params.toString() ? `?${params.toString()}` : '';
   return apiGet<PaginatedUsersResultDto>(

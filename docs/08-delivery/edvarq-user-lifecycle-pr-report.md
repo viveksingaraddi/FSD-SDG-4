@@ -1,4 +1,5 @@
 # Edvarq — Task 13 & Invitation Deduplication Completion Report
+
 ## Centralized User Lifecycle Management & Authoritative Final Best State Resolution
 
 > **Date**: November 16, 2026  
@@ -14,6 +15,7 @@
 This deliverable fulfills **Task 13 (Admin User Lifecycle Management)** and resolves the critical issue where repeated historical invitations appeared as duplicate entries and inflated dashboard KPI counters (as reported with `media_1794841676666_c3b4d0ea.jpg`).
 
 Key capabilities delivered:
+
 1. **Authoritative Invitation Deduplication ("Final Best State" Rule)**:
    - In both backend (`invitation.service.ts`) and frontend (`UserInvitationsPage.tsx`), invitations for the same recipient (`schoolId` + `email` + `role`) are consolidated into their authoritative **final best state** (`ACCEPTED` > `PENDING` > `EXPIRED` > `REVOKED`).
    - Old revoked records no longer spawn duplicate rows or allow illicit re-invitations for accounts that have already accepted and activated.
@@ -36,23 +38,26 @@ Key capabilities delivered:
 ## 2. Architectural & Security Architecture
 
 ### 2.1 Multi-Tenant Isolation & Zero Trust
+
 - All School Admin endpoints (`/api/v1/school/users/*`, `/api/v1/school/students/:id/guardians/*`) enforce tenant boundary validation via `resolveTenantSchoolId(req)`.
 - Attempting to inspect or alter users belonging to a different school returns an uninformative `404 Not Found`, preventing tenant enumeration attacks.
 - Super Admin operations do not leak student profiles, course enrollments, or attendance data.
 
 ### 2.2 Invitation Deduplication Hierarchy
+
 When listing invitations or computing summary KPIs, records for each distinct recipient (`(schoolId ?? 'platform'):email:role`) are ranked as follows:
 
-| Priority | State | Criteria |
-| :---: | :--- | :--- |
-| **1 (Highest)** | `ACCEPTED` | User has redeemed their cryptographic token and activated their account. |
-| **2** | `PENDING` | An active invitation token exists and `now <= expiresAt`. |
-| **3** | `EXPIRED` | Invitation expired without redemption (`now > expiresAt` or marked expired). |
-| **4** | `REVOKED` | Previous invitation was invalidated (e.g., during resend) and no newer active or accepted token exists. |
+|    Priority     | State      | Criteria                                                                                                |
+| :-------------: | :--------- | :------------------------------------------------------------------------------------------------------ |
+| **1 (Highest)** | `ACCEPTED` | User has redeemed their cryptographic token and activated their account.                                |
+|      **2**      | `PENDING`  | An active invitation token exists and `now <= expiresAt`.                                               |
+|      **3**      | `EXPIRED`  | Invitation expired without redemption (`now > expiresAt` or marked expired).                            |
+|      **4**      | `REVOKED`  | Previous invitation was invalidated (e.g., during resend) and no newer active or accepted token exists. |
 
 Tie-breaker: Most recent `createdAt` timestamp.
 
 ### 2.3 Account Governance & Self-Lockout Prevention
+
 - An administrator cannot suspend or deactivate their own active user ID (`userId === req.auth.userId` throws a typed `BadRequestError`).
 - When an account status is updated to `LOCKED` (suspended) or `INACTIVE`, all active sessions associated with that user ID are atomically deleted from the database session store, terminating active sessions immediately.
 
@@ -61,21 +66,23 @@ Tie-breaker: Most recent `createdAt` timestamp.
 ## 3. API Endpoints & Contracts
 
 ### Super Admin
-| Method | Route | Description | Permissions |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/super-admin/users` | List platform & school administrators with pagination & search | `platform.users.read` |
-| `GET` | `/api/v1/super-admin/users/:id` | Detailed lifecycle history and audit logs | `platform.users.read` |
-| `POST` | `/api/v1/super-admin/users/invite` | Issue invitation to school admin for active school | `platform.users.manage` |
-| `PATCH` | `/api/v1/super-admin/users/:id/status` | Suspend or reactivate administrator account | `platform.users.manage` |
+
+| Method  | Route                                  | Description                                                    | Permissions             |
+| :------ | :------------------------------------- | :------------------------------------------------------------- | :---------------------- |
+| `GET`   | `/api/v1/super-admin/users`            | List platform & school administrators with pagination & search | `platform.users.read`   |
+| `GET`   | `/api/v1/super-admin/users/:id`        | Detailed lifecycle history and audit logs                      | `platform.users.read`   |
+| `POST`  | `/api/v1/super-admin/users/invite`     | Issue invitation to school admin for active school             | `platform.users.manage` |
+| `PATCH` | `/api/v1/super-admin/users/:id/status` | Suspend or reactivate administrator account                    | `platform.users.manage` |
 
 ### School Admin
-| Method | Route | Description | Permissions |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/school/users` | List school users (Faculty, Students, Parents) | `school.users.read` |
-| `GET` | `/api/v1/school/users/:id` | Detailed user lifecycle and guardian associations | `school.users.read` |
-| `PATCH` | `/api/v1/school/users/:id/status` | Suspend or reactivate user account in school | `school.users.manage` |
-| `POST` | `/api/v1/school/students/:id/guardians` | Link parent/guardian with relationship type | `school.guardians.manage` |
-| `DELETE` | `/api/v1/school/students/:id/guardians/:guardianUserId` | Unlink parent/guardian relationship | `school.guardians.manage` |
+
+| Method   | Route                                                   | Description                                       | Permissions               |
+| :------- | :------------------------------------------------------ | :------------------------------------------------ | :------------------------ |
+| `GET`    | `/api/v1/school/users`                                  | List school users (Faculty, Students, Parents)    | `school.users.read`       |
+| `GET`    | `/api/v1/school/users/:id`                              | Detailed user lifecycle and guardian associations | `school.users.read`       |
+| `PATCH`  | `/api/v1/school/users/:id/status`                       | Suspend or reactivate user account in school      | `school.users.manage`     |
+| `POST`   | `/api/v1/school/students/:id/guardians`                 | Link parent/guardian with relationship type       | `school.guardians.manage` |
+| `DELETE` | `/api/v1/school/students/:id/guardians/:guardianUserId` | Unlink parent/guardian relationship               | `school.guardians.manage` |
 
 ---
 

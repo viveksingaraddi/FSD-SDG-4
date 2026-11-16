@@ -766,7 +766,8 @@ export function createSchoolAdminRouter(): ExpressRouter {
     validateRequest({ query: userFilterQuerySchema }),
     async (req, res) => {
       const schoolId = await resolveTenantSchoolId(req);
-      const result = await listSchoolUsers(schoolId, req.query as unknown as UserFilterQuery);
+      const query = (req.validated?.query ?? req.query) as unknown as UserFilterQuery;
+      const result = await listSchoolUsers(schoolId, query);
       sendSuccess(res, result);
     },
   );
