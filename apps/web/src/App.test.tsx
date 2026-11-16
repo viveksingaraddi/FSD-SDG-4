@@ -51,7 +51,7 @@ describe('App — shared frontend foundation', () => {
     renderWithProviders('/');
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { level: 1, name: /sign in to fsd-sdg-4/i }),
+        screen.getByRole('heading', { level: 1, name: /sign in to edvarq/i }),
       ).toBeInTheDocument();
     });
   });

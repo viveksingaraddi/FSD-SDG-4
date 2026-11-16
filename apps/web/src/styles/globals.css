@@ -1,12 +1,18 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-brand-primary: #1d4ed8;
-  --color-brand-primary-hover: #1e40af;
-  --color-brand-primary-light: #dbeafe;
-  --color-brand-primary-dark: #1e3a8a;
-  --color-brand-primary-active: #1e3a8a;
-  --color-brand-primary-subtle: #eff6ff;
+  --color-brand-primary: #0f172a;
+  --color-brand-primary-hover: #1e293b;
+  --color-brand-primary-light: #f1f5f9;
+  --color-brand-primary-dark: #020617;
+  --color-brand-primary-active: #020617;
+  --color-brand-primary-subtle: #f8fafc;
+
+  --color-brand-accent: #2563eb;
+  --color-brand-accent-hover: #1d4ed8;
+  --color-brand-accent-light: #dbeafe;
+  --color-brand-accent-dark: #1e40af;
+  --color-brand-accent-subtle: #eff6ff;
 
   --color-surface-canvas: #f8fafc;
   --color-surface-card: #ffffff;
@@ -19,39 +25,45 @@
 
   --color-text-primary: #0f172a;
   --color-text-secondary: #334155;
-  --color-text-muted: #475569;
+  --color-text-muted: #64748b;
   --color-text-inverse: #ffffff;
 
-  --color-semantic-success: #15803d;
-  --color-semantic-success-fg: #15803d;
-  --color-semantic-success-bg: #dcfce7;
-  --color-semantic-warning: #b45309;
-  --color-semantic-warning-fg: #b45309;
-  --color-semantic-warning-bg: #fef3c7;
-  --color-semantic-danger: #b91c1c;
-  --color-semantic-danger-fg: #b91c1c;
-  --color-semantic-danger-bg: #fee2e2;
-  --color-semantic-info: #1d4ed8;
-  --color-semantic-info-fg: #1d4ed8;
-  --color-semantic-info-bg: #dbeafe;
+  --color-semantic-success: #059669;
+  --color-semantic-success-fg: #059669;
+  --color-semantic-success-bg: #ecfdf5;
+  --color-semantic-warning: #d97706;
+  --color-semantic-warning-fg: #d97706;
+  --color-semantic-warning-bg: #fffbeb;
+  --color-semantic-danger: #dc2626;
+  --color-semantic-danger-fg: #dc2626;
+  --color-semantic-danger-bg: #fef2f2;
+  --color-semantic-info: #2563eb;
+  --color-semantic-info-fg: #2563eb;
+  --color-semantic-info-bg: #eff6ff;
   --color-semantic-neutral: #475569;
   --color-semantic-neutral-bg: #f1f5f9;
 
   --color-focus-ring: #2563eb;
 
   --font-sans:
-    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+    Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 :root {
-  --color-brand-primary: #1d4ed8;
-  --color-brand-primary-hover: #1e40af;
-  --color-brand-primary-light: #dbeafe;
-  --color-brand-primary-dark: #1e3a8a;
-  --color-brand-primary-active: #1e3a8a;
-  --color-brand-primary-subtle: #eff6ff;
+  --color-brand-primary: #0f172a;
+  --color-brand-primary-hover: #1e293b;
+  --color-brand-primary-light: #f1f5f9;
+  --color-brand-primary-dark: #020617;
+  --color-brand-primary-active: #020617;
+  --color-brand-primary-subtle: #f8fafc;
+
+  --color-brand-accent: #2563eb;
+  --color-brand-accent-hover: #1d4ed8;
+  --color-brand-accent-light: #dbeafe;
+  --color-brand-accent-dark: #1e40af;
+  --color-brand-accent-subtle: #eff6ff;
 
   --color-surface-canvas: #f8fafc;
   --color-surface-card: #ffffff;
@@ -64,21 +76,21 @@
 
   --color-text-primary: #0f172a;
   --color-text-secondary: #334155;
-  --color-text-muted: #475569;
+  --color-text-muted: #64748b;
   --color-text-inverse: #ffffff;
 
-  --color-semantic-success: #15803d;
-  --color-semantic-success-fg: #15803d;
-  --color-semantic-success-bg: #dcfce7;
-  --color-semantic-warning: #b45309;
-  --color-semantic-warning-fg: #b45309;
-  --color-semantic-warning-bg: #fef3c7;
-  --color-semantic-danger: #b91c1c;
-  --color-semantic-danger-fg: #b91c1c;
-  --color-semantic-danger-bg: #fee2e2;
-  --color-semantic-info: #1d4ed8;
-  --color-semantic-info-fg: #1d4ed8;
-  --color-semantic-info-bg: #dbeafe;
+  --color-semantic-success: #059669;
+  --color-semantic-success-fg: #059669;
+  --color-semantic-success-bg: #ecfdf5;
+  --color-semantic-warning: #d97706;
+  --color-semantic-warning-fg: #d97706;
+  --color-semantic-warning-bg: #fffbeb;
+  --color-semantic-danger: #dc2626;
+  --color-semantic-danger-fg: #dc2626;
+  --color-semantic-danger-bg: #fef2f2;
+  --color-semantic-info: #2563eb;
+  --color-semantic-info-fg: #2563eb;
+  --color-semantic-info-bg: #eff6ff;
   --color-semantic-neutral: #475569;
   --color-semantic-neutral-bg: #f1f5f9;
 

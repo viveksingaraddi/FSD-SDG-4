@@ -1,23 +1,33 @@
-# FSD-SDG-4: Quality Education SaaS
+# EDVARQ — Enterprise Education Management & Institutional Intelligence Platform
 
-> **CURRENT PHASE STATUS: PHASE 4 COMPLETED — PHASE 5 AWAITING AUTHORIZATION**  
-> This repository has completed **Phase 4: Repository Scaffolding and Development Environment**.  
-> The `pnpm` monorepo foundation (`apps/web`, `apps/api`, `packages/*`), CI quality gates, and foundational test suites are established.  
-> Database schema creation (Phase 5) and business/auth implementation remain locked until authorized.
+> **Working Brand Notice**: _The Edvarq name is a working brand pending trademark and domain clearance. Do not claim legal registration or availability._
+>
+> **Brand Tagline**: _"One institution. One connected intelligence platform."_
+>
+> **Charter Baseline**: Engineered to operationalize United Nations Sustainable Development Goal 4 (Quality Education: Ensure inclusive and equitable quality education and promote lifelong learning opportunities for all).
 
 ---
 
 ## 1. Product Overview
 
-**FSD-SDG-4 Quality Education SaaS** is a multi-tenant cloud platform engineered to support educational institutions in operationalizing United Nations Sustainable Development Goal 4 (Ensure inclusive and equitable quality education and promote lifelong learning opportunities for all).
+**EDVARQ** is an enterprise-grade, multi-tenant Education Management & Institutional Intelligence SaaS platform engineered to unify academic administration, faculty operations, student learning journeys, and pastoral care across five key personas into one coherent ecosystem.
 
-Rather than serving merely as a disconnected administrative record-keeping system, the platform establishes a closed-loop pedagogical and pastoral care lifecycle:
+Rather than serving merely as a disconnected administrative record-keeping system, EDVARQ establishes a closed-loop pedagogical and pastoral care lifecycle:
 
 $$\text{RECORD} \longrightarrow \text{UNDERSTAND} \longrightarrow \text{FLAG} \longrightarrow \text{SUPPORT} \longrightarrow \text{REVIEW}$$
 
 The central mission of the platform is to bridge routine academic activities (attendance, course offerings, assignments, grading, assessments) with timely, explainable, and human-reviewed student support interventions.
 
-### Target Personas & Core Roles
+### Brand Identity & Visual Language
+
+- **Product Category**: Enterprise Education Management & Institutional Intelligence SaaS
+- **Primary Surface & Contrast**: Deep Midnight Navy (`#0F172A`), Obsidian Core (`#0B192C`)
+- **Accent & Interaction**: Electric Blue (`#2563EB`), Cyan Apex (`#06B6D4`)
+- **Neutral Foundation**: Refined Slate (`#334155`, `#64748B`), Canvas Light (`#F8FAFC`, `#FFFFFF`)
+- **Semantic Feedback**: Restrained Emerald (`#059669`), Warning Amber (`#D97706`), Accessible Red (`#DC2626`)
+- **Typography & Accessibility**: Inter / system sans-serif scale, WCAG 2.2 AA accessible contrast ratios (> 4.5:1 text, > 3:1 graphical elements).
+
+### Target Personas & Core Portals
 
 1. **Platform Super Admin**: Platform-wide tenant onboarding, school lifecycle management, cross-tenant security monitoring, and global configuration.
 2. **School Administrator**: Tenant setup, academic year management, classes, sections, subjects, staff and student onboarding, and school-wide reporting.
@@ -29,10 +39,9 @@ The central mission of the platform is to bridge routine academic activities (at
 
 ## 2. Current Project Status
 
-- **Current Phase**: `PHASE 4: Repository Scaffolding and Development Environment`
-- **Phase Status**: Completed (All Phase 4 Monorepo, Tooling, CI & Foundational Test Deliverables Verified)
-- **Next Authorized Phase**: `PHASE 5: Database Schema & Migrations` (Pending formal user approval)
-- **Active Code Base**: Minimal Phase 4 monorepo scaffolding in `apps/web`, `apps/api`, and `packages/*` (zero Prisma schema, auth, or domain logic; see [phase-4-scaffolding-report.md](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/docs/08-delivery/phase-4-scaffolding-report.md) and [local-development-guide.md](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/docs/07-devops/local-development-guide.md))
+- **Current Phase**: `Admin Portal Implementation (Branch: feature/admin-portal)`
+- **Phase Status**: In Progress / Brand Transformation Established
+- **Active Code Base**: Full-stack modular monorepo (`apps/web`, `apps/api`, `packages/*`), PostgreSQL schema with Prisma ORM, multi-tenant Express backend, and React 19 SPA frontend under the EDVARQ enterprise design system.
 
 For live tracking of phase progress, open decisions, and risk registers, see [PROJECT_STATUS.md](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/PROJECT_STATUS.md) and [docs/08-delivery/implementation-status.md](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/docs/08-delivery/implementation-status.md).
 

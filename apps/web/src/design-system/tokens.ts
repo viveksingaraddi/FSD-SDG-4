@@ -1,14 +1,25 @@
 /**
- * Programmatic Design Token Mirror — aligned with Phase 3 (01-design-tokens.md)
- * and apps/web/src/styles/globals.css.
+ * Programmatic Design Token Mirror — EDVARQ Enterprise Design System
+ * Aligned with apps/web/src/styles/globals.css.
+ * Brand direction: Deep midnight navy, refined slate, electric blue accent.
  */
 export const DESIGN_TOKENS = {
+  brand: {
+    name: 'EDVARQ',
+    tagline: 'One institution. One connected intelligence platform.',
+    category: 'Enterprise Education Management & Institutional Intelligence SaaS',
+    pendingNotice: 'The Edvarq name is a working brand pending trademark and domain clearance.',
+  },
   colors: {
     brand: {
-      primary: '#1d4ed8',
-      primaryHover: '#1e40af',
-      primaryLight: '#dbeafe',
-      primaryDark: '#1e3a8a',
+      primary: '#0f172a', // Deep Midnight Navy
+      primaryHover: '#1e293b',
+      primaryLight: '#f1f5f9',
+      primaryDark: '#020617',
+      accent: '#2563eb', // Electric Blue
+      accentHover: '#1d4ed8',
+      accentLight: '#dbeafe',
+      accentSubtle: '#eff6ff',
     },
     surface: {
       canvas: '#f8fafc',
@@ -23,22 +34,36 @@ export const DESIGN_TOKENS = {
     text: {
       primary: '#0f172a',
       secondary: '#334155',
-      muted: '#475569',
+      muted: '#64748b',
       inverse: '#ffffff',
     },
     semantic: {
-      success: '#15803d',
-      successBg: '#dcfce7',
-      warning: '#b45309',
-      warningBg: '#fef3c7',
-      danger: '#b91c1c',
-      dangerBg: '#fee2e2',
-      info: '#1d4ed8',
-      infoBg: '#dbeafe',
+      success: '#059669', // Restrained Emerald
+      successBg: '#ecfdf5',
+      warning: '#d97706', // Amber
+      warningBg: '#fffbeb',
+      danger: '#dc2626', // Accessible Red
+      dangerBg: '#fef2f2',
+      info: '#2563eb', // Electric Blue
+      infoBg: '#eff6ff',
       neutral: '#475569',
       neutralBg: '#f1f5f9',
     },
     focusRing: '#2563eb',
+  },
+  typography: {
+    fontSans: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontMono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    scale: {
+      xs: '0.75rem',
+      sm: '0.875rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+      '2xl': '1.5rem',
+      '3xl': '1.875rem',
+      '4xl': '2.25rem',
+    },
   },
   spacing: {
     0: '0',

@@ -15,7 +15,7 @@ describe('API environment validation', () => {
     expect(parsed.MAIL_SECURE).toBe(true);
     expect(parsed.MAIL_USER).toBe('');
     expect(parsed.MAIL_APP_PASSWORD).toBe('');
-    expect(parsed.MAIL_FROM_NAME).toBe('FSD-SDG-4 Quality Education');
+    expect(parsed.MAIL_FROM_NAME).toBe('EDVARQ');
   });
 
   it('accepts a valid explicit configuration', () => {
