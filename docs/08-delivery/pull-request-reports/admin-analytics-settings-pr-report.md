@@ -56,25 +56,25 @@ This deliverable fulfills Task 11 of the Admin Portal implementation. It complet
 
 ## 2. Files Changed Inventory
 
-| File | Change Description |
-| --- | --- |
-| [`packages/contracts/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/contracts/src/index.ts) | Added `PlatformAdoptionMetricsDto`, `PlatformOperationalStatsDto`, `PlatformSecurityPoliciesDto`, `PlatformSettingsDto`, `SchoolPendingTaskDto`, extended `PlatformOverviewDto`, `SchoolOverviewDto`, `SchoolAcademicSummaryDto`, `SchoolSettingsDto`, and `AuditLogDto`. |
-| [`packages/validation/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/validation/src/index.ts) | Added `overviewQuerySchema`, `schoolOverviewQuerySchema`, `auditLogsQuerySchema`, and extended `updateSchoolSettingsSchema` with preferences. |
-| [`apps/api/src/modules/super-admin/superAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.service.ts) | Enhanced `getPlatformOverview` with period filtering and adoption metrics; added `getPlatformSettings`; enhanced `listPlatformAuditLogs` with category/date filtering and secret sanitization. |
-| [`apps/api/src/modules/super-admin/superAdmin.routes.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.routes.ts) | Mounted `overviewQuerySchema` on `GET /api/v1/super-admin/overview`, added `GET /api/v1/super-admin/settings`, and mounted `auditLogsQuerySchema` on `GET /api/v1/super-admin/audit-logs`. |
-| [`apps/api/src/modules/super-admin/superAdmin.routes.test.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.routes.test.ts) | Added tests for period filtering, platform settings retrieval, and category-filtered audit logs. |
-| [`apps/api/src/modules/school-admin/schoolAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.service.ts) | Enhanced `getSchoolOverview` with attendance periods, course offerings, assignments status breakdown, and pending tasks; added category/date filtering to `listSchoolAuditLogs`; implemented preferences update and audit event in `updateSchoolSettings`. |
-| [`apps/api/src/modules/school-admin/schoolAdmin.routes.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.routes.ts) | Mounted `schoolOverviewQuerySchema` on `GET /api/v1/school/overview` and `auditLogsQuerySchema` on `GET /api/v1/school/audit-logs`. |
-| [`apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts) | Added tests for overview period filtering, audit log category filtering, settings retrieval, and preferences updating. |
-| [`apps/web/src/features/super-admin/superAdminApi.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/superAdminApi.ts) | Added period support to `fetchPlatformOverview`, added `fetchPlatformSettings`, and enhanced `fetchPlatformAuditLogs` with category and date options. |
-| [`apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx) | Integrated period query key to backend, added Institutional Adoption & Platform Operations telemetry cards. |
-| [`apps/web/src/features/super-admin/PlatformGovernancePage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/PlatformGovernancePage.tsx) | Implemented category tabs, date filters, action search, and sanitized audit payload inspector modal. |
-| [`apps/web/src/features/super-admin/PlatformSettingsPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/PlatformSettingsPage.tsx) | Implemented security policy cards for session/cookies, CSRF, Argon2id, tenant isolation, rate limiting, and runtime telemetry. |
-| [`apps/web/src/features/super-admin/SuperAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminPortal.test.tsx) | Added tests for `PlatformSettingsPage` and `PlatformGovernancePage`. |
-| [`apps/web/src/features/admin/schoolAdminApi.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/schoolAdminApi.ts) | Added period support to `fetchSchoolOverview` and enhanced `fetchSchoolAuditLogs` with category and date filters. |
-| [`apps/web/src/features/admin/SchoolAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminDashboardPage.tsx) | Added 7D/30D attendance period toggle, course offerings counter, assignments status breakdown, pending tasks widget, and invitation progress widget. |
-| [`apps/web/src/features/admin/SchoolSettingsPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolSettingsPage.tsx) | Rebuilt with dual tabs (Profile & Preferences and Institutional Audit Log), active calendar link, operational preferences form, and filterable audit trail. |
-| [`apps/web/src/features/admin/SchoolAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminPortal.test.tsx) | Added unit tests verifying `SchoolSettingsPage` tabs, preferences update mutation, and audit trail rendering. |
+| File                                                                                                                                                                                 | Change Description                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`packages/contracts/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/contracts/src/index.ts)                                                             | Added `PlatformAdoptionMetricsDto`, `PlatformOperationalStatsDto`, `PlatformSecurityPoliciesDto`, `PlatformSettingsDto`, `SchoolPendingTaskDto`, extended `PlatformOverviewDto`, `SchoolOverviewDto`, `SchoolAcademicSummaryDto`, `SchoolSettingsDto`, and `AuditLogDto`. |
+| [`packages/validation/src/index.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/packages/validation/src/index.ts)                                                           | Added `overviewQuerySchema`, `schoolOverviewQuerySchema`, `auditLogsQuerySchema`, and extended `updateSchoolSettingsSchema` with preferences.                                                                                                                             |
+| [`apps/api/src/modules/super-admin/superAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.service.ts)               | Enhanced `getPlatformOverview` with period filtering and adoption metrics; added `getPlatformSettings`; enhanced `listPlatformAuditLogs` with category/date filtering and secret sanitization.                                                                            |
+| [`apps/api/src/modules/super-admin/superAdmin.routes.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.routes.ts)                 | Mounted `overviewQuerySchema` on `GET /api/v1/super-admin/overview`, added `GET /api/v1/super-admin/settings`, and mounted `auditLogsQuerySchema` on `GET /api/v1/super-admin/audit-logs`.                                                                                |
+| [`apps/api/src/modules/super-admin/superAdmin.routes.test.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/super-admin/superAdmin.routes.test.ts)       | Added tests for period filtering, platform settings retrieval, and category-filtered audit logs.                                                                                                                                                                          |
+| [`apps/api/src/modules/school-admin/schoolAdmin.service.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.service.ts)           | Enhanced `getSchoolOverview` with attendance periods, course offerings, assignments status breakdown, and pending tasks; added category/date filtering to `listSchoolAuditLogs`; implemented preferences update and audit event in `updateSchoolSettings`.                |
+| [`apps/api/src/modules/school-admin/schoolAdmin.routes.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.routes.ts)             | Mounted `schoolOverviewQuerySchema` on `GET /api/v1/school/overview` and `auditLogsQuerySchema` on `GET /api/v1/school/audit-logs`.                                                                                                                                       |
+| [`apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/api/src/modules/school-admin/schoolAdmin.routes.test.ts)   | Added tests for overview period filtering, audit log category filtering, settings retrieval, and preferences updating.                                                                                                                                                    |
+| [`apps/web/src/features/super-admin/superAdminApi.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/superAdminApi.ts)                       | Added period support to `fetchPlatformOverview`, added `fetchPlatformSettings`, and enhanced `fetchPlatformAuditLogs` with category and date options.                                                                                                                     |
+| [`apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminDashboardPage.tsx) | Integrated period query key to backend, added Institutional Adoption & Platform Operations telemetry cards.                                                                                                                                                               |
+| [`apps/web/src/features/super-admin/PlatformGovernancePage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/PlatformGovernancePage.tsx)   | Implemented category tabs, date filters, action search, and sanitized audit payload inspector modal.                                                                                                                                                                      |
+| [`apps/web/src/features/super-admin/PlatformSettingsPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/PlatformSettingsPage.tsx)       | Implemented security policy cards for session/cookies, CSRF, Argon2id, tenant isolation, rate limiting, and runtime telemetry.                                                                                                                                            |
+| [`apps/web/src/features/super-admin/SuperAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/super-admin/SuperAdminPortal.test.tsx)     | Added tests for `PlatformSettingsPage` and `PlatformGovernancePage`.                                                                                                                                                                                                      |
+| [`apps/web/src/features/admin/schoolAdminApi.ts`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/schoolAdminApi.ts)                                 | Added period support to `fetchSchoolOverview` and enhanced `fetchSchoolAuditLogs` with category and date filters.                                                                                                                                                         |
+| [`apps/web/src/features/admin/SchoolAdminDashboardPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminDashboardPage.tsx)           | Added 7D/30D attendance period toggle, course offerings counter, assignments status breakdown, pending tasks widget, and invitation progress widget.                                                                                                                      |
+| [`apps/web/src/features/admin/SchoolSettingsPage.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolSettingsPage.tsx)                       | Rebuilt with dual tabs (Profile & Preferences and Institutional Audit Log), active calendar link, operational preferences form, and filterable audit trail.                                                                                                               |
+| [`apps/web/src/features/admin/SchoolAdminPortal.test.tsx`](file:///Users/viveksantoshkumarsingaraddi/FSD-SDG-4/apps/web/src/features/admin/SchoolAdminPortal.test.tsx)               | Added unit tests verifying `SchoolSettingsPage` tabs, preferences update mutation, and audit trail rendering.                                                                                                                                                             |
 
 ---
 
@@ -107,6 +107,7 @@ This deliverable fulfills Task 11 of the Admin Portal implementation. It complet
 ## 5. Verification & Test Outputs
 
 ### A. Prettier & Git Diff Check (`pnpm format:check && git diff --check`)
+
 ```text
 Checking formatting...
 All matched files use Prettier code style!
@@ -114,6 +115,7 @@ Exit code: 0 (PASS)
 ```
 
 ### B. TypeScript Workspace Typecheck (`pnpm typecheck`)
+
 ```text
 Scope: 6 of 7 workspace projects
 packages/contracts: tsc --noEmit (PASS)
@@ -125,6 +127,7 @@ Exit code: 0 (PASS)
 ```
 
 ### C. Backend API Test Suite (`pnpm --filter @fsd-sdg4/api test`)
+
 ```text
 Test Files  13 passed (13)
 Tests       122 passed (122)
@@ -132,6 +135,7 @@ Exit code: 0 (PASS)
 ```
 
 ### D. Frontend Web Test Suite (`pnpm --filter @fsd-sdg4/web test`)
+
 ```text
 Test Files  11 passed (11)
 Tests       43 passed (43)
@@ -139,6 +143,7 @@ Exit code: 0 (PASS)
 ```
 
 ### E. Workspace Production Build (`pnpm build`)
+
 ```text
 Scope: 4 packages + 2 apps
 apps/web: vite v8.3.6 building client environment for production... (built in 534ms)

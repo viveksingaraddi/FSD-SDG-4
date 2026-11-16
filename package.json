@@ -23,6 +23,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
+    "mail:verify": "pnpm --filter '@fsd-sdg4/api' mail:verify",
     "typecheck": "pnpm --recursive typecheck",
     "clean": "pnpm --recursive clean && rimraf node_modules",
     "prepare": "echo 'Monorepo root ready'"
