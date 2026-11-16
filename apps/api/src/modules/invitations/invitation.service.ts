@@ -277,6 +277,20 @@ export async function resendInvitation(params: {
     throw new BadRequestError('Cannot resend an invitation that has already been accepted.');
   }
 
+  const alreadyAccepted = await prisma.userInvitation.findFirst({
+    where: {
+      email: existing.email,
+      role: existing.role,
+      schoolId: existing.schoolId,
+      status: 'ACCEPTED',
+    },
+  });
+  if (alreadyAccepted) {
+    throw new BadRequestError(
+      'Cannot resend an invitation for an account that has already been accepted and activated.',
+    );
+  }
+
   const { rawToken, tokenHash } = generateInvitationToken();
   const expiresAt = new Date(Date.now() + DEFAULT_INVITATION_EXPIRATION_HOURS * 3600 * 1000);
 
@@ -381,6 +395,20 @@ export async function revokeInvitation(params: {
     throw new BadRequestError('Cannot revoke an invitation that has already been accepted.');
   }
 
+  const alreadyAccepted = await prisma.userInvitation.findFirst({
+    where: {
+      email: existing.email,
+      role: existing.role,
+      schoolId: existing.schoolId,
+      status: 'ACCEPTED',
+    },
+  });
+  if (alreadyAccepted) {
+    throw new BadRequestError(
+      'Cannot revoke an invitation for an account that has already been accepted and activated.',
+    );
+  }
+
   const updated = await prisma.userInvitation.update({
     where: { id: existing.id },
     data: {
@@ -431,27 +459,9 @@ export async function listInvitations(params: {
   const now = new Date();
   const where: Prisma.UserInvitationWhereInput = {
     ...(params.schoolId !== undefined ? { schoolId: params.schoolId } : {}),
-    ...(params.query.role && params.query.role !== 'ALL'
-      ? { role: params.query.role as UserRole }
-      : {}),
-    ...(params.query.status && params.query.status !== 'ALL'
-      ? params.query.status === 'EXPIRED'
-        ? {
-            OR: [{ status: 'EXPIRED' }, { status: 'PENDING', expiresAt: { lt: now } }],
-          }
-        : { status: params.query.status }
-      : {}),
-    ...(params.query.deliveryStatus && params.query.deliveryStatus !== 'ALL'
-      ? { deliveryStatus: params.query.deliveryStatus as DeliveryStatus }
-      : {}),
-    ...(params.query.search
-      ? {
-          email: { contains: params.query.search, mode: 'insensitive' },
-        }
-      : {}),
   };
 
-  const invitations = await prisma.userInvitation.findMany({
+  const rawInvitations = await prisma.userInvitation.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     include: {
@@ -459,28 +469,86 @@ export async function listInvitations(params: {
     },
   });
 
-  return invitations.map((inv) => {
-    let effectiveStatus = inv.status;
+  // State precedence: ACCEPTED (4) > PENDING (3) > EXPIRED (2) > REVOKED (1)
+  const STATE_RANK: Record<string, number> = {
+    ACCEPTED: 4,
+    PENDING: 3,
+    EXPIRED: 2,
+    REVOKED: 1,
+  };
+
+  type InvWithEffective = (typeof rawInvitations)[0] & {
+    effectiveStatus: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+  };
+
+  const recipientMap = new Map<string, InvWithEffective>();
+
+  for (const inv of rawInvitations) {
+    let effectiveStatus: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED' = inv.status;
     if (inv.status === 'PENDING' && now > inv.expiresAt) {
       effectiveStatus = 'EXPIRED';
     }
 
-    return {
-      id: inv.id,
-      schoolId: inv.schoolId,
-      schoolName: inv.school?.name ?? null,
-      userId: inv.userId,
-      email: inv.email,
-      role: inv.role,
-      status: effectiveStatus,
-      deliveryStatus: inv.deliveryStatus,
-      deliveryAttempts: inv.deliveryAttempts,
-      deliveredAt: inv.deliveredAt?.toISOString() ?? null,
-      deliveryError: inv.deliveryError ?? null,
-      expiresAt: inv.expiresAt.toISOString(),
-      acceptedAt: inv.acceptedAt?.toISOString() ?? null,
-      revokedAt: inv.revokedAt?.toISOString() ?? null,
-      createdAt: inv.createdAt.toISOString(),
-    };
-  });
+    const key = `${(inv.schoolId ?? 'platform').toLowerCase()}:${inv.email.trim().toLowerCase()}:${inv.role}`;
+    const current = recipientMap.get(key);
+
+    if (!current) {
+      recipientMap.set(key, { ...inv, effectiveStatus });
+      continue;
+    }
+
+    const currentRank = STATE_RANK[current.effectiveStatus] ?? 0;
+    const invRank = STATE_RANK[effectiveStatus] ?? 0;
+
+    if (invRank > currentRank) {
+      recipientMap.set(key, { ...inv, effectiveStatus });
+    } else if (invRank === currentRank) {
+      // Pick the most recent record
+      if (inv.createdAt.getTime() > current.createdAt.getTime()) {
+        recipientMap.set(key, { ...inv, effectiveStatus });
+      }
+    }
+  }
+
+  // Convert deduplicated records to DTOs
+  let result: UserInvitationDto[] = Array.from(recipientMap.values()).map((inv) => ({
+    id: inv.id,
+    schoolId: inv.schoolId,
+    schoolName: inv.school?.name ?? null,
+    userId: inv.userId,
+    email: inv.email,
+    role: inv.role,
+    status: inv.effectiveStatus,
+    deliveryStatus: inv.deliveryStatus,
+    deliveryAttempts: inv.deliveryAttempts,
+    deliveredAt: inv.deliveredAt?.toISOString() ?? null,
+    deliveryError: inv.deliveryError ?? null,
+    expiresAt: inv.expiresAt.toISOString(),
+    acceptedAt: inv.acceptedAt?.toISOString() ?? null,
+    revokedAt: inv.revokedAt?.toISOString() ?? null,
+    createdAt: inv.createdAt.toISOString(),
+  }));
+
+  // Apply filters on deduplicated authoritative records
+  if (params.query.role && params.query.role !== 'ALL') {
+    result = result.filter((inv) => inv.role === params.query.role);
+  }
+
+  if (params.query.status && params.query.status !== 'ALL') {
+    result = result.filter((inv) => inv.status === params.query.status);
+  }
+
+  if (params.query.deliveryStatus && params.query.deliveryStatus !== 'ALL') {
+    result = result.filter((inv) => inv.deliveryStatus === params.query.deliveryStatus);
+  }
+
+  if (params.query.search) {
+    const searchLower = params.query.search.trim().toLowerCase();
+    result = result.filter((inv) => inv.email.toLowerCase().includes(searchLower));
+  }
+
+  // Sort by createdAt descending
+  result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return result;
 }

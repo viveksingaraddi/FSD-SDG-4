@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import type {
   AuditLogDto,
+  PaginatedUsersResultDto,
   PlatformAdoptionMetricsDto,
   PlatformOperationalStatsDto,
   PlatformOverviewDto,
@@ -8,16 +9,20 @@ import type {
   ProvisionSchoolResultDto,
   SchoolDetailDto,
   SchoolSummaryDto,
+  UserDirectoryItemDto,
   UserInvitationDto,
+  UserLifecycleDetailDto,
 } from '@fsd-sdg4/contracts';
-import type { SchoolStatus } from '@prisma/client';
+import type { Prisma, SchoolStatus, UserRole, UserStatus } from '@prisma/client';
 import type {
   CreateSchoolInput,
   InvitationFilterQuery,
+  SuperAdminInviteAdminInput,
   UpdateSchoolInput,
+  UserFilterQuery,
 } from '@fsd-sdg4/validation';
 import { prisma } from '../../shared/db/prisma.js';
-import { ConflictError, NotFoundError } from '../../shared/errors/appError.js';
+import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { AUDIT_ACTIONS, recordAuditEvent } from '../audit/audit.service.js';
 import {
   createInvitation,
@@ -54,7 +59,7 @@ export async function getPlatformOverview(
     totalStudentsAcrossSchools,
     totalTeachersAcrossSchools,
     schoolsWithActiveYear,
-    invitationsGrouped,
+    allInvitationsRaw,
     totalCourseOfferings,
     totalAssignments,
     totalAssessments,
@@ -88,9 +93,16 @@ export async function getPlatformOverview(
         academicYears: { some: { status: 'ACTIVE' } },
       },
     }),
-    prisma.userInvitation.groupBy({
-      by: ['status'],
-      _count: { id: true },
+    prisma.userInvitation.findMany({
+      select: {
+        id: true,
+        schoolId: true,
+        email: true,
+        role: true,
+        status: true,
+        expiresAt: true,
+        createdAt: true,
+      },
     }),
     prisma.courseOffering.count(),
     prisma.assignment.count(),
@@ -122,17 +134,44 @@ export async function getPlatformOverview(
     superAdmins: roleMap['SUPER_ADMIN'] ?? 0,
   };
 
-  const inviteStatusMap: Record<string, number> = {};
-  let totalInvitations = 0;
-  for (const inv of invitationsGrouped) {
-    inviteStatusMap[inv.status] = inv._count.id;
-    totalInvitations += inv._count.id;
+  const STATE_RANK: Record<string, number> = {
+    ACCEPTED: 4,
+    PENDING: 3,
+    EXPIRED: 2,
+    REVOKED: 1,
+  };
+  const bestInviteStatusByRecipient = new Map<string, string>();
+  for (const inv of allInvitationsRaw) {
+    let effectiveStatus = inv.status;
+    if (inv.status === 'PENDING' && now > inv.expiresAt) {
+      effectiveStatus = 'EXPIRED';
+    }
+    const key = `${(inv.schoolId ?? 'platform').toLowerCase()}:${inv.email.trim().toLowerCase()}:${inv.role}`;
+    const current = bestInviteStatusByRecipient.get(key);
+    if (!current) {
+      bestInviteStatusByRecipient.set(key, effectiveStatus);
+    } else {
+      const currentRank = STATE_RANK[current] ?? 0;
+      const newRank = STATE_RANK[effectiveStatus] ?? 0;
+      if (newRank > currentRank) {
+        bestInviteStatusByRecipient.set(key, effectiveStatus);
+      }
+    }
   }
 
-  const acceptedInvitations = inviteStatusMap['ACCEPTED'] ?? 0;
-  const pendingInvitations = inviteStatusMap['PENDING'] ?? 0;
-  const revokedInvitations = inviteStatusMap['REVOKED'] ?? 0;
-  const expiredInvitations = inviteStatusMap['EXPIRED'] ?? 0;
+  let acceptedInvitations = 0;
+  let pendingInvitations = 0;
+  let revokedInvitations = 0;
+  let expiredInvitations = 0;
+
+  for (const status of bestInviteStatusByRecipient.values()) {
+    if (status === 'ACCEPTED') acceptedInvitations++;
+    else if (status === 'PENDING') pendingInvitations++;
+    else if (status === 'REVOKED') revokedInvitations++;
+    else if (status === 'EXPIRED') expiredInvitations++;
+  }
+
+  const totalInvitations = bestInviteStatusByRecipient.size;
 
   const averageStudentsPerSchool =
     activeSchools > 0 ? Math.round(totalStudentsAcrossSchools / activeSchools) : 0;
@@ -633,4 +672,399 @@ export async function listPlatformAuditLogs(
       createdAt: log.createdAt.toISOString(),
     };
   });
+}
+
+// ─── Platform User Lifecycle Management (Task 13) ──────────────────────────
+
+export async function listPlatformUsers(query: UserFilterQuery): Promise<PaginatedUsersResultDto> {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 25;
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.UserWhereInput = {
+    ...(query.schoolId ? { schoolId: query.schoolId } : {}),
+    ...(query.role && query.role !== 'ALL' ? { role: query.role as UserRole } : {}),
+    ...(query.status && query.status !== 'ALL' ? { status: query.status as UserStatus } : {}),
+    ...(query.search
+      ? {
+          OR: [
+            { email: { contains: query.search, mode: 'insensitive' as const } },
+            {
+              teacherProfile: {
+                OR: [
+                  { firstName: { contains: query.search, mode: 'insensitive' as const } },
+                  { lastName: { contains: query.search, mode: 'insensitive' as const } },
+                  { employeeId: { contains: query.search, mode: 'insensitive' as const } },
+                ],
+              },
+            },
+            {
+              studentProfile: {
+                OR: [
+                  { firstName: { contains: query.search, mode: 'insensitive' as const } },
+                  { lastName: { contains: query.search, mode: 'insensitive' as const } },
+                  { studentIdNumber: { contains: query.search, mode: 'insensitive' as const } },
+                ],
+              },
+            },
+          ],
+        }
+      : {}),
+    ...(query.invitationStatus && query.invitationStatus !== 'ALL'
+      ? query.invitationStatus === 'NONE'
+        ? { invitations: { none: {} } }
+        : { invitations: { some: { status: query.invitationStatus } } }
+      : {}),
+  };
+
+  let orderBy: Prisma.UserOrderByWithRelationInput = { createdAt: query.sortOrder ?? 'desc' };
+  if (query.sortBy === 'email') {
+    orderBy = { email: query.sortOrder ?? 'asc' };
+  } else if (query.sortBy === 'role') {
+    orderBy = { role: query.sortOrder ?? 'asc' };
+  } else if (query.sortBy === 'status') {
+    orderBy = { status: query.sortOrder ?? 'asc' };
+  }
+
+  const [total, users] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        school: { select: { id: true, name: true } },
+        teacherProfile: { select: { firstName: true, lastName: true, employeeId: true } },
+        studentProfile: { select: { firstName: true, lastName: true, studentIdNumber: true } },
+        invitations: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            deliveryStatus: true,
+            expiresAt: true,
+            acceptedAt: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const items: UserDirectoryItemDto[] = users.map((u) => {
+    let firstName: string | null = null;
+    let lastName: string | null = null;
+    let identifier: string | null = null;
+
+    if (u.teacherProfile) {
+      firstName = u.teacherProfile.firstName;
+      lastName = u.teacherProfile.lastName;
+      identifier = u.teacherProfile.employeeId;
+    } else if (u.studentProfile) {
+      firstName = u.studentProfile.firstName;
+      lastName = u.studentProfile.lastName;
+      identifier = u.studentProfile.studentIdNumber;
+    }
+
+    const displayName =
+      firstName && lastName ? `${firstName} ${lastName}`.trim() : u.email.split('@')[0] || u.email;
+
+    const latestInv = u.invitations[0];
+
+    return {
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      status: u.status,
+      schoolId: u.schoolId,
+      schoolName: u.school?.name ?? null,
+      firstName,
+      lastName,
+      displayName,
+      identifier,
+      lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
+      createdAt: u.createdAt.toISOString(),
+      invitationStatus: latestInv ? latestInv.status : 'NONE',
+      invitationId: latestInv?.id ?? null,
+      invitationExpiresAt: latestInv ? latestInv.expiresAt.toISOString() : null,
+      invitationDeliveryStatus: latestInv?.deliveryStatus ?? null,
+    };
+  });
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit) || 1,
+  };
+}
+
+export async function getPlatformUserById(userId: string): Promise<UserLifecycleDetailDto> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      school: { select: { id: true, name: true } },
+      teacherProfile: {
+        include: {
+          _count: { select: { courseAssignments: true } },
+        },
+      },
+      studentProfile: {
+        include: {
+          _count: { select: { enrollments: true } },
+          enrollments: {
+            where: { status: 'ACTIVE' },
+            include: { section: true },
+            take: 1,
+          },
+        },
+      },
+      guardianLinks: {
+        include: {
+          student: true,
+        },
+      },
+      invitations: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+      auditLogs: {
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: { actor: { select: { email: true } } },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new NotFoundError('User was not found.');
+  }
+
+  let firstName: string | null = null;
+  let lastName: string | null = null;
+  let identifier: string | null = null;
+
+  if (user.teacherProfile) {
+    firstName = user.teacherProfile.firstName;
+    lastName = user.teacherProfile.lastName;
+    identifier = user.teacherProfile.employeeId;
+  } else if (user.studentProfile) {
+    firstName = user.studentProfile.firstName;
+    lastName = user.studentProfile.lastName;
+    identifier = user.studentProfile.studentIdNumber;
+  }
+
+  const displayName =
+    firstName && lastName
+      ? `${firstName} ${lastName}`.trim()
+      : user.email.split('@')[0] || user.email;
+
+  const latestInv = user.invitations[0];
+
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    schoolId: user.schoolId,
+    schoolName: user.school?.name ?? null,
+    firstName,
+    lastName,
+    displayName,
+    identifier,
+    lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+    invitationStatus: latestInv ? latestInv.status : 'NONE',
+    invitationId: latestInv?.id ?? null,
+    invitationExpiresAt: latestInv ? latestInv.expiresAt.toISOString() : null,
+    invitationDeliveryStatus: latestInv?.deliveryStatus ?? null,
+    teacherProfile: user.teacherProfile
+      ? {
+          id: user.teacherProfile.id,
+          employeeId: user.teacherProfile.employeeId,
+          specialization: user.teacherProfile.specialization,
+          allocationCount: user.teacherProfile._count.courseAssignments,
+        }
+      : null,
+    studentProfile: user.studentProfile
+      ? {
+          id: user.studentProfile.id,
+          studentIdNumber: user.studentProfile.studentIdNumber,
+          admissionDate: user.studentProfile.admissionDate.toISOString().slice(0, 10),
+          dateOfBirth: user.studentProfile.dateOfBirth
+            ? user.studentProfile.dateOfBirth.toISOString().slice(0, 10)
+            : null,
+          gender: user.studentProfile.gender,
+          currentSection: user.studentProfile.enrollments[0]?.section?.name ?? null,
+          enrollmentCount: user.studentProfile._count.enrollments,
+        }
+      : null,
+    guardianRelationships: user.guardianLinks.map((gl) => ({
+      id: gl.id,
+      studentId: gl.studentId,
+      studentName: `${gl.student.firstName} ${gl.student.lastName}`.trim(),
+      studentIdNumber: gl.student.studentIdNumber,
+      relationshipType: gl.relationshipType,
+      isPrimaryContact: gl.isPrimaryContact,
+      isVerified: gl.isVerified,
+    })),
+    recentAuditLogs: user.auditLogs.map((log) => ({
+      id: log.id,
+      schoolId: log.schoolId,
+      actorId: log.actorId,
+      actorEmail: log.actor?.email ?? null,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      delta: (log.delta as Record<string, unknown>) ?? null,
+      createdAt: log.createdAt.toISOString(),
+    })),
+  };
+}
+
+export async function inviteSchoolAdministrator(
+  input: SuperAdminInviteAdminInput,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<UserInvitationDto> {
+  const school = await prisma.school.findUnique({
+    where: { id: input.schoolId },
+    select: { id: true, name: true, status: true },
+  });
+
+  if (!school) {
+    throw new NotFoundError('School not found.');
+  }
+
+  if (school.status !== 'ACTIVE') {
+    throw new BadRequestError('Cannot invite an administrator to an inactive or suspended school.');
+  }
+
+  const normalizedEmail = input.email.toLowerCase().trim();
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (existingUser) {
+    throw new ConflictError('A user with this email address already exists.');
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const placeholderHash = `!INVITED_PENDING_ACTIVATION_${crypto.randomBytes(16).toString('hex')}`;
+    const user = await tx.user.create({
+      data: {
+        schoolId: school.id,
+        email: normalizedEmail,
+        role: 'SCHOOL_ADMIN',
+        status: 'INACTIVE',
+        passwordHash: placeholderHash,
+      },
+    });
+
+    const invitationResult = await createInvitation({
+      tx,
+      schoolId: school.id,
+      userId: user.id,
+      email: normalizedEmail,
+      role: 'SCHOOL_ADMIN',
+      recipientName: `${input.firstName} ${input.lastName}`.trim(),
+      invitedByUserId: actorId,
+    });
+
+    await recordAuditEvent({
+      schoolId: school.id,
+      actorId,
+      action: AUDIT_ACTIONS.TENANT_ADMIN_INVITED,
+      entityType: 'User',
+      entityId: user.id,
+      delta: {
+        email: normalizedEmail,
+        schoolName: school.name,
+        role: 'SCHOOL_ADMIN',
+        invitationId: invitationResult.invitation.id,
+      },
+      ipAddress,
+    });
+
+    return invitationResult;
+  });
+
+  const dispatchResult = await dispatchInvitationEmail({
+    invitationId: result.invitation.id,
+    rawToken: result.rawToken,
+    invitationUrl: result.invitationUrl,
+    recipientEmail: result.invitation.email,
+    recipientName: `${input.firstName} ${input.lastName}`.trim(),
+    role: 'SCHOOL_ADMIN',
+    schoolId: school.id,
+    schoolName: school.name,
+    expiresAt: new Date(result.invitation.expiresAt),
+    type: 'INVITATION_INITIAL',
+  });
+
+  return {
+    ...result.invitation,
+    deliveryStatus: dispatchResult.delivered ? 'SENT' : 'FAILED',
+    deliveryError: dispatchResult.error ?? null,
+  };
+}
+
+export async function updatePlatformUserStatus(
+  userId: string,
+  newStatus: UserStatus,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ id: string; email: string; status: UserStatus }> {
+  if (userId === actorId) {
+    throw new BadRequestError('Administrators cannot suspend or deactivate their own account.');
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, status: true, role: true, schoolId: true },
+  });
+
+  if (!existingUser) {
+    throw new NotFoundError('User was not found.');
+  }
+
+  if (existingUser.status === newStatus) {
+    return { id: existingUser.id, email: existingUser.email, status: existingUser.status };
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.update({
+      where: { id: userId },
+      data: { status: newStatus },
+      select: { id: true, email: true, status: true },
+    });
+
+    if (newStatus === 'INACTIVE' || newStatus === 'LOCKED') {
+      await tx.session.deleteMany({
+        where: { userId },
+      });
+    }
+
+    await recordAuditEvent({
+      schoolId: existingUser.schoolId,
+      actorId,
+      action: AUDIT_ACTIONS.AUTH_ACCOUNT_STATUS_CHANGED,
+      entityType: 'User',
+      entityId: userId,
+      delta: {
+        email: existingUser.email,
+        role: existingUser.role,
+        previousStatus: existingUser.status,
+        newStatus,
+      },
+      ipAddress,
+    });
+
+    return u;
+  });
+
+  return updated;
 }

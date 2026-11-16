@@ -9,7 +9,11 @@ import {
   overviewQuerySchema,
   schoolStatusSchema,
   searchQuerySchema,
+  superAdminInviteAdminSchema,
   updateSchoolSchema,
+  updateUserStatusSchema,
+  userFilterQuerySchema,
+  type UserFilterQuery,
   z,
 } from '@fsd-sdg4/validation';
 import { authenticate } from '../../middleware/authenticate.js';
@@ -22,12 +26,16 @@ import {
   createSchool,
   getPlatformOverview,
   getPlatformSettings,
+  getPlatformUserById,
   getSchoolById,
+  inviteSchoolAdministrator,
   listPlatformAuditLogs,
   listPlatformInvitations,
+  listPlatformUsers,
   listSchools,
   resendPlatformInvitation,
   revokePlatformInvitation,
+  updatePlatformUserStatus,
   updateSchool,
 } from './superAdmin.service.js';
 
@@ -179,6 +187,65 @@ export function createSuperAdminRouter(): ExpressRouter {
       const { id } = req.params as { id: string };
       const revoked = await revokePlatformInvitation(id, req.auth!.userId, req.ip ?? null);
       sendSuccess(res, revoked);
+    },
+  );
+
+  // ─── Platform Users Lifecycle Management (Task 13) ───────────────────────
+
+  router.get(
+    API_ROUTES.SUPER_ADMIN.USERS,
+    authenticate,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_USERS_READ),
+    validateRequest({ query: userFilterQuerySchema }),
+    async (req, res) => {
+      const result = await listPlatformUsers(req.query as unknown as UserFilterQuery);
+      sendSuccess(res, result);
+    },
+  );
+
+  router.post(
+    `${API_ROUTES.SUPER_ADMIN.USERS}/invite`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_USERS_MANAGE),
+    validateRequest({ body: superAdminInviteAdminSchema }),
+    async (req, res) => {
+      const invitation = await inviteSchoolAdministrator(
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, invitation, 201);
+    },
+  );
+
+  router.get(
+    `${API_ROUTES.SUPER_ADMIN.USERS}/:id`,
+    authenticate,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_USERS_READ),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const { id } = req.params as { id: string };
+      const user = await getPlatformUserById(id);
+      sendSuccess(res, user);
+    },
+  );
+
+  router.patch(
+    `${API_ROUTES.SUPER_ADMIN.USERS}/:id/status`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_USERS_MANAGE),
+    validateRequest({ params: idParamSchema, body: updateUserStatusSchema }),
+    async (req, res) => {
+      const { id } = req.params as { id: string };
+      const { status } = req.body as { status: 'ACTIVE' | 'INACTIVE' | 'LOCKED' };
+      const updated = await updatePlatformUserStatus(id, status, req.auth!.userId, req.ip ?? null);
+      sendSuccess(res, updated);
     },
   );
 

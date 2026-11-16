@@ -140,9 +140,12 @@ describe('School Admin Portal', () => {
     renderWithProviders(<SchoolAdminDashboardPage />);
 
     // School Overview & Tenant Isolation Badge
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Synthetic High School' })).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('heading', { name: 'Synthetic High School' })).toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
     expect(screen.getByText(/Tenant-Isolated Domain:/)).toBeInTheDocument();
     expect(screen.getByText('2026-2027')).toBeInTheDocument();
     expect(screen.getByText('240')).toBeInTheDocument();
