@@ -54,6 +54,7 @@ export const API_ROUTES = {
     SCHOOLS: '/api/v1/super-admin/schools',
     AUDIT_LOGS: '/api/v1/super-admin/audit-logs',
     INVITATIONS: '/api/v1/super-admin/invitations',
+    SETTINGS: '/api/v1/super-admin/settings',
   },
   // School admin (Phase 10)
   SCHOOL: {
@@ -127,7 +128,70 @@ export interface PlatformSchoolBreakdownDto {
   archived: number;
   totalClasses: number;
   totalSections: number;
+  totalStudents?: number;
+  totalTeachers?: number;
   registrationTrends?: SchoolRegistrationTrendDto[];
+}
+
+export interface PlatformAdoptionMetricsDto {
+  schoolsWithActiveYear: number;
+  totalStudentsAcrossSchools: number;
+  averageStudentsPerSchool: number;
+  averageTeachersPerSchool: number;
+  invitationAcceptanceRate: number;
+}
+
+export interface PlatformOperationalStatsDto {
+  totalCourseOfferings: number;
+  totalAssignments: number;
+  totalAssessments: number;
+  invitations: {
+    total: number;
+    accepted: number;
+    pending: number;
+    revoked: number;
+    expired: number;
+  };
+}
+
+export interface PlatformSecurityPoliciesDto {
+  sessionPolicy: {
+    maxAgeSeconds: number;
+    sameSite: 'lax' | 'strict' | 'none';
+    secure: boolean;
+    httpOnly: boolean;
+  };
+  csrfProtection: {
+    enabled: boolean;
+    headerName: string;
+  };
+  passwordPolicy: {
+    minLength: number;
+    requireUppercase: boolean;
+    requireLowercase: boolean;
+    requireNumber: boolean;
+    requireSpecial: boolean;
+    hashingAlgorithm: string;
+  };
+  tenantIsolation: {
+    model: string;
+    zeroTrust: boolean;
+    enforcementLayer: string;
+  };
+  rateLimiting: {
+    globalLimit: number;
+    authLimit: number;
+  };
+  emailDelivery: {
+    provider: string;
+    secureTls: boolean;
+  };
+}
+
+export interface PlatformSettingsDto {
+  policies: PlatformSecurityPoliciesDto;
+  version: string;
+  environment: string;
 }
 
 export interface PlatformAlertDto {
@@ -148,7 +212,10 @@ export interface PlatformOverviewDto {
   recentAuditEvents: number;
   usersByRole?: PlatformUserBreakdownDto;
   schoolsAnalytics?: PlatformSchoolBreakdownDto;
+  adoptionMetrics?: PlatformAdoptionMetricsDto;
+  operationalStats?: PlatformOperationalStatsDto;
   alerts?: PlatformAlertDto[];
+  period?: 'all' | '30d' | '90d' | 'year';
 }
 
 export interface AttendanceTrendItemDto {
@@ -184,7 +251,22 @@ export interface SchoolAcademicSummaryDto {
   activeAssignments: number;
   upcomingAssessments: number;
   totalAssessments: number;
+  totalCourseOfferings?: number;
+  assignmentsByStatus?: {
+    published: number;
+    draft: number;
+    archived: number;
+  };
   recentAssessments: SchoolRecentAssessmentDto[];
+}
+
+export interface SchoolPendingTaskDto {
+  id: string;
+  title: string;
+  category: 'ACADEMIC' | 'FACULTY' | 'STUDENT' | 'SECURITY';
+  actionUrl: string;
+  actionLabel: string;
+  count?: number;
 }
 
 export interface SchoolRecentStudentDto {
@@ -220,6 +302,14 @@ export interface SchoolOverviewDto {
   academic?: SchoolAcademicSummaryDto;
   activity?: SchoolRecentActivityDto;
   alerts?: SchoolAlertDto[];
+  invitations?: {
+    total: number;
+    pending: number;
+    accepted: number;
+    revoked: number;
+  };
+  pendingTasks?: SchoolPendingTaskDto[];
+  period?: 'all' | '7d' | '30d';
 }
 
 export interface AcademicYearDto {
@@ -394,6 +484,7 @@ export interface AuditLogDto {
   action: string;
   entityType: string;
   entityId: string;
+  delta?: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -404,6 +495,14 @@ export interface SchoolSettingsDto {
   subdomain: string;
   contactEmail: string;
   status: SchoolStatus;
+  activeAcademicYearId?: string | null;
+  activeAcademicYearName?: string | null;
+  totalAcademicYears?: number;
+  preferences?: {
+    emailNotificationsEnabled: boolean;
+    weeklyAttendanceDigest: boolean;
+    studentSupportAlerts: boolean;
+  };
 }
 
 export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';

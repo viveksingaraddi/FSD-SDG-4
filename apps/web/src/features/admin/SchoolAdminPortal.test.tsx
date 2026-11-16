@@ -9,6 +9,7 @@ import { SchoolAdminDashboardPage } from './SchoolAdminDashboardPage';
 import { AcademicSetupPage } from './AcademicSetupPage';
 import { StaffDirectoryPage } from './StaffDirectoryPage';
 import { TeacherProfilePage } from './TeacherProfilePage';
+import { SchoolSettingsPage } from './SchoolSettingsPage';
 
 function renderWithProviders(ui: ReactNode, initialPath = '/admin') {
   const queryClient = new QueryClient({
@@ -756,5 +757,146 @@ describe('School Admin Portal', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
     expect(screen.getByText(/Remove Course Allocation/i)).toBeInTheDocument();
+  });
+
+  it('renders school settings tabs, preferences form, and institutional audit trail', async () => {
+    let patchedData: unknown = null;
+    const fetchMock = vi.fn((input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'adm-1',
+                  email: 'admin@stjudes.edu',
+                  role: 'SCHOOL_ADMIN',
+                  schoolId: 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/settings') && method === 'PATCH') {
+        patchedData = JSON.parse(String(init?.body));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'school-1',
+                name: 'St. Jude Academy Updated',
+                code: 'SJA-2026',
+                subdomain: 'st-jude',
+                contactEmail: 'principal@stjudes.edu',
+                status: 'ACTIVE',
+                activeAcademicYearId: 'ay-2026',
+                activeAcademicYearName: '2026-2027 Academic Year',
+                totalAcademicYears: 2,
+                preferences: {
+                  emailNotificationsEnabled: true,
+                  weeklyAttendanceDigest: false,
+                  studentSupportAlerts: true,
+                },
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-11-16T00:00:00.000Z',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/settings')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'school-1',
+                name: 'St. Jude Academy',
+                code: 'SJA-2026',
+                subdomain: 'st-jude',
+                contactEmail: 'principal@stjudes.edu',
+                status: 'ACTIVE',
+                activeAcademicYearId: 'ay-2026',
+                activeAcademicYearName: '2026-2027 Academic Year',
+                totalAcademicYears: 2,
+                preferences: {
+                  emailNotificationsEnabled: true,
+                  weeklyAttendanceDigest: true,
+                  studentSupportAlerts: true,
+                },
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/audit-logs')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'audit-log-1',
+                  action: 'SCHOOL_SETTINGS_UPDATED',
+                  entityType: 'School',
+                  entityId: 'school-1',
+                  schoolId: 'school-1',
+                  userId: 'adm-1',
+                  userEmail: 'admin@stjudes.edu',
+                  userRole: 'SCHOOL_ADMIN',
+                  delta: { preferences: { emailNotificationsEnabled: true } },
+                  createdAt: '2026-11-16T12:00:00.000Z',
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<SchoolSettingsPage />, '/admin/settings');
+
+    // Verify School Profile & Preferences tab is active
+    await waitFor(() => {
+      expect(screen.getByText('Institutional Profile & Contact Information')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('St. Jude Academy')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('principal@stjudes.edu')).toBeInTheDocument();
+      expect(screen.getByText('SJA-2026')).toBeInTheDocument();
+      expect(screen.getByText('2026-2027 Academic Year')).toBeInTheDocument();
+    });
+
+    // Save preferences update
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => {
+      expect(patchedData).not.toBeNull();
+    });
+
+    // Switch to Institutional Audit Log tab
+    fireEvent.click(screen.getByRole('button', { name: /institutional audit log/i }));
+    await waitFor(() => {
+      expect(screen.getByText('SCHOOL_SETTINGS_UPDATED')).toBeInTheDocument();
+      expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
   });
 });

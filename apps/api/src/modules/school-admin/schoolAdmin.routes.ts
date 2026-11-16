@@ -3,6 +3,7 @@ import { API_ROUTES } from '@fsd-sdg4/contracts';
 import {
   allocateTeacherSchema,
   assignOfferingTeacherSchema,
+  auditLogsQuerySchema,
   createAcademicYearSchema,
   createClassSchema,
   createOfferingSchema,
@@ -16,6 +17,7 @@ import {
   inviteUserSchema,
   offeringFilterQuerySchema,
   saveOnboardingProgressSchema,
+  schoolOverviewQuerySchema,
   searchQuerySchema,
   staffFilterQuerySchema,
   updateAcademicYearSchema,
@@ -100,9 +102,13 @@ export function createSchoolAdminRouter(): ExpressRouter {
     authenticate,
     requireRole(['SCHOOL_ADMIN']),
     requirePermission(PERMISSIONS.SCHOOL_CLASSES_READ),
+    validateRequest({ query: schoolOverviewQuerySchema }),
     async (req, res) => {
       const schoolId = await resolveTenantSchoolId(req);
-      const overview = await getSchoolOverview(schoolId);
+      const { period } = req.query as { period?: 'all' | '7d' | '30d' };
+      const overview = await (period !== undefined
+        ? getSchoolOverview(schoolId, period)
+        : getSchoolOverview(schoolId));
       sendSuccess(res, overview);
     },
   );
@@ -631,9 +637,16 @@ export function createSchoolAdminRouter(): ExpressRouter {
     authenticate,
     requireRole(['SCHOOL_ADMIN']),
     requirePermission(PERMISSIONS.SCHOOL_AUDIT_READ),
+    validateRequest({ query: auditLogsQuerySchema }),
     async (req, res) => {
       const schoolId = await resolveTenantSchoolId(req);
-      const logs = await listSchoolAuditLogs(schoolId);
+      const { action, category, startDate, endDate } = req.query as {
+        action?: string;
+        category?: 'ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS';
+        startDate?: string;
+        endDate?: string;
+      };
+      const logs = await listSchoolAuditLogs(schoolId, { action, category, startDate, endDate });
       sendSuccess(res, logs);
     },
   );

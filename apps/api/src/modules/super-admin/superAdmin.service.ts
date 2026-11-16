@@ -1,7 +1,10 @@
 import crypto from 'node:crypto';
 import type {
   AuditLogDto,
+  PlatformAdoptionMetricsDto,
+  PlatformOperationalStatsDto,
   PlatformOverviewDto,
+  PlatformSettingsDto,
   ProvisionSchoolResultDto,
   SchoolDetailDto,
   SchoolSummaryDto,
@@ -24,7 +27,19 @@ import {
 } from '../invitations/invitation.service.js';
 import { dispatchInvitationEmail } from '../mail/mail.service.js';
 
-export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
+export async function getPlatformOverview(
+  period?: 'all' | '30d' | '90d' | 'year',
+): Promise<PlatformOverviewDto> {
+  const now = new Date();
+  let dateBoundary: Date | null = null;
+  if (period === '30d') {
+    dateBoundary = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  } else if (period === '90d') {
+    dateBoundary = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  } else if (period === 'year') {
+    dateBoundary = new Date(now.getFullYear(), 0, 1);
+  }
+
   const [
     totalSchools,
     activeSchools,
@@ -36,6 +51,13 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     totalClasses,
     totalSections,
     allSchools,
+    totalStudentsAcrossSchools,
+    totalTeachersAcrossSchools,
+    schoolsWithActiveYear,
+    invitationsGrouped,
+    totalCourseOfferings,
+    totalAssignments,
+    totalAssessments,
   ] = await Promise.all([
     prisma.school.count({ where: { deletedAt: null } }),
     prisma.school.count({ where: { deletedAt: null, status: 'ACTIVE' } }),
@@ -51,10 +73,28 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     prisma.class.count(),
     prisma.section.count(),
     prisma.school.findMany({
-      where: { deletedAt: null },
+      where: {
+        deletedAt: null,
+        ...(dateBoundary ? { createdAt: { gte: dateBoundary } } : {}),
+      },
       select: { createdAt: true },
       orderBy: { createdAt: 'asc' },
     }),
+    prisma.studentProfile.count({ where: { deletedAt: null } }),
+    prisma.teacherProfile.count(),
+    prisma.school.count({
+      where: {
+        deletedAt: null,
+        academicYears: { some: { status: 'ACTIVE' } },
+      },
+    }),
+    prisma.userInvitation.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    }),
+    prisma.courseOffering.count(),
+    prisma.assignment.count(),
+    prisma.assessment.count(),
   ]);
 
   const roleMap: Record<string, number> = {};
@@ -69,8 +109,8 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     );
     trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
   }
-  const registrationTrends = Array.from(trendMap.entries()).map(([period, count]) => ({
-    period,
+  const registrationTrends = Array.from(trendMap.entries()).map(([periodLabel, count]) => ({
+    period: periodLabel,
     count,
   }));
 
@@ -82,12 +122,54 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     superAdmins: roleMap['SUPER_ADMIN'] ?? 0,
   };
 
+  const inviteStatusMap: Record<string, number> = {};
+  let totalInvitations = 0;
+  for (const inv of invitationsGrouped) {
+    inviteStatusMap[inv.status] = inv._count.id;
+    totalInvitations += inv._count.id;
+  }
+
+  const acceptedInvitations = inviteStatusMap['ACCEPTED'] ?? 0;
+  const pendingInvitations = inviteStatusMap['PENDING'] ?? 0;
+  const revokedInvitations = inviteStatusMap['REVOKED'] ?? 0;
+  const expiredInvitations = inviteStatusMap['EXPIRED'] ?? 0;
+
+  const averageStudentsPerSchool =
+    activeSchools > 0 ? Math.round(totalStudentsAcrossSchools / activeSchools) : 0;
+  const averageTeachersPerSchool =
+    activeSchools > 0 ? Math.round(totalTeachersAcrossSchools / activeSchools) : 0;
+  const invitationAcceptanceRate =
+    totalInvitations > 0 ? Math.round((acceptedInvitations / totalInvitations) * 100) : 0;
+
+  const adoptionMetrics: PlatformAdoptionMetricsDto = {
+    schoolsWithActiveYear,
+    totalStudentsAcrossSchools,
+    averageStudentsPerSchool,
+    averageTeachersPerSchool,
+    invitationAcceptanceRate,
+  };
+
+  const operationalStats: PlatformOperationalStatsDto = {
+    totalCourseOfferings,
+    totalAssignments,
+    totalAssessments,
+    invitations: {
+      total: totalInvitations,
+      accepted: acceptedInvitations,
+      pending: pendingInvitations,
+      revoked: revokedInvitations,
+      expired: expiredInvitations,
+    },
+  };
+
   const schoolsAnalytics = {
     active: activeSchools,
     suspended: suspendedSchools,
     archived: archivedSchools,
     totalClasses,
     totalSections,
+    totalStudents: totalStudentsAcrossSchools,
+    totalTeachers: totalTeachersAcrossSchools,
     registrationTrends,
   };
 
@@ -123,7 +205,50 @@ export async function getPlatformOverview(): Promise<PlatformOverviewDto> {
     recentAuditEvents,
     usersByRole,
     schoolsAnalytics,
+    adoptionMetrics,
+    operationalStats,
     alerts,
+    period: period ?? 'all',
+  };
+}
+
+export async function getPlatformSettings(): Promise<PlatformSettingsDto> {
+  return {
+    policies: {
+      sessionPolicy: {
+        maxAgeSeconds: 7 * 24 * 60 * 60,
+        sameSite: 'lax',
+        secure: process.env['NODE_ENV'] === 'production',
+        httpOnly: true,
+      },
+      csrfProtection: {
+        enabled: true,
+        headerName: 'X-CSRF-Token',
+      },
+      passwordPolicy: {
+        minLength: 12,
+        requireUppercase: true,
+        requireLowercase: true,
+        requireNumber: true,
+        requireSpecial: true,
+        hashingAlgorithm: 'Argon2id',
+      },
+      tenantIsolation: {
+        model: 'Multi-Tenant Shared Schema with Tenant Discriminator (school_id)',
+        zeroTrust: true,
+        enforcementLayer: 'Session Context resolveTenantSchoolId(req) & Prisma Scoped Queries',
+      },
+      rateLimiting: {
+        globalLimit: 100,
+        authLimit: 10,
+      },
+      emailDelivery: {
+        provider: 'Official FSD-SDG-4 Gmail SMTP (Nodemailer TLS)',
+        secureTls: true,
+      },
+    },
+    version: '1.0.0',
+    environment: process.env['NODE_ENV'] ?? 'development',
   };
 }
 
@@ -434,13 +559,46 @@ export async function updateSchool(
 }
 
 export async function listPlatformAuditLogs(
-  actionFilter?: string,
-  schoolId?: string,
+  actionFilter?: string | undefined,
+  schoolId?: string | undefined,
+  category?: ('ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS') | undefined,
+  startDate?: string | undefined,
+  endDate?: string | undefined,
 ): Promise<AuditLogDto[]> {
+  const categoryFilters: Record<string, string[]> = {
+    AUTH: ['AUTH_', 'LOGIN', 'SESSION', 'PASSWORD'],
+    SCHOOL: ['SCHOOL_', 'PLATFORM_TENANT_', 'PLATFORM_SCHOOL_'],
+    ACADEMIC: ['ACADEMIC', 'CLASS', 'SECTION', 'SUBJECT', 'OFFERING'],
+    USER: ['USER_', 'TEACHER_', 'STUDENT_', 'STAFF_', 'GUARDIAN_', 'INVITATION_'],
+    SETTINGS: ['SETTINGS', 'POLICY', 'PREFERENCE'],
+  };
+
+  const actionConditions: Array<{ action: { contains: string; mode: 'insensitive' } }> = [];
+  if (actionFilter) {
+    actionConditions.push({ action: { contains: actionFilter, mode: 'insensitive' } });
+  }
+
+  const categoryMatches = category && category !== 'ALL' ? categoryFilters[category] : undefined;
+
   const logs = await prisma.auditLog.findMany({
     where: {
       ...(actionFilter ? { action: { contains: actionFilter, mode: 'insensitive' as const } } : {}),
       ...(schoolId ? { schoolId } : {}),
+      ...(categoryMatches
+        ? {
+            OR: categoryMatches.map((prefix) => ({
+              action: { contains: prefix, mode: 'insensitive' as const },
+            })),
+          }
+        : {}),
+      ...(startDate || endDate
+        ? {
+            createdAt: {
+              ...(startDate ? { gte: new Date(startDate) } : {}),
+              ...(endDate ? { lte: new Date(endDate) } : {}),
+            },
+          }
+        : {}),
     },
     orderBy: { createdAt: 'desc' },
     take: 100,
@@ -451,14 +609,28 @@ export async function listPlatformAuditLogs(
     },
   });
 
-  return logs.map((log) => ({
-    id: log.id,
-    schoolId: log.schoolId,
-    actorId: log.actorId,
-    actorEmail: log.actor?.email ?? null,
-    action: log.action,
-    entityType: log.entityType,
-    entityId: log.entityId,
-    createdAt: log.createdAt.toISOString(),
-  }));
+  return logs.map((log) => {
+    // Redact sensitive secrets from delta if present
+    let sanitizedDelta: Record<string, unknown> | null = null;
+    if (log.delta && typeof log.delta === 'object' && !Array.isArray(log.delta)) {
+      sanitizedDelta = { ...(log.delta as Record<string, unknown>) };
+      for (const secretKey of ['password', 'passwordHash', 'token', 'rawToken', 'cookie']) {
+        if (secretKey in sanitizedDelta) {
+          sanitizedDelta[secretKey] = '[REDACTED]';
+        }
+      }
+    }
+
+    return {
+      id: log.id,
+      schoolId: log.schoolId,
+      actorId: log.actorId,
+      actorEmail: log.actor?.email ?? null,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      delta: sanitizedDelta,
+      createdAt: log.createdAt.toISOString(),
+    };
+  });
 }

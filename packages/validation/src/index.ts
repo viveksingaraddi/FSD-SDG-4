@@ -306,9 +306,35 @@ export const studentFilterQuerySchema = z.object({
   status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'TRANSFERRED']).optional(),
 });
 
+export const overviewQuerySchema = z.object({
+  period: z.enum(['all', '30d', '90d', 'year']).optional(),
+});
+export type OverviewQuery = z.infer<typeof overviewQuerySchema>;
+
+export const schoolOverviewQuerySchema = z.object({
+  period: z.enum(['all', '7d', '30d']).optional(),
+});
+export type SchoolOverviewQuery = z.infer<typeof schoolOverviewQuerySchema>;
+
+export const auditLogsQuerySchema = z.object({
+  action: searchQuerySchema,
+  schoolId: uuidSchema.optional(),
+  category: z.enum(['ALL', 'AUTH', 'SCHOOL', 'ACADEMIC', 'USER', 'SETTINGS']).optional(),
+  startDate: isoDateString.optional(),
+  endDate: isoDateString.optional(),
+});
+export type AuditLogsQuery = z.infer<typeof auditLogsQuerySchema>;
+
 export const updateSchoolSettingsSchema = z.object({
   name: nonEmptyString('School name').max(200),
   contactEmail: emailSchema,
+  preferences: z
+    .object({
+      emailNotificationsEnabled: z.boolean().default(true),
+      weeklyAttendanceDigest: z.boolean().default(true),
+      studentSupportAlerts: z.boolean().default(true),
+    })
+    .optional(),
 });
 
 export const inviteUserSchema = z.object({

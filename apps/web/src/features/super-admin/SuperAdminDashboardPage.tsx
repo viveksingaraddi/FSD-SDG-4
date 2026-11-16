@@ -8,9 +8,12 @@ import {
   BookOpen,
   Building2,
   Calendar,
+  CheckCircle2,
+  ClipboardList,
   Filter,
   GraduationCap,
   Layers,
+  Mail,
   RefreshCw,
   School,
   ShieldCheck,
@@ -63,8 +66,8 @@ export function SuperAdminDashboardPage() {
   const [timeFilter, setTimeFilter] = useState<'all' | '30d' | 'year'>('all');
 
   const overviewQuery = useQuery({
-    queryKey: ['super-admin', 'overview'],
-    queryFn: ({ signal }) => fetchPlatformOverview(signal),
+    queryKey: ['super-admin', 'overview', timeFilter],
+    queryFn: ({ signal }) => fetchPlatformOverview(timeFilter, signal),
   });
 
   const auditQuery = useQuery({
@@ -553,6 +556,69 @@ export function SuperAdminDashboardPage() {
                   </Text>
                 </div>
               </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Section C2: Institutional Adoption & Platform Operations Telemetry */}
+        {overview && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Total Student Footprint</Text>
+                <GraduationCap className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.adoptionMetrics?.totalStudentsAcrossSchools ??
+                  overview.schoolsAnalytics?.totalStudents ??
+                  0}
+              </p>
+              <Text variant="caption" className="mt-1">
+                ~{overview.adoptionMetrics?.averageStudentsPerSchool ?? 0} students / institution
+              </Text>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Active Academic Calendars</Text>
+                <Calendar
+                  className="h-5 w-5 text-[var(--color-brand-primary)]"
+                  aria-hidden="true"
+                />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.adoptionMetrics?.schoolsWithActiveYear ?? 0} / {overview.totalSchools}
+              </p>
+              <Text variant="caption" className="mt-1">
+                Institutions running active terms
+              </Text>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Course Offerings &amp; Curriculum</Text>
+                <BookOpen className="h-5 w-5 text-indigo-600" aria-hidden="true" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.operationalStats?.totalCourseOfferings ?? 0}
+              </p>
+              <Text variant="caption" className="mt-1">
+                {overview.operationalStats?.totalAssessments ?? 0} active assessments
+              </Text>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Account Activation Rate</Text>
+                <Mail className="h-5 w-5 text-amber-600" aria-hidden="true" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.adoptionMetrics?.invitationAcceptanceRate ?? 0}%
+              </p>
+              <Text variant="caption" className="mt-1">
+                {overview.operationalStats?.invitations.accepted ?? 0} accepted of{' '}
+                {overview.operationalStats?.invitations.total ?? 0} invitations
+              </Text>
             </Card>
           </div>
         )}

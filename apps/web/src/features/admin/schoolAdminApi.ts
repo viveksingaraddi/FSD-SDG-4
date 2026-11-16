@@ -42,8 +42,15 @@ import type {
 } from '@fsd-sdg4/validation';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
-export function fetchSchoolOverview(signal?: AbortSignal): Promise<SchoolOverviewDto> {
-  return apiGet<SchoolOverviewDto>(API_ROUTES.SCHOOL.OVERVIEW, signal ? { signal } : undefined);
+export function fetchSchoolOverview(
+  period?: 'all' | '7d' | '30d',
+  signal?: AbortSignal,
+): Promise<SchoolOverviewDto> {
+  const qs = period && period !== 'all' ? `?period=${encodeURIComponent(period)}` : '';
+  return apiGet<SchoolOverviewDto>(
+    `${API_ROUTES.SCHOOL.OVERVIEW}${qs}`,
+    signal ? { signal } : undefined,
+  );
 }
 
 export function fetchAcademicYears(signal?: AbortSignal): Promise<AcademicYearDto[]> {
@@ -246,8 +253,43 @@ export function createStudentRequest(input: CreateStudentInput): Promise<Student
   return apiPost<StudentDirectoryDto>(API_ROUTES.SCHOOL.STUDENTS, input);
 }
 
-export function fetchSchoolAuditLogs(signal?: AbortSignal): Promise<AuditLogDto[]> {
-  return apiGet<AuditLogDto[]>(API_ROUTES.SCHOOL.AUDIT_LOGS, signal ? { signal } : undefined);
+export function fetchSchoolAuditLogs(
+  optionsOrSignal?:
+    | {
+        action?: string | undefined;
+        category?: ('ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS') | undefined;
+        startDate?: string | undefined;
+        endDate?: string | undefined;
+      }
+    | AbortSignal,
+  maybeSignal?: AbortSignal,
+): Promise<AuditLogDto[]> {
+  const params = new URLSearchParams();
+  let signal: AbortSignal | undefined;
+
+  if (optionsOrSignal instanceof AbortSignal) {
+    signal = optionsOrSignal;
+  } else if (optionsOrSignal && typeof optionsOrSignal === 'object') {
+    if (optionsOrSignal.action && optionsOrSignal.action.trim().length > 0) {
+      params.set('action', optionsOrSignal.action.trim());
+    }
+    if (optionsOrSignal.category && optionsOrSignal.category !== 'ALL') {
+      params.set('category', optionsOrSignal.category);
+    }
+    if (optionsOrSignal.startDate) {
+      params.set('startDate', optionsOrSignal.startDate);
+    }
+    if (optionsOrSignal.endDate) {
+      params.set('endDate', optionsOrSignal.endDate);
+    }
+    signal = maybeSignal;
+  }
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<AuditLogDto[]>(
+    `${API_ROUTES.SCHOOL.AUDIT_LOGS}${qs}`,
+    signal ? { signal } : undefined,
+  );
 }
 
 export function fetchSchoolSettings(signal?: AbortSignal): Promise<SchoolSettingsDto> {
