@@ -5,7 +5,9 @@ import {
   type ClassDto,
   type CompleteOnboardingResultDto,
   type CourseOfferingDto,
+  type GuardianRelationshipDto,
   type OfferingTeacherDto,
+  type PaginatedUsersResultDto,
   type SaveOnboardingProgressResultDto,
   type SchoolOnboardingStatusDto,
   type SchoolOverviewDto,
@@ -17,6 +19,7 @@ import {
   type TeacherAllocationDto,
   type TeacherDetailDto,
   type UserInvitationDto,
+  type UserLifecycleDetailDto,
 } from '@fsd-sdg4/contracts';
 import type {
   AllocateTeacherInput,
@@ -30,6 +33,7 @@ import type {
   CreateSubjectInput,
   InvitationFilterQuery,
   InviteUserInput,
+  LinkGuardianInput,
   OfferingFilterQuery,
   SaveOnboardingProgressInput,
   StaffFilterQuery,
@@ -39,6 +43,7 @@ import type {
   UpdateSectionInput,
   UpdateStaffInput,
   UpdateSubjectInput,
+  UserFilterQueryInput,
 } from '@fsd-sdg4/validation';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
@@ -346,4 +351,62 @@ export function saveOnboardingProgressRequest(
 
 export function completeSchoolOnboardingRequest(): Promise<CompleteOnboardingResultDto> {
   return apiPost<CompleteOnboardingResultDto>(API_ROUTES.SCHOOL.ONBOARDING_COMPLETE, {});
+}
+
+export function fetchSchoolUsers(
+  query?: UserFilterQueryInput,
+  signal?: AbortSignal,
+): Promise<PaginatedUsersResultDto> {
+  const params = new URLSearchParams();
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.page) params.set('page', String(query.page));
+  if (query?.limit) params.set('limit', String(query.limit));
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<PaginatedUsersResultDto>(
+    `${API_ROUTES.SCHOOL.USERS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchSchoolUserDetail(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserLifecycleDetailDto> {
+  return apiGet<UserLifecycleDetailDto>(
+    `${API_ROUTES.SCHOOL.USERS}/${encodeURIComponent(userId)}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function updateSchoolUserStatusRequest(
+  userId: string,
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED',
+  reason?: string,
+): Promise<UserLifecycleDetailDto> {
+  return apiPatch<UserLifecycleDetailDto>(
+    `${API_ROUTES.SCHOOL.USERS}/${encodeURIComponent(userId)}/status`,
+    { status, reason },
+  );
+}
+
+export function linkStudentGuardianRequest(
+  studentId: string,
+  input: LinkGuardianInput,
+): Promise<GuardianRelationshipDto> {
+  return apiPost<GuardianRelationshipDto>(
+    `${API_ROUTES.SCHOOL.STUDENTS}/${encodeURIComponent(studentId)}/guardians`,
+    input,
+  );
+}
+
+export function unlinkStudentGuardianRequest(
+  studentId: string,
+  guardianUserId: string,
+): Promise<{ success: boolean; unlinkedAt: string }> {
+  return apiDelete<{ success: boolean; unlinkedAt: string }>(
+    `${API_ROUTES.SCHOOL.STUDENTS}/${encodeURIComponent(studentId)}/guardians/${encodeURIComponent(guardianUserId)}`,
+  );
 }

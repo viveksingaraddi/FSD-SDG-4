@@ -201,4 +201,102 @@ describe('UserInvitationsPage', () => {
     expect(await screen.findByText('Invitation Ready')).toBeInTheDocument();
     expect(screen.getByDisplayValue(/newly-minted-token/)).toBeInTheDocument();
   });
+
+  it('deduplicates multiple historical invitations for the same recipient to their final best state', async () => {
+    const historicalInvitations = [
+      {
+        id: 'inv-101',
+        schoolId: 'school-1',
+        userId: 'usr-100',
+        email: 'gigmithra.connect@gmail.com',
+        role: 'STUDENT',
+        status: 'REVOKED',
+        deliveryStatus: 'FAILED',
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        acceptedAt: null,
+        revokedAt: new Date(Date.now() - 3600000).toISOString(),
+        createdAt: new Date(Date.now() - 7200000).toISOString(),
+      },
+      {
+        id: 'inv-102',
+        schoolId: 'school-1',
+        userId: 'usr-100',
+        email: 'gigmithra.connect@gmail.com',
+        role: 'STUDENT',
+        status: 'ACCEPTED',
+        deliveryStatus: 'SENT',
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        acceptedAt: new Date().toISOString(),
+        revokedAt: null,
+        createdAt: new Date(Date.now() - 1800000).toISOString(),
+      },
+      {
+        id: 'inv-103',
+        schoolId: 'school-1',
+        userId: 'usr-100',
+        email: 'gigmithra.connect@gmail.com',
+        role: 'STUDENT',
+        status: 'REVOKED',
+        deliveryStatus: 'SENT',
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        acceptedAt: null,
+        revokedAt: new Date().toISOString(),
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+      },
+    ];
+
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = String(input);
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'adm-1',
+                  email: 'admin@school.edu',
+                  role: 'SCHOOL_ADMIN',
+                  schoolId: 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+      if (url.includes('/api/v1/school/invitations')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: historicalInvitations,
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+      return Promise.reject(new Error(`Unhandled URL: ${url}`));
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<UserInvitationsPage />);
+
+    // Wait for recipient to appear
+    expect(await screen.findByText('gigmithra.connect@gmail.com')).toBeInTheDocument();
+
+    // Verify it appears only ONCE in the table
+    const emails = screen.getAllByText('gigmithra.connect@gmail.com');
+    expect(emails).toHaveLength(1);
+
+    // Verify Activated indicator is present and Resend is NOT present for this accepted recipient
+    expect(screen.getByText('Activated')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Resend/i })).not.toBeInTheDocument();
+
+    // Verify KPI counters reflect unique recipients in best state (Total: 1, Accepted: 1, Expired/Revoked: 0)
+    expect(screen.getByTestId('kpi-total-issued')).toHaveTextContent('1');
+    expect(screen.getByTestId('kpi-accepted-active')).toHaveTextContent('1');
+    expect(screen.getByTestId('kpi-expired-revoked')).toHaveTextContent('0');
+  });
 });

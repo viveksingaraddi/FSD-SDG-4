@@ -22,11 +22,15 @@ import {
   staffFilterQuerySchema,
   updateAcademicYearSchema,
   updateClassSchema,
+  linkGuardianSchema,
+  studentGuardianParamSchema,
   updateSchoolSettingsSchema,
   updateSectionSchema,
   updateStaffSchema,
   updateSubjectSchema,
   updateUserStatusSchema,
+  userFilterQuerySchema,
+  type UserFilterQuery,
   z,
 } from '@fsd-sdg4/validation';
 import { authenticate } from '../../middleware/authenticate.js';
@@ -57,13 +61,16 @@ import {
   getSchoolOnboarding,
   getSchoolOverview,
   getSchoolSettings,
+  getSchoolUserById,
   getStaffById,
   inviteSchoolUser,
+  linkStudentGuardian,
   listAcademicYears,
   listClasses,
   listCourseOfferings,
   listSchoolAuditLogs,
   listSchoolInvitations,
+  listSchoolUsers,
   listStaff,
   listStudents,
   listSubjects,
@@ -71,9 +78,11 @@ import {
   resendSchoolInvitation,
   revokeSchoolInvitation,
   saveOnboardingProgress,
+  unlinkStudentGuardian,
   updateAcademicYear,
   updateClass,
   updateSchoolSettings,
+  updateSchoolUserStatus,
   updateSection,
   updateStaff,
   updateStaffStatus,
@@ -744,6 +753,99 @@ export function createSchoolAdminRouter(): ExpressRouter {
       const { id } = req.params as { id: string };
       const revoked = await revokeSchoolInvitation(schoolId, id, req.auth!.userId, req.ip ?? null);
       sendSuccess(res, revoked);
+    },
+  );
+
+  // ─── School Users Lifecycle Management (Task 13) ──────────────────────────
+
+  router.get(
+    API_ROUTES.SCHOOL.USERS,
+    authenticate,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_READ),
+    validateRequest({ query: userFilterQuerySchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const result = await listSchoolUsers(schoolId, req.query as unknown as UserFilterQuery);
+      sendSuccess(res, result);
+    },
+  );
+
+  router.get(
+    `${API_ROUTES.SCHOOL.USERS}/:id`,
+    authenticate,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_READ),
+    validateRequest({ params: idParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const user = await getSchoolUserById(schoolId, id);
+      sendSuccess(res, user);
+    },
+  );
+
+  router.patch(
+    `${API_ROUTES.SCHOOL.USERS}/:id/status`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_USERS_UPDATE),
+    validateRequest({ params: idParamSchema, body: updateUserStatusSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const { status } = req.body as { status: 'ACTIVE' | 'INACTIVE' | 'LOCKED' };
+      const updated = await updateSchoolUserStatus(
+        schoolId,
+        id,
+        status,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, updated);
+    },
+  );
+
+  router.post(
+    `${API_ROUTES.SCHOOL.STUDENTS}/:id/guardians`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_GUARDIANS_MANAGE),
+    validateRequest({ params: idParamSchema, body: linkGuardianSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id } = req.params as { id: string };
+      const linked = await linkStudentGuardian(
+        schoolId,
+        id,
+        req.body,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, linked, 201);
+    },
+  );
+
+  router.delete(
+    `${API_ROUTES.SCHOOL.STUDENTS}/:id/guardians/:guardianUserId`,
+    authenticate,
+    requireCsrfHeader,
+    requireRole(['SCHOOL_ADMIN']),
+    requirePermission(PERMISSIONS.SCHOOL_GUARDIANS_MANAGE),
+    validateRequest({ params: studentGuardianParamSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { id, guardianUserId } = req.params as { id: string; guardianUserId: string };
+      const result = await unlinkStudentGuardian(
+        schoolId,
+        id,
+        guardianUserId,
+        req.auth!.userId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, result);
     },
   );
 

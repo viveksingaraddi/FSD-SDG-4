@@ -1,17 +1,21 @@
 import {
   API_ROUTES,
   type AuditLogDto,
+  type PaginatedUsersResultDto,
   type PlatformOverviewDto,
   type PlatformSettingsDto,
   type ProvisionSchoolResultDto,
   type SchoolDetailDto,
   type SchoolSummaryDto,
   type UserInvitationDto,
+  type UserLifecycleDetailDto,
 } from '@fsd-sdg4/contracts';
 import type {
   CreateSchoolInput,
   InvitationFilterQuery,
+  SuperAdminInviteAdminInput,
   UpdateSchoolInput,
+  UserFilterQueryInput,
 } from '@fsd-sdg4/validation';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
@@ -140,5 +144,52 @@ export function fetchPlatformAuditLogs(
   return apiGet<AuditLogDto[]>(
     `${API_ROUTES.SUPER_ADMIN.AUDIT_LOGS}${qs}`,
     signal ? { signal } : undefined,
+  );
+}
+
+export function fetchPlatformUsers(
+  query?: UserFilterQueryInput,
+  signal?: AbortSignal,
+): Promise<PaginatedUsersResultDto> {
+  const params = new URLSearchParams();
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.schoolId && query.schoolId.trim().length > 0)
+    params.set('schoolId', query.schoolId.trim());
+  if (query?.page) params.set('page', String(query.page));
+  if (query?.limit) params.set('limit', String(query.limit));
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<PaginatedUsersResultDto>(
+    `${API_ROUTES.SUPER_ADMIN.USERS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchPlatformUserDetail(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserLifecycleDetailDto> {
+  return apiGet<UserLifecycleDetailDto>(
+    `${API_ROUTES.SUPER_ADMIN.USERS}/${encodeURIComponent(userId)}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function inviteSchoolAdminRequest(
+  input: SuperAdminInviteAdminInput,
+): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(`${API_ROUTES.SUPER_ADMIN.USERS}/invite`, input);
+}
+
+export function updatePlatformUserStatusRequest(
+  userId: string,
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED',
+  reason?: string,
+): Promise<UserLifecycleDetailDto> {
+  return apiPatch<UserLifecycleDetailDto>(
+    `${API_ROUTES.SUPER_ADMIN.USERS}/${encodeURIComponent(userId)}/status`,
+    { status, reason },
   );
 }

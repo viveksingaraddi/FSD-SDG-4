@@ -16,6 +16,7 @@ const SchoolsDirectoryPage = lazy(() => import('@/features/super-admin/SchoolsDi
 const SchoolInspectionPage = lazy(() => import('@/features/super-admin/SchoolInspectionPage'));
 const PlatformGovernancePage = lazy(() => import('@/features/super-admin/PlatformGovernancePage'));
 const PlatformSettingsPage = lazy(() => import('@/features/super-admin/PlatformSettingsPage'));
+const PlatformUsersPage = lazy(() => import('@/features/super-admin/PlatformUsersPage'));
 const SchoolAdminDashboardPage = lazy(() => import('@/features/admin/SchoolAdminDashboardPage'));
 const AcademicSetupPage = lazy(() => import('@/features/admin/AcademicSetupPage'));
 const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPage'));
@@ -23,6 +24,7 @@ const TeacherProfilePage = lazy(() => import('@/features/admin/TeacherProfilePag
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
 const UserInvitationsPage = lazy(() => import('@/features/admin/UserInvitationsPage'));
+const UserManagementPage = lazy(() => import('@/features/admin/UserManagementPage'));
 const SchoolOnboardingPage = lazy(() => import('@/features/admin/SchoolOnboardingPage'));
 const AcceptInvitationPage = lazy(() => import('@/features/auth/AcceptInvitationPage'));
 
@@ -106,6 +108,14 @@ export function App() {
                 }
               />
               <Route
+                path="/super-admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <PlatformUsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/super-admin/governance"
                 element={
                   <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
@@ -167,6 +177,14 @@ export function App() {
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
                     <StudentDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <UserManagementPage />
                   </ProtectedRoute>
                 }
               />

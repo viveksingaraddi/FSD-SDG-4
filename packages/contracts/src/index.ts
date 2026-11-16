@@ -55,6 +55,7 @@ export const API_ROUTES = {
     AUDIT_LOGS: '/api/v1/super-admin/audit-logs',
     INVITATIONS: '/api/v1/super-admin/invitations',
     SETTINGS: '/api/v1/super-admin/settings',
+    USERS: '/api/v1/super-admin/users',
   },
   // School admin (Phase 10)
   SCHOOL: {
@@ -72,6 +73,8 @@ export const API_ROUTES = {
     AUDIT_LOGS: '/api/v1/school/audit-logs',
     SETTINGS: '/api/v1/school/settings',
     INVITATIONS: '/api/v1/school/invitations',
+    USERS: '/api/v1/school/users',
+    GUARDIAN_LINKS: '/api/v1/school/guardian-relationships',
   },
   // Teacher (Phase 10–12)
   TEACHER: {
@@ -455,6 +458,8 @@ export interface StudentGuardianDto {
   isVerified: boolean;
 }
 
+export type GuardianRelationshipDto = StudentGuardianDto;
+
 export interface StudentDetailDto {
   id: string;
   userId: string;
@@ -617,4 +622,73 @@ export interface SaveOnboardingProgressResultDto {
 export interface CompleteOnboardingResultDto {
   success: boolean;
   completedAt: string;
+}
+
+// ─── User Lifecycle Management DTOs (Task 13) ──────────────────────────────
+
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+
+export interface UserDirectoryItemDto {
+  id: string;
+  email: string;
+  role: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+  status: UserStatus;
+  schoolId: string | null;
+  schoolName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  displayName: string;
+  identifier: string | null; // employeeId or studentIdNumber
+  lastLoginAt: string | null;
+  createdAt: string;
+  invitationStatus: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED' | 'NONE';
+  invitationId?: string | null;
+  invitationExpiresAt?: string | null;
+  invitationDeliveryStatus?: 'PENDING' | 'SENT' | 'FAILED' | null;
+}
+
+export interface UserLifecycleDetailDto extends UserDirectoryItemDto {
+  updatedAt: string;
+  teacherProfile?: {
+    id: string;
+    employeeId: string;
+    specialization: string | null;
+    allocationCount: number;
+  } | null;
+  studentProfile?: {
+    id: string;
+    studentIdNumber: string;
+    admissionDate: string;
+    dateOfBirth: string | null;
+    gender: string | null;
+    currentSection: string | null;
+    enrollmentCount: number;
+  } | null;
+  guardianRelationships?: {
+    id: string;
+    studentId: string;
+    studentName: string;
+    studentIdNumber: string;
+    relationshipType: 'MOTHER' | 'FATHER' | 'LEGAL_GUARDIAN' | 'OTHER';
+    isPrimaryContact: boolean;
+    isVerified: boolean;
+  }[];
+  studentGuardians?: {
+    id: string;
+    guardianUserId: string;
+    guardianName: string;
+    guardianEmail: string;
+    relationshipType: 'MOTHER' | 'FATHER' | 'LEGAL_GUARDIAN' | 'OTHER';
+    isPrimaryContact: boolean;
+    isVerified: boolean;
+  }[];
+  recentAuditLogs?: AuditLogDto[];
+}
+
+export interface PaginatedUsersResultDto {
+  items: UserDirectoryItemDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }

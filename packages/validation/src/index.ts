@@ -405,3 +405,42 @@ export const saveOnboardingProgressSchema = z.object({
 });
 
 export type SaveOnboardingProgressInput = z.infer<typeof saveOnboardingProgressSchema>;
+
+// ─── User Lifecycle Management Schemas (Task 13) ───────────────────────────
+
+export const userFilterQuerySchema = z.object({
+  search: searchQuerySchema,
+  role: z.enum(['ALL', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).optional(),
+  status: z.enum(['ALL', 'ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
+  invitationStatus: z.enum(['ALL', 'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED', 'NONE']).optional(),
+  schoolId: uuidSchema.optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(['createdAt', 'email', 'name', 'role', 'status']).default('createdAt'),
+  sortOrder: sortOrderSchema,
+});
+
+export type UserFilterQuery = z.infer<typeof userFilterQuerySchema>;
+export type UserFilterQueryInput = Partial<UserFilterQuery>;
+
+export const superAdminInviteAdminSchema = z.object({
+  schoolId: uuidSchema,
+  email: emailSchema,
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+});
+
+export type SuperAdminInviteAdminInput = z.infer<typeof superAdminInviteAdminSchema>;
+
+export const linkGuardianSchema = z.object({
+  guardianUserId: uuidSchema,
+  relationshipType: z.enum(['MOTHER', 'FATHER', 'LEGAL_GUARDIAN', 'OTHER']),
+  isPrimaryContact: z.boolean().default(false),
+});
+
+export type LinkGuardianInput = z.infer<typeof linkGuardianSchema>;
+
+export const studentGuardianParamSchema = z.object({
+  id: uuidSchema,
+  guardianUserId: uuidSchema,
+});

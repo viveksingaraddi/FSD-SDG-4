@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type { UserInvitationDto } from '@fsd-sdg4/contracts';
 import type { InvitationFilterQuery } from '@fsd-sdg4/validation';
 import {
@@ -228,12 +228,48 @@ export function UserInvitationsPage() {
     }
   };
 
+  // Deduplicate invitations by recipient (schoolId + email + role) ensuring the final best state persists
+  const deduplicatedInvitations = useMemo(() => {
+    const STATE_RANK: Record<string, number> = {
+      ACCEPTED: 4,
+      PENDING: 3,
+      EXPIRED: 2,
+      REVOKED: 1,
+    };
+    const map = new Map<string, UserInvitationDto>();
+
+    for (const inv of invitations) {
+      const key = `${(inv.schoolId ?? 'platform').toLowerCase()}:${inv.email.trim().toLowerCase()}:${inv.role}`;
+      const existing = map.get(key);
+
+      if (!existing) {
+        map.set(key, inv);
+        continue;
+      }
+
+      const existingRank = STATE_RANK[existing.status] ?? 0;
+      const invRank = STATE_RANK[inv.status] ?? 0;
+
+      if (invRank > existingRank) {
+        map.set(key, inv);
+      } else if (invRank === existingRank) {
+        if (new Date(inv.createdAt).getTime() > new Date(existing.createdAt).getTime()) {
+          map.set(key, inv);
+        }
+      }
+    }
+
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [invitations]);
+
   const counts = {
-    total: invitations.length,
-    pending: invitations.filter((i) => i.status === 'PENDING').length,
-    accepted: invitations.filter((i) => i.status === 'ACCEPTED').length,
-    expired: invitations.filter((i) => i.status === 'EXPIRED').length,
-    revoked: invitations.filter((i) => i.status === 'REVOKED').length,
+    total: deduplicatedInvitations.length,
+    pending: deduplicatedInvitations.filter((i) => i.status === 'PENDING').length,
+    accepted: deduplicatedInvitations.filter((i) => i.status === 'ACCEPTED').length,
+    expired: deduplicatedInvitations.filter((i) => i.status === 'EXPIRED').length,
+    revoked: deduplicatedInvitations.filter((i) => i.status === 'REVOKED').length,
   };
 
   return (
@@ -265,27 +301,43 @@ export function UserInvitationsPage() {
 
         {/* Metric Cards */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Card padding="md" className="border-[var(--color-border-default)]">
+          <Card
+            padding="md"
+            className="border-[var(--color-border-default)]"
+            data-testid="kpi-total-issued"
+          >
             <p className="text-xs font-medium text-[var(--color-text-secondary)]">Total Issued</p>
             <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
               {counts.total}
             </p>
           </Card>
-          <Card padding="md" className="border-[var(--color-border-default)]">
+          <Card
+            padding="md"
+            className="border-[var(--color-border-default)]"
+            data-testid="kpi-pending-activation"
+          >
             <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
               <Clock className="h-3.5 w-3.5" />
               <span>Pending Activation</span>
             </div>
             <p className="mt-1 text-2xl font-bold text-amber-700">{counts.pending}</p>
           </Card>
-          <Card padding="md" className="border-[var(--color-border-default)]">
+          <Card
+            padding="md"
+            className="border-[var(--color-border-default)]"
+            data-testid="kpi-accepted-active"
+          >
             <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700">
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>Accepted & Active</span>
             </div>
             <p className="mt-1 text-2xl font-bold text-emerald-700">{counts.accepted}</p>
           </Card>
-          <Card padding="md" className="border-[var(--color-border-default)]">
+          <Card
+            padding="md"
+            className="border-[var(--color-border-default)]"
+            data-testid="kpi-expired-revoked"
+          >
             <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
               <ShieldAlert className="h-3.5 w-3.5" />
               <span>Expired / Revoked</span>
@@ -385,7 +437,7 @@ export function UserInvitationsPage() {
                   Try Again
                 </Button>
               </div>
-            ) : invitations.length === 0 ? (
+            ) : deduplicatedInvitations.length === 0 ? (
               <div className="p-12 text-center text-[var(--color-text-secondary)]">
                 <Mail className="mx-auto h-12 w-12 text-[var(--color-text-muted)] mb-3" />
                 <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
@@ -421,7 +473,7 @@ export function UserInvitationsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-border-default)]">
-                    {invitations.map((inv) => {
+                    {deduplicatedInvitations.map((inv) => {
                       const isExpired =
                         inv.status === 'EXPIRED' ||
                         (inv.status === 'PENDING' && new Date() > new Date(inv.expiresAt));

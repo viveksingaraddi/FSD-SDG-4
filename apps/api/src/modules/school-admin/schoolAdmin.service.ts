@@ -21,7 +21,10 @@ import type {
   SubjectDto,
   TeacherAllocationDto,
   TeacherDetailDto,
+  UserDirectoryItemDto,
   UserInvitationDto,
+  UserLifecycleDetailDto,
+  PaginatedUsersResultDto,
 } from '@fsd-sdg4/contracts';
 import type {
   AllocateTeacherInput,
@@ -35,6 +38,7 @@ import type {
   CreateSubjectInput,
   InvitationFilterQuery,
   InviteUserInput,
+  LinkGuardianInput,
   OfferingFilterQuery,
   SaveOnboardingProgressInput,
   StaffFilterQuery,
@@ -44,8 +48,9 @@ import type {
   UpdateSectionInput,
   UpdateStaffInput,
   UpdateSubjectInput,
+  UserFilterQuery,
 } from '@fsd-sdg4/validation';
-import { Prisma } from '@prisma/client';
+import { GuardianRelationshipType, Prisma, UserRole, UserStatus } from '@prisma/client';
 import { prisma } from '../../shared/db/prisma.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { hashPassword } from '../../shared/security/password.js';
@@ -85,7 +90,7 @@ export async function getSchoolOverview(
     recentStudentsRaw,
     recentAuditLogsRaw,
     pendingFlagsCount,
-    invitationsGrouped,
+    rawSchoolInvitations,
     classesWithoutSectionsCount,
   ] = await Promise.all([
     prisma.school.findUnique({ where: { id: schoolId }, select: { name: true } }),
@@ -164,11 +169,17 @@ export async function getSchoolOverview(
     }),
     // Pending support flags
     prisma.supportFlag.count({ where: { schoolId, status: 'PROPOSED' } }),
-    // Invitations breakdown
-    prisma.userInvitation.groupBy({
-      by: ['status'],
+    // Invitations raw list for deduplicated best-state aggregation
+    prisma.userInvitation.findMany({
       where: { schoolId },
-      _count: { id: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true,
+        expiresAt: true,
+        createdAt: true,
+      },
     }),
     // Classes without sections
     prisma.class.count({
@@ -274,18 +285,48 @@ export async function getSchoolOverview(
     })),
   };
 
-  // Invitations map
-  const inviteStatusMap: Record<string, number> = {};
-  let totalInvitations = 0;
-  for (const inv of invitationsGrouped) {
-    inviteStatusMap[inv.status] = inv._count.id;
-    totalInvitations += inv._count.id;
+  // Deduplicate invitations by recipient (email + role) to report authoritative final best state
+  const STATE_RANK: Record<string, number> = {
+    ACCEPTED: 4,
+    PENDING: 3,
+    EXPIRED: 2,
+    REVOKED: 1,
+  };
+  const bestInviteStatusByRecipient = new Map<string, string>();
+
+  for (const inv of rawSchoolInvitations) {
+    let effectiveStatus = inv.status;
+    if (inv.status === 'PENDING' && now > inv.expiresAt) {
+      effectiveStatus = 'EXPIRED';
+    }
+    const key = `${inv.email.trim().toLowerCase()}:${inv.role}`;
+    const currentStatus = bestInviteStatusByRecipient.get(key);
+    if (!currentStatus) {
+      bestInviteStatusByRecipient.set(key, effectiveStatus);
+    } else {
+      const currentRank = STATE_RANK[currentStatus] ?? 0;
+      const newRank = STATE_RANK[effectiveStatus] ?? 0;
+      if (newRank > currentRank) {
+        bestInviteStatusByRecipient.set(key, effectiveStatus);
+      }
+    }
   }
+
+  let acceptedCount = 0;
+  let pendingCount = 0;
+  let revokedCount = 0;
+
+  for (const status of bestInviteStatusByRecipient.values()) {
+    if (status === 'ACCEPTED') acceptedCount++;
+    else if (status === 'PENDING') pendingCount++;
+    else if (status === 'REVOKED' || status === 'EXPIRED') revokedCount++;
+  }
+
   const invitations = {
-    total: totalInvitations,
-    pending: inviteStatusMap['PENDING'] ?? 0,
-    accepted: inviteStatusMap['ACCEPTED'] ?? 0,
-    revoked: inviteStatusMap['REVOKED'] ?? 0,
+    total: bestInviteStatusByRecipient.size,
+    pending: pendingCount,
+    accepted: acceptedCount,
+    revoked: revokedCount,
   };
 
   // Pending administrative tasks
@@ -2728,4 +2769,445 @@ export async function completeSchoolOnboarding(
     success: true,
     completedAt: new Date().toISOString(),
   };
+}
+
+// ─── School User Lifecycle Management (Task 13) ────────────────────────────
+
+export async function listSchoolUsers(
+  schoolId: string,
+  query: UserFilterQuery,
+): Promise<PaginatedUsersResultDto> {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 25;
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.UserWhereInput = {
+    schoolId,
+    ...(query.role && query.role !== 'ALL' ? { role: query.role as UserRole } : {}),
+    ...(query.status && query.status !== 'ALL' ? { status: query.status as UserStatus } : {}),
+    ...(query.search
+      ? {
+          OR: [
+            { email: { contains: query.search, mode: 'insensitive' as const } },
+            {
+              teacherProfile: {
+                OR: [
+                  { firstName: { contains: query.search, mode: 'insensitive' as const } },
+                  { lastName: { contains: query.search, mode: 'insensitive' as const } },
+                  { employeeId: { contains: query.search, mode: 'insensitive' as const } },
+                ],
+              },
+            },
+            {
+              studentProfile: {
+                OR: [
+                  { firstName: { contains: query.search, mode: 'insensitive' as const } },
+                  { lastName: { contains: query.search, mode: 'insensitive' as const } },
+                  { studentIdNumber: { contains: query.search, mode: 'insensitive' as const } },
+                ],
+              },
+            },
+          ],
+        }
+      : {}),
+    ...(query.invitationStatus && query.invitationStatus !== 'ALL'
+      ? query.invitationStatus === 'NONE'
+        ? { invitations: { none: {} } }
+        : { invitations: { some: { status: query.invitationStatus } } }
+      : {}),
+  };
+
+  let orderBy: Prisma.UserOrderByWithRelationInput = { createdAt: query.sortOrder ?? 'desc' };
+  if (query.sortBy === 'email') {
+    orderBy = { email: query.sortOrder ?? 'asc' };
+  } else if (query.sortBy === 'role') {
+    orderBy = { role: query.sortOrder ?? 'asc' };
+  } else if (query.sortBy === 'status') {
+    orderBy = { status: query.sortOrder ?? 'asc' };
+  }
+
+  const [total, users, school] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        teacherProfile: { select: { firstName: true, lastName: true, employeeId: true } },
+        studentProfile: { select: { firstName: true, lastName: true, studentIdNumber: true } },
+        invitations: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            deliveryStatus: true,
+            expiresAt: true,
+            acceptedAt: true,
+          },
+        },
+      },
+    }),
+    prisma.school.findUnique({ where: { id: schoolId }, select: { name: true } }),
+  ]);
+
+  const items: UserDirectoryItemDto[] = users.map((u) => {
+    let firstName: string | null = null;
+    let lastName: string | null = null;
+    let identifier: string | null = null;
+
+    if (u.teacherProfile) {
+      firstName = u.teacherProfile.firstName;
+      lastName = u.teacherProfile.lastName;
+      identifier = u.teacherProfile.employeeId;
+    } else if (u.studentProfile) {
+      firstName = u.studentProfile.firstName;
+      lastName = u.studentProfile.lastName;
+      identifier = u.studentProfile.studentIdNumber;
+    }
+
+    const displayName =
+      firstName && lastName ? `${firstName} ${lastName}`.trim() : u.email.split('@')[0] || u.email;
+
+    const latestInv = u.invitations[0];
+
+    return {
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      status: u.status,
+      schoolId,
+      schoolName: school?.name ?? null,
+      firstName,
+      lastName,
+      displayName,
+      identifier,
+      lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
+      createdAt: u.createdAt.toISOString(),
+      invitationStatus: latestInv ? latestInv.status : 'NONE',
+      invitationId: latestInv?.id ?? null,
+      invitationExpiresAt: latestInv ? latestInv.expiresAt.toISOString() : null,
+      invitationDeliveryStatus: latestInv?.deliveryStatus ?? null,
+    };
+  });
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit) || 1,
+  };
+}
+
+export async function getSchoolUserById(
+  schoolId: string,
+  userId: string,
+): Promise<UserLifecycleDetailDto> {
+  const user = await prisma.user.findFirst({
+    where: { id: userId, schoolId },
+    include: {
+      school: { select: { name: true } },
+      teacherProfile: {
+        include: {
+          _count: { select: { courseAssignments: true } },
+        },
+      },
+      studentProfile: {
+        include: {
+          _count: { select: { enrollments: true } },
+          enrollments: {
+            where: { status: 'ACTIVE' },
+            include: { section: true },
+            take: 1,
+          },
+          guardianLinks: {
+            include: {
+              guardianUser: true,
+            },
+          },
+        },
+      },
+      guardianLinks: {
+        include: {
+          student: true,
+        },
+      },
+      invitations: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+      auditLogs: {
+        where: { schoolId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: { actor: { select: { email: true } } },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new NotFoundError('User was not found in this school.');
+  }
+
+  let firstName: string | null = null;
+  let lastName: string | null = null;
+  let identifier: string | null = null;
+
+  if (user.teacherProfile) {
+    firstName = user.teacherProfile.firstName;
+    lastName = user.teacherProfile.lastName;
+    identifier = user.teacherProfile.employeeId;
+  } else if (user.studentProfile) {
+    firstName = user.studentProfile.firstName;
+    lastName = user.studentProfile.lastName;
+    identifier = user.studentProfile.studentIdNumber;
+  }
+
+  const displayName =
+    firstName && lastName
+      ? `${firstName} ${lastName}`.trim()
+      : user.email.split('@')[0] || user.email;
+
+  const latestInv = user.invitations[0];
+
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    schoolId,
+    schoolName: user.school?.name ?? null,
+    firstName,
+    lastName,
+    displayName,
+    identifier,
+    lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+    invitationStatus: latestInv ? latestInv.status : 'NONE',
+    invitationId: latestInv?.id ?? null,
+    invitationExpiresAt: latestInv ? latestInv.expiresAt.toISOString() : null,
+    invitationDeliveryStatus: latestInv?.deliveryStatus ?? null,
+    teacherProfile: user.teacherProfile
+      ? {
+          id: user.teacherProfile.id,
+          employeeId: user.teacherProfile.employeeId,
+          specialization: user.teacherProfile.specialization,
+          allocationCount: user.teacherProfile._count.courseAssignments,
+        }
+      : null,
+    studentProfile: user.studentProfile
+      ? {
+          id: user.studentProfile.id,
+          studentIdNumber: user.studentProfile.studentIdNumber,
+          admissionDate: user.studentProfile.admissionDate.toISOString().slice(0, 10),
+          dateOfBirth: user.studentProfile.dateOfBirth
+            ? user.studentProfile.dateOfBirth.toISOString().slice(0, 10)
+            : null,
+          gender: user.studentProfile.gender,
+          currentSection: user.studentProfile.enrollments[0]?.section?.name ?? null,
+          enrollmentCount: user.studentProfile._count.enrollments,
+        }
+      : null,
+    guardianRelationships: user.guardianLinks.map((gl) => ({
+      id: gl.id,
+      studentId: gl.studentId,
+      studentName: `${gl.student.firstName} ${gl.student.lastName}`.trim(),
+      studentIdNumber: gl.student.studentIdNumber,
+      relationshipType: gl.relationshipType,
+      isPrimaryContact: gl.isPrimaryContact,
+      isVerified: gl.isVerified,
+    })),
+    studentGuardians: user.studentProfile
+      ? user.studentProfile.guardianLinks.map((gl) => ({
+          id: gl.id,
+          guardianUserId: gl.guardianUserId,
+          guardianName: gl.guardianUser.email.split('@')[0] || gl.guardianUser.email,
+          guardianEmail: gl.guardianUser.email,
+          relationshipType: gl.relationshipType,
+          isPrimaryContact: gl.isPrimaryContact,
+          isVerified: gl.isVerified,
+        }))
+      : [],
+    recentAuditLogs: user.auditLogs.map((log) => ({
+      id: log.id,
+      schoolId: log.schoolId,
+      actorId: log.actorId,
+      actorEmail: log.actor?.email ?? null,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      delta: (log.delta as Record<string, unknown>) ?? null,
+      createdAt: log.createdAt.toISOString(),
+    })),
+  };
+}
+
+export async function updateSchoolUserStatus(
+  schoolId: string,
+  userId: string,
+  newStatus: UserStatus,
+  actorId: string,
+  ipAddress: string | null,
+): Promise<{ id: string; email: string; status: UserStatus }> {
+  if (userId === actorId) {
+    throw new BadRequestError('Administrators cannot suspend or deactivate their own account.');
+  }
+
+  const existingUser = await prisma.user.findFirst({
+    where: { id: userId, schoolId },
+    select: { id: true, email: true, status: true, role: true },
+  });
+
+  if (!existingUser) {
+    throw new NotFoundError('User was not found in this school.');
+  }
+
+  if (existingUser.status === newStatus) {
+    return { id: existingUser.id, email: existingUser.email, status: existingUser.status };
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.update({
+      where: { id: userId },
+      data: { status: newStatus },
+      select: { id: true, email: true, status: true },
+    });
+
+    if (newStatus === 'INACTIVE' || newStatus === 'LOCKED') {
+      await tx.session.deleteMany({
+        where: { userId },
+      });
+    }
+
+    await recordAuditEvent({
+      schoolId,
+      actorId,
+      action: AUDIT_ACTIONS.AUTH_ACCOUNT_STATUS_CHANGED,
+      entityType: 'User',
+      entityId: userId,
+      delta: {
+        email: existingUser.email,
+        role: existingUser.role,
+        previousStatus: existingUser.status,
+        newStatus,
+      },
+      ipAddress,
+    });
+
+    return u;
+  });
+
+  return updated;
+}
+
+export async function linkStudentGuardian(
+  schoolId: string,
+  studentId: string,
+  input: LinkGuardianInput,
+  actorId: string,
+  ipAddress: string | null,
+) {
+  const student = await prisma.studentProfile.findFirst({
+    where: { id: studentId, schoolId },
+    select: { id: true, firstName: true, lastName: true },
+  });
+
+  if (!student) {
+    throw new NotFoundError('Student was not found in this school.');
+  }
+
+  const guardian = await prisma.user.findFirst({
+    where: { id: input.guardianUserId, schoolId, role: 'PARENT' },
+    select: { id: true, email: true },
+  });
+
+  if (!guardian) {
+    throw new NotFoundError('Parent/Guardian user was not found in this school.');
+  }
+
+  const relationship = await prisma.guardianRelationship.upsert({
+    where: {
+      schoolId_guardianUserId_studentId: {
+        schoolId,
+        guardianUserId: input.guardianUserId,
+        studentId,
+      },
+    },
+    create: {
+      schoolId,
+      studentId,
+      guardianUserId: input.guardianUserId,
+      relationshipType: input.relationshipType,
+      isPrimaryContact: input.isPrimaryContact ?? false,
+      isVerified: true,
+      verifiedAt: new Date(),
+    },
+    update: {
+      relationshipType: input.relationshipType,
+      isPrimaryContact: input.isPrimaryContact ?? false,
+      isVerified: true,
+      verifiedAt: new Date(),
+    },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: AUDIT_ACTIONS.GUARDIAN_RELATIONSHIP_LINKED,
+    entityType: 'GuardianRelationship',
+    entityId: relationship.id,
+    delta: {
+      studentId,
+      studentName: `${student.firstName} ${student.lastName}`.trim(),
+      guardianEmail: guardian.email,
+      relationshipType: input.relationshipType,
+    },
+    ipAddress,
+  });
+
+  return relationship;
+}
+
+export async function unlinkStudentGuardian(
+  schoolId: string,
+  studentId: string,
+  guardianUserId: string,
+  actorId: string,
+  ipAddress: string | null,
+) {
+  const existing = await prisma.guardianRelationship.findUnique({
+    where: {
+      schoolId_guardianUserId_studentId: {
+        schoolId,
+        guardianUserId,
+        studentId,
+      },
+    },
+  });
+
+  if (!existing) {
+    throw new NotFoundError('Guardian relationship was not found.');
+  }
+
+  await prisma.guardianRelationship.delete({
+    where: { id: existing.id },
+  });
+
+  await recordAuditEvent({
+    schoolId,
+    actorId,
+    action: AUDIT_ACTIONS.GUARDIAN_RELATIONSHIP_UNLINKED,
+    entityType: 'GuardianRelationship',
+    entityId: existing.id,
+    delta: {
+      studentId,
+      guardianUserId,
+    },
+    ipAddress,
+  });
+
+  return { success: true };
 }

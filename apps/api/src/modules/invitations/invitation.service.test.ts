@@ -4,6 +4,7 @@ import {
   buildInvitationUrl,
   createInvitation,
   generateInvitationToken,
+  listInvitations,
   resendInvitation,
   revokeInvitation,
   verifyInvitation,
@@ -24,6 +25,7 @@ vi.mock('../../shared/db/prisma.js', () => ({
     userInvitation: {
       create: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
     },
@@ -420,6 +422,84 @@ describe('Invitation Service', () => {
         data: expect.objectContaining({ status: 'REVOKED' }),
         include: { school: { select: { name: true } } },
       });
+    });
+  });
+
+  describe('listInvitations', () => {
+    it('deduplicates multiple invitation attempts per recipient and returns only the single final best state', async () => {
+      const now = new Date();
+      const mockRaw = [
+        {
+          id: 'inv-1',
+          schoolId: 'school-1',
+          userId: 'user-1',
+          email: 'student@example.com',
+          role: 'STUDENT',
+          status: 'REVOKED',
+          deliveryStatus: 'FAILED',
+          deliveryAttempts: 1,
+          deliveredAt: null,
+          deliveryError: 'SMTP connect failed',
+          expiresAt: new Date(now.getTime() + 86400000),
+          acceptedAt: null,
+          revokedAt: new Date(now.getTime() - 10000),
+          createdAt: new Date(now.getTime() - 20000),
+          school: { name: 'Springfield Academy' },
+        },
+        {
+          id: 'inv-2',
+          schoolId: 'school-1',
+          userId: 'user-1',
+          email: 'student@example.com',
+          role: 'STUDENT',
+          status: 'ACCEPTED',
+          deliveryStatus: 'SENT',
+          deliveryAttempts: 1,
+          deliveredAt: new Date(now.getTime() - 5000),
+          deliveryError: null,
+          expiresAt: new Date(now.getTime() + 86400000),
+          acceptedAt: new Date(now.getTime() - 1000),
+          revokedAt: null,
+          createdAt: new Date(now.getTime() - 5000),
+          school: { name: 'Springfield Academy' },
+        },
+        {
+          id: 'inv-3',
+          schoolId: 'school-1',
+          userId: 'user-2',
+          email: 'teacher@example.com',
+          role: 'TEACHER',
+          status: 'PENDING',
+          deliveryStatus: 'SENT',
+          deliveryAttempts: 1,
+          deliveredAt: new Date(now.getTime() - 1000),
+          deliveryError: null,
+          expiresAt: new Date(now.getTime() + 86400000),
+          acceptedAt: null,
+          revokedAt: null,
+          createdAt: new Date(now.getTime() - 1000),
+          school: { name: 'Springfield Academy' },
+        },
+      ];
+
+      vi.mocked(prisma.userInvitation.findMany).mockResolvedValue(mockRaw as never);
+
+      const result = await listInvitations({
+        schoolId: 'school-1',
+        query: { status: 'ALL', role: 'ALL' },
+      });
+
+      // Exactly 2 distinct recipients: student (ACCEPTED) and teacher (PENDING)
+      expect(result).toHaveLength(2);
+
+      const student = result.find((r) => r.email === 'student@example.com');
+      expect(student).toBeDefined();
+      expect(student?.status).toBe('ACCEPTED');
+      expect(student?.deliveryStatus).toBe('SENT');
+
+      const teacher = result.find((r) => r.email === 'teacher@example.com');
+      expect(teacher).toBeDefined();
+      expect(teacher?.status).toBe('PENDING');
     });
   });
 });
