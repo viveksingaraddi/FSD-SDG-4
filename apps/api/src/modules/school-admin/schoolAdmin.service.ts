@@ -2777,8 +2777,8 @@ export async function listSchoolUsers(
   schoolId: string,
   query: UserFilterQuery,
 ): Promise<PaginatedUsersResultDto> {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 25;
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 25));
   const skip = (page - 1) * limit;
 
   const where: Prisma.UserWhereInput = {

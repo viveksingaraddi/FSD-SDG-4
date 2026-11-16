@@ -199,7 +199,8 @@ export function createSuperAdminRouter(): ExpressRouter {
     requirePermission(PERMISSIONS.PLATFORM_USERS_READ),
     validateRequest({ query: userFilterQuerySchema }),
     async (req, res) => {
-      const result = await listPlatformUsers(req.query as unknown as UserFilterQuery);
+      const query = (req.validated?.query ?? req.query) as unknown as UserFilterQuery;
+      const result = await listPlatformUsers(query);
       sendSuccess(res, result);
     },
   );

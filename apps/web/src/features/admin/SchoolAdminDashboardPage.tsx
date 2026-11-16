@@ -104,12 +104,15 @@ export function SchoolAdminDashboardPage() {
           <div
             role="region"
             aria-label="Initial school setup reminder"
-            className="rounded-[var(--radius-lg)] border border-primary/20 bg-primary/5 p-5 shadow-xs"
+            className="rounded-[var(--radius-lg)] border border-[var(--color-brand-primary)]/20 bg-[var(--color-brand-primary-subtle)] p-5 shadow-xs"
           >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
+                  <Sparkles
+                    className="h-5 w-5 text-[var(--color-brand-accent)]"
+                    aria-hidden="true"
+                  />
                   <Heading level={3} size="h4">
                     Initial School Setup in Progress
                   </Heading>
@@ -141,10 +144,10 @@ export function SchoolAdminDashboardPage() {
                 aria-valuenow={onboarding.completionPercentage}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                className="h-2 w-full overflow-hidden rounded-full bg-primary/10"
+                className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-border-default)]"
               >
                 <div
-                  className="h-full bg-primary transition-all duration-300 ease-out"
+                  className="h-full bg-[var(--color-brand-accent)] transition-all duration-300 ease-out"
                   style={{ width: `${onboarding.completionPercentage}%` }}
                 />
               </div>

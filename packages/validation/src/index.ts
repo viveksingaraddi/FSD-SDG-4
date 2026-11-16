@@ -89,8 +89,14 @@ export function createSortSchema<T extends readonly [string, ...string[]]>(
 
 /**
  * Validates optional search query string (trimmed, bounded length to prevent abuse).
+ * Coerces empty or whitespace-only strings to undefined for robust query parsing.
  */
-export const searchQuerySchema = z.string().trim().min(1).max(100).optional();
+export const searchQuerySchema = z
+  .string()
+  .trim()
+  .max(100)
+  .optional()
+  .transform((val) => (val && val.length > 0 ? val : undefined));
 
 /**
  * Reusable paginated list query schema with optional search and sort direction.
@@ -410,10 +416,22 @@ export type SaveOnboardingProgressInput = z.infer<typeof saveOnboardingProgressS
 
 export const userFilterQuerySchema = z.object({
   search: searchQuerySchema,
-  role: z.enum(['ALL', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).optional(),
-  status: z.enum(['ALL', 'ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
-  invitationStatus: z.enum(['ALL', 'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED', 'NONE']).optional(),
-  schoolId: uuidSchema.optional(),
+  role: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).optional(),
+  ),
+  status: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
+  ),
+  invitationStatus: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED', 'NONE']).optional(),
+  ),
+  schoolId: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    uuidSchema.optional(),
+  ),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(['createdAt', 'email', 'name', 'role', 'status']).default('createdAt'),

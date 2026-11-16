@@ -330,7 +330,7 @@ export function SchoolOnboardingPage() {
               className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
             >
               <div
-                className="h-full bg-primary transition-all duration-300 ease-out"
+                className="h-full bg-[var(--color-brand-accent)] transition-all duration-300 ease-out"
                 style={{ width: `${onboarding.completionPercentage}%` }}
               />
             </div>
@@ -362,12 +362,14 @@ export function SchoolOnboardingPage() {
                         saveProgressMutation.mutate(step.key);
                       }}
                       className={`flex w-full items-center justify-between rounded-[var(--radius-md)] px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                        isCurrent ? 'bg-primary text-white' : 'text-foreground hover:bg-slate-100'
+                        isCurrent
+                          ? 'bg-[var(--color-brand-primary)] text-white shadow-xs'
+                          : 'text-[var(--color-text-primary)] hover:bg-[var(--color-surface-raised)]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <Icon
-                          className={`h-4 w-4 ${isCurrent ? 'text-white' : 'text-muted-foreground'}`}
+                          className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-white' : 'text-[var(--color-text-muted)]'}`}
                         />
                         <span>
                           {idx + 1}. {step.label}
@@ -375,12 +377,12 @@ export function SchoolOnboardingPage() {
                       </div>
                       {isStepCompleted ? (
                         <CheckCircle2
-                          className={`h-4 w-4 ${isCurrent ? 'text-white' : 'text-emerald-600'}`}
+                          className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-emerald-400' : 'text-emerald-600'}`}
                           aria-label="Completed"
                         />
                       ) : (
                         <Circle
-                          className={`h-3 w-3 ${isCurrent ? 'text-white/60' : 'text-slate-300'}`}
+                          className={`h-3 w-3 shrink-0 ${isCurrent ? 'text-white/60' : 'text-slate-300'}`}
                           aria-label="Pending"
                         />
                       )}
@@ -398,7 +400,7 @@ export function SchoolOnboardingPage() {
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-border)] pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-brand-accent-subtle)] text-xs font-semibold text-[var(--color-brand-accent)]">
                       {currentStepIndex + 1}
                     </span>
                     <Heading level={2} size="h3">
@@ -1746,7 +1748,7 @@ function StepSummary({
       )}
 
       <div className="rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 p-6 text-center">
-        <Sparkles className="mx-auto h-8 w-8 text-primary" />
+        <Sparkles className="mx-auto h-8 w-8 text-[var(--color-brand-accent)]" />
         <Heading level={4} size="h4" className="mt-2">
           Ready to Launch Your School Operations?
         </Heading>
