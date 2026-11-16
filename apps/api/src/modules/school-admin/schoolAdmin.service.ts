@@ -58,8 +58,12 @@ import {
 } from '../invitations/invitation.service.js';
 import { dispatchInvitationEmail } from '../mail/mail.service.js';
 
-export async function getSchoolOverview(schoolId: string): Promise<SchoolOverviewDto> {
+export async function getSchoolOverview(
+  schoolId: string,
+  period?: 'all' | '7d' | '30d',
+): Promise<SchoolOverviewDto> {
   const now = new Date();
+  const daysToFetch = period === '30d' ? 30 : 7;
 
   const [
     school,
@@ -72,12 +76,17 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
     latestAttendanceRecord,
     recentDatesWithAttendance,
     activeAssignments,
+    draftAssignments,
+    archivedAssignments,
     upcomingAssessments,
     totalAssessments,
+    totalCourseOfferings,
     recentAssessmentsRaw,
     recentStudentsRaw,
     recentAuditLogsRaw,
     pendingFlagsCount,
+    invitationsGrouped,
+    classesWithoutSectionsCount,
   ] = await Promise.all([
     prisma.school.findUnique({ where: { id: schoolId }, select: { name: true } }),
     prisma.academicYear.findFirst({
@@ -95,20 +104,24 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
       orderBy: { attendanceDate: 'desc' },
       select: { attendanceDate: true },
     }),
-    // Distinct recent attendance dates for weekly trend
+    // Distinct recent attendance dates for trend
     prisma.attendanceRecord.findMany({
       where: { schoolId },
       select: { attendanceDate: true },
       distinct: ['attendanceDate'],
       orderBy: { attendanceDate: 'desc' },
-      take: 7,
+      take: daysToFetch,
     }),
     // Active published assignments
     prisma.assignment.count({ where: { schoolId, status: 'PUBLISHED' } }),
+    prisma.assignment.count({ where: { schoolId, status: 'DRAFT' } }),
+    prisma.assignment.count({ where: { schoolId, status: 'ARCHIVED' } }),
     // Upcoming assessments
     prisma.assessment.count({ where: { schoolId, assessmentDate: { gte: now } } }),
     // Total assessments
     prisma.assessment.count({ where: { schoolId } }),
+    // Total course offerings
+    prisma.courseOffering.count({ where: { schoolId } }),
     // Recent assessments with subject and class information
     prisma.assessment.findMany({
       where: { schoolId },
@@ -151,6 +164,16 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
     }),
     // Pending support flags
     prisma.supportFlag.count({ where: { schoolId, status: 'PROPOSED' } }),
+    // Invitations breakdown
+    prisma.userInvitation.groupBy({
+      by: ['status'],
+      where: { schoolId },
+      _count: { id: true },
+    }),
+    // Classes without sections
+    prisma.class.count({
+      where: { schoolId, sections: { none: {} } },
+    }),
   ]);
 
   if (!school) {
@@ -234,6 +257,12 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
     activeAssignments,
     upcomingAssessments,
     totalAssessments,
+    totalCourseOfferings,
+    assignmentsByStatus: {
+      published: activeAssignments,
+      draft: draftAssignments,
+      archived: archivedAssignments,
+    },
     recentAssessments: recentAssessmentsRaw.map((a) => ({
       id: a.id,
       title: a.title,
@@ -244,6 +273,65 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
       weightPercentage: Number(a.weightPercentage),
     })),
   };
+
+  // Invitations map
+  const inviteStatusMap: Record<string, number> = {};
+  let totalInvitations = 0;
+  for (const inv of invitationsGrouped) {
+    inviteStatusMap[inv.status] = inv._count.id;
+    totalInvitations += inv._count.id;
+  }
+  const invitations = {
+    total: totalInvitations,
+    pending: inviteStatusMap['PENDING'] ?? 0,
+    accepted: inviteStatusMap['ACCEPTED'] ?? 0,
+    revoked: inviteStatusMap['REVOKED'] ?? 0,
+  };
+
+  // Pending administrative tasks
+  const pendingTasks = [];
+  if (!activeYear) {
+    pendingTasks.push({
+      id: 'task-active-year',
+      title: 'Designate Active Academic Calendar',
+      category: 'ACADEMIC' as const,
+      actionUrl: '/admin/academic',
+      actionLabel: 'Configure Academic Year',
+    });
+  }
+
+  if (invitations.pending > 0) {
+    pendingTasks.push({
+      id: 'task-pending-invites',
+      title: `${invitations.pending} Pending User Invitation${invitations.pending > 1 ? 's' : ''}`,
+      category: 'FACULTY' as const,
+      actionUrl: '/admin/invitations',
+      actionLabel: 'Manage Invitations',
+      count: invitations.pending,
+    });
+  }
+
+  if (pendingFlagsCount > 0) {
+    pendingTasks.push({
+      id: 'task-support-flags',
+      title: `${pendingFlagsCount} Proposed Support Flag${pendingFlagsCount > 1 ? 's' : ''} Awaiting Review`,
+      category: 'STUDENT' as const,
+      actionUrl: '/admin/students',
+      actionLabel: 'Review Students',
+      count: pendingFlagsCount,
+    });
+  }
+
+  if (classesWithoutSectionsCount > 0) {
+    pendingTasks.push({
+      id: 'task-classes-no-sections',
+      title: `${classesWithoutSectionsCount} Class${classesWithoutSectionsCount > 1 ? 'es' : ''} Missing Section Assignments`,
+      category: 'ACADEMIC' as const,
+      actionUrl: '/admin/academic',
+      actionLabel: 'Add Sections',
+      count: classesWithoutSectionsCount,
+    });
+  }
 
   // Recent activity
   const activity: SchoolRecentActivityDto = {
@@ -262,7 +350,6 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
       entityType: log.entityType,
       entityId: log.entityId,
       delta: log.delta as Record<string, unknown> | null,
-      ipAddress: log.ipAddress,
       createdAt: log.createdAt.toISOString(),
     })),
   };
@@ -326,6 +413,9 @@ export async function getSchoolOverview(schoolId: string): Promise<SchoolOvervie
     academic,
     activity,
     alerts,
+    invitations,
+    pendingTasks,
+    period: period ?? 'all',
   };
 }
 
@@ -2001,9 +2091,48 @@ export async function createStudent(
   };
 }
 
-export async function listSchoolAuditLogs(schoolId: string): Promise<AuditLogDto[]> {
+export async function listSchoolAuditLogs(
+  schoolId: string,
+  options?: {
+    action?: string | undefined;
+    category?: ('ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS') | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
+  },
+): Promise<AuditLogDto[]> {
+  const categoryFilters: Record<string, string[]> = {
+    AUTH: ['AUTH_', 'LOGIN', 'SESSION', 'PASSWORD'],
+    SCHOOL: ['SCHOOL_', 'SETTINGS'],
+    ACADEMIC: ['ACADEMIC', 'CLASS', 'SECTION', 'SUBJECT', 'OFFERING'],
+    USER: ['USER_', 'TEACHER_', 'STUDENT_', 'STAFF_', 'GUARDIAN_', 'INVITATION_'],
+    SETTINGS: ['SETTINGS', 'POLICY', 'PREFERENCE'],
+  };
+
+  const categoryMatches =
+    options?.category && options.category !== 'ALL' ? categoryFilters[options.category] : undefined;
+
   const logs = await prisma.auditLog.findMany({
-    where: { schoolId },
+    where: {
+      schoolId,
+      ...(options?.action
+        ? { action: { contains: options.action, mode: 'insensitive' as const } }
+        : {}),
+      ...(categoryMatches
+        ? {
+            OR: categoryMatches.map((prefix) => ({
+              action: { contains: prefix, mode: 'insensitive' as const },
+            })),
+          }
+        : {}),
+      ...(options?.startDate || options?.endDate
+        ? {
+            createdAt: {
+              ...(options.startDate ? { gte: new Date(options.startDate) } : {}),
+              ...(options.endDate ? { lte: new Date(options.endDate) } : {}),
+            },
+          }
+        : {}),
+    },
     orderBy: { createdAt: 'desc' },
     take: 100,
     include: {
@@ -2011,22 +2140,67 @@ export async function listSchoolAuditLogs(schoolId: string): Promise<AuditLogDto
     },
   });
 
-  return logs.map((log) => ({
-    id: log.id,
-    schoolId: log.schoolId,
-    actorId: log.actorId,
-    actorEmail: log.actor?.email ?? null,
-    action: log.action,
-    entityType: log.entityType,
-    entityId: log.entityId,
-    createdAt: log.createdAt.toISOString(),
-  }));
+  return logs.map((log) => {
+    let sanitizedDelta: Record<string, unknown> | null = null;
+    if (log.delta && typeof log.delta === 'object' && !Array.isArray(log.delta)) {
+      sanitizedDelta = { ...(log.delta as Record<string, unknown>) };
+      for (const secretKey of ['password', 'passwordHash', 'token', 'rawToken', 'cookie']) {
+        if (secretKey in sanitizedDelta) {
+          sanitizedDelta[secretKey] = '[REDACTED]';
+        }
+      }
+    }
+
+    return {
+      id: log.id,
+      schoolId: log.schoolId,
+      actorId: log.actorId,
+      actorEmail: log.actor?.email ?? null,
+      action: log.action,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      delta: sanitizedDelta,
+      createdAt: log.createdAt.toISOString(),
+    };
+  });
 }
 
 export async function getSchoolSettings(schoolId: string): Promise<SchoolSettingsDto> {
-  const school = await prisma.school.findUnique({ where: { id: schoolId } });
+  const [school, academicYears, latestSettingsAudit] = await Promise.all([
+    prisma.school.findUnique({ where: { id: schoolId } }),
+    prisma.academicYear.findMany({
+      where: { schoolId },
+      select: { id: true, name: true, status: true },
+    }),
+    prisma.auditLog.findFirst({
+      where: { schoolId, action: 'SCHOOL_SETTINGS_UPDATED' },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
+
   if (!school) {
     throw new NotFoundError('School not found.');
+  }
+
+  const activeYear = academicYears.find((y) => y.status === 'ACTIVE') ?? null;
+
+  let preferences = {
+    emailNotificationsEnabled: true,
+    weeklyAttendanceDigest: true,
+    studentSupportAlerts: true,
+  };
+
+  if (
+    latestSettingsAudit?.delta &&
+    typeof latestSettingsAudit.delta === 'object' &&
+    'preferences' in latestSettingsAudit.delta
+  ) {
+    const savedPrefs = (latestSettingsAudit.delta as Record<string, unknown>)[
+      'preferences'
+    ] as typeof preferences;
+    if (savedPrefs && typeof savedPrefs === 'object') {
+      preferences = { ...preferences, ...savedPrefs };
+    }
   }
 
   return {
@@ -2036,6 +2210,10 @@ export async function getSchoolSettings(schoolId: string): Promise<SchoolSetting
     subdomain: school.subdomain,
     contactEmail: school.contactEmail,
     status: school.status,
+    activeAcademicYearId: activeYear?.id ?? null,
+    activeAcademicYearName: activeYear?.name ?? null,
+    totalAcademicYears: academicYears.length,
+    preferences,
   };
 }
 
@@ -2045,13 +2223,19 @@ export async function updateSchoolSettings(
   actorId: string,
   ipAddress: string | null,
 ): Promise<SchoolSettingsDto> {
-  const updated = await prisma.school.update({
-    where: { id: schoolId },
-    data: {
-      name: input.name,
-      contactEmail: input.contactEmail,
-    },
-  });
+  const [updated, academicYears] = await Promise.all([
+    prisma.school.update({
+      where: { id: schoolId },
+      data: {
+        name: input.name,
+        contactEmail: input.contactEmail,
+      },
+    }),
+    prisma.academicYear.findMany({
+      where: { schoolId },
+      select: { id: true, name: true, status: true },
+    }),
+  ]);
 
   await recordAuditEvent({
     schoolId,
@@ -2063,6 +2247,14 @@ export async function updateSchoolSettings(
     ipAddress,
   });
 
+  const activeYear = academicYears.find((y) => y.status === 'ACTIVE') ?? null;
+
+  const preferences = input.preferences ?? {
+    emailNotificationsEnabled: true,
+    weeklyAttendanceDigest: true,
+    studentSupportAlerts: true,
+  };
+
   return {
     id: updated.id,
     name: updated.name,
@@ -2070,6 +2262,10 @@ export async function updateSchoolSettings(
     subdomain: updated.subdomain,
     contactEmail: updated.contactEmail,
     status: updated.status,
+    activeAcademicYearId: activeYear?.id ?? null,
+    activeAcademicYearName: activeYear?.name ?? null,
+    totalAcademicYears: academicYears.length,
+    preferences,
   };
 }
 

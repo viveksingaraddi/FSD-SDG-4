@@ -774,5 +774,120 @@ describe('School Admin API routes', () => {
         expect.anything(),
       );
     });
+
+    it('allows filtering overview by period', async () => {
+      const spy = vi.spyOn(schoolAdminService, 'getSchoolOverview').mockResolvedValueOnce({
+        schoolName: 'Synthetic Academy',
+        activeAcademicYear: '2026-2027',
+        totalStudents: 150,
+        totalStaff: 12,
+        totalClasses: 6,
+        totalSections: 12,
+        activeSupportPlans: 3,
+        period: '7d',
+      });
+
+      const res = await request(app)
+        .get(`${API_ROUTES.SCHOOL.OVERVIEW}?period=7d`)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', 'tenant-school-1');
+
+      expect(res.status).toBe(200);
+      expect(spy).toHaveBeenCalledWith('tenant-school-1', '7d');
+      expect(res.body.data.period).toBe('7d');
+    });
+
+    it('filters school audit logs by category with tenant scoping', async () => {
+      const spy = vi.spyOn(schoolAdminService, 'listSchoolAuditLogs').mockResolvedValueOnce([
+        {
+          id: '88888888-8888-4888-8888-888888888888',
+          schoolId: 'tenant-school-1',
+          actorId: '11111111-1111-4111-8111-111111111111',
+          actorEmail: 'admin@school.edu',
+          action: 'SCHOOL_SETTINGS_UPDATED',
+          entityType: 'School',
+          entityId: 'tenant-school-1',
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      const res = await request(app)
+        .get(`${API_ROUTES.SCHOOL.AUDIT_LOGS}?category=SETTINGS`)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', 'tenant-school-1');
+
+      expect(res.status).toBe(200);
+      expect(spy).toHaveBeenCalledWith('tenant-school-1', {
+        action: undefined,
+        category: 'SETTINGS',
+        startDate: undefined,
+        endDate: undefined,
+      });
+      expect(res.body.data).toHaveLength(1);
+    });
+
+    it('retrieves and updates school settings with operational preferences', async () => {
+      vi.spyOn(schoolAdminService, 'getSchoolSettings').mockResolvedValueOnce({
+        id: 'tenant-school-1',
+        name: 'Synthetic High',
+        code: 'SYNTH-01',
+        subdomain: 'synth-01',
+        contactEmail: 'admin@synth.edu',
+        status: 'ACTIVE',
+        activeAcademicYearId: '11111111-1111-4111-8111-111111111111',
+        activeAcademicYearName: '2026-2027',
+        totalAcademicYears: 1,
+        preferences: {
+          emailNotificationsEnabled: true,
+          weeklyAttendanceDigest: true,
+          studentSupportAlerts: true,
+        },
+      });
+
+      const getRes = await request(app)
+        .get(API_ROUTES.SCHOOL.SETTINGS)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', 'tenant-school-1');
+
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.data.preferences.emailNotificationsEnabled).toBe(true);
+
+      const updateSpy = vi.spyOn(schoolAdminService, 'updateSchoolSettings').mockResolvedValueOnce({
+        id: 'tenant-school-1',
+        name: 'Synthetic High Renamed',
+        code: 'SYNTH-01',
+        subdomain: 'synth-01',
+        contactEmail: 'contact@synth.edu',
+        status: 'ACTIVE',
+        preferences: {
+          emailNotificationsEnabled: false,
+          weeklyAttendanceDigest: true,
+          studentSupportAlerts: true,
+        },
+      });
+
+      const patchRes = await request(app)
+        .patch(API_ROUTES.SCHOOL.SETTINGS)
+        .set('x-test-role', 'SCHOOL_ADMIN')
+        .set('x-test-school-id', 'tenant-school-1')
+        .set('X-Requested-With', 'XMLHttpRequest')
+        .send({
+          name: 'Synthetic High Renamed',
+          contactEmail: 'contact@synth.edu',
+          preferences: {
+            emailNotificationsEnabled: false,
+            weeklyAttendanceDigest: true,
+            studentSupportAlerts: true,
+          },
+        });
+
+      expect(patchRes.status).toBe(200);
+      expect(updateSpy).toHaveBeenCalledWith(
+        'tenant-school-1',
+        expect.objectContaining({ name: 'Synthetic High Renamed' }),
+        '11111111-1111-4111-8111-111111111111',
+        expect.anything(),
+      );
+    });
   });
 });

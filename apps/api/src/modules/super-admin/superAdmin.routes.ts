@@ -1,14 +1,15 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import { API_ROUTES } from '@fsd-sdg4/contracts';
 import {
+  auditLogsQuerySchema,
   createSchoolSchema,
   idParamSchema,
   invitationFilterQuerySchema,
   type InvitationFilterQuery,
+  overviewQuerySchema,
   schoolStatusSchema,
   searchQuerySchema,
   updateSchoolSchema,
-  uuidSchema,
   z,
 } from '@fsd-sdg4/validation';
 import { authenticate } from '../../middleware/authenticate.js';
@@ -20,6 +21,7 @@ import { PERMISSIONS } from '../identity/permissions.js';
 import {
   createSchool,
   getPlatformOverview,
+  getPlatformSettings,
   getSchoolById,
   listPlatformAuditLogs,
   listPlatformInvitations,
@@ -34,11 +36,6 @@ const searchParamsSchema = z.object({
   status: schoolStatusSchema.optional(),
 });
 
-const auditQuerySchema = z.object({
-  action: searchQuerySchema,
-  schoolId: uuidSchema.optional(),
-});
-
 export function createSuperAdminRouter(): ExpressRouter {
   const router: ExpressRouter = Router();
 
@@ -47,9 +44,24 @@ export function createSuperAdminRouter(): ExpressRouter {
     authenticate,
     requireRole(['SUPER_ADMIN']),
     requirePermission(PERMISSIONS.PLATFORM_SCHOOLS_READ),
-    async (_req, res) => {
-      const overview = await getPlatformOverview();
+    validateRequest({ query: overviewQuerySchema }),
+    async (req, res) => {
+      const { period } = req.query as { period?: 'all' | '30d' | '90d' | 'year' };
+      const overview = await (period !== undefined
+        ? getPlatformOverview(period)
+        : getPlatformOverview());
       sendSuccess(res, overview);
+    },
+  );
+
+  router.get(
+    API_ROUTES.SUPER_ADMIN.SETTINGS,
+    authenticate,
+    requireRole(['SUPER_ADMIN']),
+    requirePermission(PERMISSIONS.PLATFORM_AUDIT_READ),
+    async (_req, res) => {
+      const settings = await getPlatformSettings();
+      sendSuccess(res, settings);
     },
   );
 
@@ -114,10 +126,16 @@ export function createSuperAdminRouter(): ExpressRouter {
     authenticate,
     requireRole(['SUPER_ADMIN']),
     requirePermission(PERMISSIONS.PLATFORM_AUDIT_READ),
-    validateRequest({ query: auditQuerySchema }),
+    validateRequest({ query: auditLogsQuerySchema }),
     async (req, res) => {
-      const { action, schoolId } = req.query as { action?: string; schoolId?: string };
-      const logs = await listPlatformAuditLogs(action, schoolId);
+      const { action, schoolId, category, startDate, endDate } = req.query as {
+        action?: string;
+        schoolId?: string;
+        category?: 'ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS';
+        startDate?: string;
+        endDate?: string;
+      };
+      const logs = await listPlatformAuditLogs(action, schoolId, category, startDate, endDate);
       sendSuccess(res, logs);
     },
   );

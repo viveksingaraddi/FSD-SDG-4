@@ -2,6 +2,7 @@ import {
   API_ROUTES,
   type AuditLogDto,
   type PlatformOverviewDto,
+  type PlatformSettingsDto,
   type ProvisionSchoolResultDto,
   type SchoolDetailDto,
   type SchoolSummaryDto,
@@ -14,9 +15,20 @@ import type {
 } from '@fsd-sdg4/validation';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
-export function fetchPlatformOverview(signal?: AbortSignal): Promise<PlatformOverviewDto> {
+export function fetchPlatformOverview(
+  period?: 'all' | '30d' | '90d' | 'year',
+  signal?: AbortSignal,
+): Promise<PlatformOverviewDto> {
+  const qs = period && period !== 'all' ? `?period=${encodeURIComponent(period)}` : '';
   return apiGet<PlatformOverviewDto>(
-    API_ROUTES.SUPER_ADMIN.OVERVIEW,
+    `${API_ROUTES.SUPER_ADMIN.OVERVIEW}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchPlatformSettings(signal?: AbortSignal): Promise<PlatformSettingsDto> {
+  return apiGet<PlatformSettingsDto>(
+    API_ROUTES.SUPER_ADMIN.SETTINGS,
     signal ? { signal } : undefined,
   );
 }
@@ -88,8 +100,11 @@ export function revokePlatformInvitationRequest(id: string): Promise<UserInvitat
 }
 
 export interface FetchAuditLogsParams {
-  action?: string;
-  schoolId?: string;
+  action?: string | undefined;
+  schoolId?: string | undefined;
+  category?: ('ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS') | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
 }
 
 export function fetchPlatformAuditLogs(
@@ -109,6 +124,15 @@ export function fetchPlatformAuditLogs(
     }
     if (filterOrAction.schoolId && filterOrAction.schoolId.trim().length > 0) {
       params.set('schoolId', filterOrAction.schoolId.trim());
+    }
+    if (filterOrAction.category && filterOrAction.category !== 'ALL') {
+      params.set('category', filterOrAction.category);
+    }
+    if (filterOrAction.startDate) {
+      params.set('startDate', filterOrAction.startDate);
+    }
+    if (filterOrAction.endDate) {
+      params.set('endDate', filterOrAction.endDate);
     }
   }
 
