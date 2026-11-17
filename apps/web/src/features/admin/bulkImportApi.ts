@@ -27,14 +27,10 @@ export async function fetchImportPreview(
   formData.append('file', file);
   formData.append('category', category);
 
-  return apiPost<BulkImportPreviewResponseDto>(
-    API_ROUTES.SCHOOL.BULK_IMPORT.PREVIEW,
-    formData,
-    {
-      timeoutMs: 60_000,
-      ...(signal ? { signal } : {}),
-    },
-  );
+  return apiPost<BulkImportPreviewResponseDto>(API_ROUTES.SCHOOL.BULK_IMPORT.PREVIEW, formData, {
+    timeoutMs: 60_000,
+    ...(signal ? { signal } : {}),
+  });
 }
 
 /**

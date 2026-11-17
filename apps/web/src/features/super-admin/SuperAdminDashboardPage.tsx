@@ -8,8 +8,6 @@ import {
   BookOpen,
   Building2,
   Calendar,
-  CheckCircle2,
-  ClipboardList,
   Filter,
   GraduationCap,
   Layers,

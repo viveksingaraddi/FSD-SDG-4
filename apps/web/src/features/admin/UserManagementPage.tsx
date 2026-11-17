@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { UserDirectoryItemDto, UserStatus } from '@fsd-sdg4/contracts';
 import {
-  AlertCircle,
   CheckCircle2,
   Eye,
   GraduationCap,
@@ -28,7 +27,6 @@ import {
   type DataTableColumn,
   EmptyState,
   ErrorState,
-  Input,
   Modal,
   SearchInput,
   Select,
@@ -63,7 +61,6 @@ export function UserManagementPage() {
   // Status Change Dialog
   const [statusTarget, setStatusTarget] = useState<UserDirectoryItemDto | null>(null);
   const [statusActionReason, setStatusActionReason] = useState('');
-  const [statusActionError, setStatusActionError] = useState<string | null>(null);
 
   // User Detail Drawer
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -142,7 +139,6 @@ export function UserManagementPage() {
       }
       setStatusTarget(null);
       setStatusActionReason('');
-      setStatusActionError(null);
       showToast({
         title: 'User Status Updated',
         description: 'Account access privileges have been successfully updated.',
@@ -150,9 +146,11 @@ export function UserManagementPage() {
       });
     },
     onError: (err) => {
-      setStatusActionError(
-        err instanceof ApiClientError ? err.message : 'Failed to update user status.',
-      );
+      showToast({
+        title: 'Status Update Failed',
+        description: err instanceof ApiClientError ? err.message : 'Failed to update user status.',
+        variant: 'danger',
+      });
     },
   });
 
@@ -643,7 +641,6 @@ export function UserManagementPage() {
           onClose={() => {
             if (!statusMutation.isPending) {
               setStatusTarget(null);
-              setStatusActionError(null);
               setStatusActionReason('');
             }
           }}

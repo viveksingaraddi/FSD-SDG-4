@@ -2,18 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import {
-  Bell,
-  Building2,
-  Calendar,
-  CheckCircle2,
-  Eye,
-  Filter,
-  Globe,
-  Layers,
-  RefreshCw,
-  ShieldCheck,
-} from 'lucide-react';
+import { Eye, RefreshCw, ShieldCheck } from 'lucide-react';
 import type { AuditLogDto } from '@fsd-sdg4/contracts';
 import { updateSchoolSettingsSchema, type UpdateSchoolSettingsInput } from '@fsd-sdg4/validation';
 import { AppShell } from '@/components/layout/AppShell';

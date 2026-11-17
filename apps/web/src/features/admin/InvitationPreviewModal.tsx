@@ -5,12 +5,8 @@ import {
   ExternalLink,
   GraduationCap,
   HeartHandshake,
-  Mail,
-  Shield,
   ShieldCheck,
-  UserCheck,
   Users,
-  X,
 } from 'lucide-react';
 import { Badge, Button, Modal } from '@/components/ui';
 

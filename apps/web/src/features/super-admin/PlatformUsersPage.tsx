@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UserDirectoryItemDto, UserStatus } from '@fsd-sdg4/contracts';
 import {
-  AlertCircle,
   Building2,
   CheckCircle2,
   Copy,
@@ -73,7 +72,6 @@ export function PlatformUsersPage() {
   // Status Change Dialog
   const [statusTarget, setStatusTarget] = useState<UserDirectoryItemDto | null>(null);
   const [statusActionReason, setStatusActionReason] = useState('');
-  const [statusActionError, setStatusActionError] = useState<string | null>(null);
 
   // User Detail Drawer
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -160,7 +158,6 @@ export function PlatformUsersPage() {
       }
       setStatusTarget(null);
       setStatusActionReason('');
-      setStatusActionError(null);
       showToast({
         title: 'Account Status Updated',
         description: 'User access status has been successfully modified.',
@@ -168,9 +165,11 @@ export function PlatformUsersPage() {
       });
     },
     onError: (err) => {
-      setStatusActionError(
-        err instanceof ApiClientError ? err.message : 'Failed to update user status.',
-      );
+      showToast({
+        title: 'Status Update Failed',
+        description: err instanceof ApiClientError ? err.message : 'Failed to update user status.',
+        variant: 'danger',
+      });
     },
   });
 
@@ -663,7 +662,6 @@ export function PlatformUsersPage() {
           onClose={() => {
             if (!statusMutation.isPending) {
               setStatusTarget(null);
-              setStatusActionError(null);
               setStatusActionReason('');
             }
           }}

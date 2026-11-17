@@ -51,7 +51,7 @@ import type {
   UpdateSubjectInput,
   UserFilterQuery,
 } from '@fsd-sdg4/validation';
-import { GuardianRelationshipType, Prisma, UserRole, UserStatus } from '@prisma/client';
+import { Prisma, type UserRole, type UserStatus } from '@prisma/client';
 import { prisma } from '../../shared/db/prisma.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors/appError.js';
 import { hashPassword } from '../../shared/security/password.js';

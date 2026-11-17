@@ -232,8 +232,8 @@ export function generateTemplate(
 ): { buffer: Buffer; contentType: string; filename: string } {
   const wb = xlsx.utils.book_new();
 
-  let sampleData: Array<Record<string, string>> = [];
-  let sheetName = 'Import_Template';
+  let sampleData: Array<Record<string, string>>;
+  let sheetName: string;
 
   if (category === 'STUDENTS') {
     sheetName = 'Students';
@@ -433,7 +433,6 @@ export async function validateImportRows(
 
       // Validate Class and Section
       const className = row['className']?.toLowerCase().trim() ?? '';
-      const sectionName = row['sectionName']?.toLowerCase().trim() ?? '';
       let resolvedClassId: string | undefined;
       let resolvedSectionId: string | undefined;
 
@@ -676,7 +675,6 @@ export async function executeImportJob(
   for (const row of validRows) {
     try {
       await prisma.$transaction(async (tx) => {
-
         if (category === 'STUDENTS' && row.parsedStudent) {
           const studentInput = row.parsedStudent;
           const user = await tx.user.create({
@@ -953,8 +951,7 @@ export async function executeImportJob(
               where: { id: inv.invitationId },
               data: {
                 deliveryStatus: 'FAILED',
-                deliveryError:
-                  err instanceof Error ? err.message : 'Unknown mail dispatch error',
+                deliveryError: err instanceof Error ? err.message : 'Unknown mail dispatch error',
               },
             });
           }
