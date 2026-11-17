@@ -49,6 +49,18 @@ This document details the primary step-by-step user workflows for the **FSD-SDG-
 
 ## 2. School Administrator Workflows (Institutional Setup)
 
+### Workflow A-00: Guided School Administrator Onboarding & Initial Setup Wizard
+
+1. **First-Login Prompt & Navigation**: Upon successful account activation and initial sign-in, the School Administrator is welcomed by the **Initial School Setup Wizard** (`/admin/onboarding`), or prompted via the prominent setup progress widget on the School Dashboard (`/admin`).
+2. **Step 1 — School Profile Verification**: Admin verifies the provisioned school name, unique code, subdomain, and administrative contact email.
+3. **Step 2 — Academic Year Configuration**: Admin configures the active academic calendar (start/end dates) and sets it to `ACTIVE`.
+4. **Step 3 — Grade Levels & Class Sections**: Admin defines classes (e.g. Grade 9, Secondary) and provisions class sections (e.g. Section A, Section B) bound to the active academic year.
+5. **Step 4 — Curriculum Subject Catalog**: Admin registers core subjects (e.g. Mathematics, Sciences, English Language Arts) with course codes and descriptions.
+6. **Step 5 — Faculty Onboarding**: Admin invites teachers via the official Gmail/Nodemailer delivery system, establishing initial instructional capacity.
+7. **Step 6 — Student Enrollment**: Admin registers enrolled students with student ID numbers, admission dates, and section placements.
+8. **Step 7 — Parent / Guardian Linking**: Admin invites parents and guardians with mandatory student profile links to establish zero-trust, authorized record access boundaries.
+9. **Step 8 — Setup Summary & Platform Activation**: Admin reviews institutional configuration metrics, saves progress bookmark to backend, and clicks _"Complete Setup & Launch Dashboard"_, recording the `SCHOOL_ONBOARDING_COMPLETED` audit event and entering the active School Administrator Dashboard.
+
 ### Workflow A-01: Academic Year & Curriculum Initialization
 
 1. **Create Academic Year**: Admin navigates to _School Settings_ $\to$ _Academic Years_ $\to$ creates _"2026–2027 Academic Year"_ with start and end dates. Sets status to `ACTIVE`.

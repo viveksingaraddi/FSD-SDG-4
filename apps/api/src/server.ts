@@ -4,20 +4,49 @@
 
 import { createApp } from './app.js';
 import { env } from './config/env.js';
+import { isMailConfigured, verifyMailConnection } from './modules/mail/mail.service.js';
 import { disconnectDatabase } from './shared/database/index.js';
 import { logger } from './shared/logging/logger.js';
 
 const app = createApp();
 
-const server = app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, async () => {
   logger.info(
     {
       port: env.PORT,
       env: env.NODE_ENV,
       version: env.API_VERSION,
     },
-    'FSD-SDG-4 API server started',
+    'EDVARQ API server started',
   );
+
+  if (isMailConfigured()) {
+    const check = await verifyMailConnection();
+    if (check.ok) {
+      logger.info(
+        {
+          host: env.MAIL_HOST,
+          port: env.MAIL_PORT,
+          user: env.MAIL_USER,
+        },
+        'SMTP mail connection verified successfully (Nodemailer transporter.verify())',
+      );
+    } else {
+      logger.error(
+        {
+          host: env.MAIL_HOST,
+          port: env.MAIL_PORT,
+          user: env.MAIL_USER,
+          error: check.error,
+        },
+        'SMTP connection verification failed — automatic emails will fail until resolved',
+      );
+    }
+  } else {
+    logger.warn(
+      'SMTP mail delivery unconfigured (MAIL_USER / MAIL_APP_PASSWORD empty) — operating in fallback link mode',
+    );
+  }
 });
 
 // ─── Graceful Shutdown ──────────────────────────────────────────────────────

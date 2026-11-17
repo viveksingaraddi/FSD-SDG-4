@@ -49,3 +49,53 @@ export default router;
 ```
 
 If `authenticate` fails, it halts execution immediately and emits an RFC 7807 `401 Unauthorized` envelope. If `requireRole` fails, it returns `403 Forbidden`.
+
+---
+
+## 4. Account Activation & Invitation Acceptance Lifecycle
+
+The platform uses a cryptographic, single-use invitation token model to securely onboard users across all five platform roles:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Invited User
+    participant Browser as Web Client (/accept-invitation)
+    participant API as Express API (/api/v1/auth)
+    participant DB as PostgreSQL (Prisma)
+    participant Mail as Gmail SMTP
+
+    Note over User,Mail: 1. Provisioning & Invitation
+    Admin->>API: Provision user (School Admin or Staff/Student/Parent)
+    API->>DB: Create User (status: INACTIVE) + UserInvitation (status: PENDING)
+    API->>Mail: Dispatch HTML/Plaintext invitation with opaque 32-byte hex token
+
+    Note over User,Mail: 2. Verification
+    User->>Browser: Open invitation URL (?token=...)
+    Browser->>API: GET /api/v1/auth/invitations/verify?token=...
+    API->>DB: Hash token (SHA-256) & lookup UserInvitation + School
+    API-->>Browser: 200 OK { valid: true, email, role, schoolName }
+
+    Note over User,Mail: 3. Password Setup & Activation
+    User->>Browser: Enters 12+ char password with strength requirements
+    Browser->>API: POST /api/v1/auth/invitations/accept { token, password }
+    API->>DB: Transaction: hash password (Argon2id), set User ACTIVE, mark invitation ACCEPTED
+    API->>DB: Insert immutable AuditLog (AUTH_INVITATION_ACCEPTED)
+    API-->>Browser: 200 OK { success: true, email, role }
+
+    Note over User,Mail: 4. Role-Aware First Login
+    Browser->>Browser: Navigate to /login with { activated: true, email }
+    User->>Browser: Submit credentials
+    Browser->>API: POST /api/v1/auth/login { email, password }
+    API->>DB: Verify Argon2id hash & assert user.status == 'ACTIVE' & school.status == 'ACTIVE'
+    API-->>Browser: Set-Cookie: __Host-sid (HttpOnly, Secure, Lax) + { user, permissions }
+    Browser->>Browser: Navigate to canonical portal home (SUPER_ADMIN: /super-admin, SCHOOL_ADMIN: /admin, TEACHER: /teacher, STUDENT: /student, PARENT: /parent)
+```
+
+### Security Invariants for Activation
+
+1. **Entropy & Storage**: 32 bytes of secure cryptographic entropy (`crypto.randomBytes(32)`). Only the SHA-256 hash is persisted in PostgreSQL; the raw token is never stored or logged.
+2. **Single-Use & Invalidation**: Acceptance transitions the record to `status: ACCEPTED` and sets `acceptedAt: now()` inside a serializable database transaction. Repeated attempts reject with `400 Bad Request`.
+3. **Tenant & Role Integrity**: The browser cannot supply or override `role` or `schoolId`. The activated user's role and tenant scoping are derived strictly from the pre-provisioned server-side record.
+4. **Institution State Validation**: If the associated educational institution is inactive or suspended, verification returns `valid: false, reason: 'INVALID'` and acceptance is blocked.
+5. **No Password Hashes or Sensitive Tokens in Client Memory**: Passwords are transmitted directly to the backend over TLS, hashed using Argon2id, and session cookies are set as `HttpOnly`. No tokens or hashes are stored in `localStorage` or `sessionStorage`.
