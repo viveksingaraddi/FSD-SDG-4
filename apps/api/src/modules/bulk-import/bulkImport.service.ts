@@ -668,11 +668,14 @@ export async function executeImportJob(
     select: { name: true },
   });
 
+  // Pre-generate a single placeholder password hash for unactivated accounts
+  // Eliminates repetitive expensive Argon2id hashing across rows
+  const placeholderHash = await hashPassword(crypto.randomBytes(32).toString('hex'));
+
   // Process valid rows safely in individual row transactions
   for (const row of validRows) {
     try {
       await prisma.$transaction(async (tx) => {
-        const placeholderHash = await hashPassword(crypto.randomBytes(32).toString('hex'));
 
         if (category === 'STUDENTS' && row.parsedStudent) {
           const studentInput = row.parsedStudent;
@@ -897,48 +900,66 @@ export async function executeImportJob(
   let invitationsFailed = 0;
 
   const shouldSendInvitations = options.sendInvitations !== false;
-  if (shouldSendInvitations) {
-    for (const inv of createdInvitations) {
-      try {
-        const dispatchResult = await dispatchInvitationEmail({
-          invitationId: inv.invitationId,
-          rawToken: inv.rawToken,
-          invitationUrl: inv.invitationUrl,
-          recipientEmail: inv.recipientEmail,
-          recipientName: inv.recipientName,
-          role: inv.role,
-          schoolId,
-          schoolName: inv.schoolName ?? school?.name,
-          expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
-          type: 'INVITATION_INITIAL',
-        });
+  if (shouldSendInvitations && createdInvitations.length > 0) {
+    // Dispatch invitations concurrently in chunks of 5 with bounded per-item timeout
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < createdInvitations.length; i += CHUNK_SIZE) {
+      const chunk = createdInvitations.slice(i, i + CHUNK_SIZE);
+      await Promise.allSettled(
+        chunk.map(async (inv) => {
+          try {
+            const dispatchPromise = dispatchInvitationEmail({
+              invitationId: inv.invitationId,
+              rawToken: inv.rawToken,
+              invitationUrl: inv.invitationUrl,
+              recipientEmail: inv.recipientEmail,
+              recipientName: inv.recipientName,
+              role: inv.role,
+              schoolId,
+              schoolName: inv.schoolName ?? school?.name,
+              expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+              type: 'INVITATION_INITIAL',
+            });
 
-        if (dispatchResult.delivered) {
-          invitationsSent++;
-          await prisma.userInvitation.update({
-            where: { id: inv.invitationId },
-            data: { deliveryStatus: 'SENT', deliveredAt: new Date() },
-          });
-        } else {
-          invitationsFailed++;
-          await prisma.userInvitation.update({
-            where: { id: inv.invitationId },
-            data: {
-              deliveryStatus: 'FAILED',
-              deliveryError: dispatchResult.error ?? 'SMTP delivery failure',
-            },
-          });
-        }
-      } catch (err) {
-        invitationsFailed++;
-        await prisma.userInvitation.update({
-          where: { id: inv.invitationId },
-          data: {
-            deliveryStatus: 'FAILED',
-            deliveryError: err instanceof Error ? err.message : 'Unknown mail dispatch error',
-          },
-        });
-      }
+            const timeoutPromise = new Promise<{
+              delivered: false;
+              error: string;
+              outboxId: string;
+            }>((_, reject) =>
+              setTimeout(() => reject(new Error('Email dispatch timed out after 8s')), 8000),
+            );
+
+            const dispatchResult = await Promise.race([dispatchPromise, timeoutPromise]);
+
+            if (dispatchResult.delivered) {
+              invitationsSent++;
+              await prisma.userInvitation.update({
+                where: { id: inv.invitationId },
+                data: { deliveryStatus: 'SENT', deliveredAt: new Date() },
+              });
+            } else {
+              invitationsFailed++;
+              await prisma.userInvitation.update({
+                where: { id: inv.invitationId },
+                data: {
+                  deliveryStatus: 'FAILED',
+                  deliveryError: dispatchResult.error ?? 'SMTP delivery failure',
+                },
+              });
+            }
+          } catch (err) {
+            invitationsFailed++;
+            await prisma.userInvitation.update({
+              where: { id: inv.invitationId },
+              data: {
+                deliveryStatus: 'FAILED',
+                deliveryError:
+                  err instanceof Error ? err.message : 'Unknown mail dispatch error',
+              },
+            });
+          }
+        }),
+      );
     }
   }
 
