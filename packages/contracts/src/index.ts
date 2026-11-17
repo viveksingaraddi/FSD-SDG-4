@@ -75,6 +75,14 @@ export const API_ROUTES = {
     INVITATIONS: '/api/v1/school/invitations',
     USERS: '/api/v1/school/users',
     GUARDIAN_LINKS: '/api/v1/school/guardian-relationships',
+    BULK_IMPORT: {
+      PREVIEW: '/api/v1/school/bulk-import/preview',
+      EXECUTE: '/api/v1/school/bulk-import/execute',
+      JOBS: '/api/v1/school/bulk-import/jobs',
+      JOB_DETAIL: '/api/v1/school/bulk-import/jobs/:id',
+      JOB_ERRORS: '/api/v1/school/bulk-import/jobs/:id/errors',
+      TEMPLATE: '/api/v1/school/bulk-import/template',
+    },
   },
   // Teacher (Phase 10–12)
   TEACHER: {
@@ -687,6 +695,77 @@ export interface UserLifecycleDetailDto extends UserDirectoryItemDto {
 
 export interface PaginatedUsersResultDto {
   items: UserDirectoryItemDto[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ─── Bulk Onboarding & Import DTOs (Task 14) ───────────────────────────────
+
+export type BulkImportCategory = 'STUDENTS' | 'TEACHERS' | 'PARENTS';
+export type BulkImportStatus = 'PENDING' | 'VALIDATING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface BulkImportRowErrorDto {
+  rowNumber: number;
+  field?: string | undefined;
+  message: string;
+  identifier?: string | undefined;
+  rawData?: Record<string, string> | undefined;
+}
+
+export interface BulkImportRowPreviewDto {
+  rowNumber: number;
+  isValid: boolean;
+  data: Record<string, string>;
+  errors: string[];
+  warnings?: string[] | undefined;
+}
+
+export interface BulkImportPreviewResponseDto {
+  category: BulkImportCategory;
+  filename: string;
+  fileSize: number;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  columns: string[];
+  detectedRows: BulkImportRowPreviewDto[];
+  eligibleInvitations: number;
+  canProceed: boolean;
+}
+
+export interface BulkImportJobDto {
+  id: string;
+  schoolId: string;
+  actorId: string | null;
+  actorName?: string | null | undefined;
+  category: BulkImportCategory;
+  filename: string;
+  fileSize: number;
+  status: BulkImportStatus;
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  duplicateRows: number;
+  successfulRows: number;
+  failedRows: number;
+  skippedRows: number;
+  invitationsCreated: number;
+  invitationsSent: number;
+  invitationsFailed: number;
+  summary?: Record<string, unknown> | null | undefined;
+  errors?: BulkImportRowErrorDto[] | null | undefined;
+  idempotencyKey?: string | null | undefined;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BulkImportJobsListResponseDto {
+  items: BulkImportJobDto[];
   total: number;
   page: number;
   limit: number;

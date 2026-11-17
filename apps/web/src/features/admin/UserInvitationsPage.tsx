@@ -16,6 +16,7 @@ import {
   Search,
   ShieldAlert,
   Trash2,
+  UploadCloud,
   UserCheck,
   UserPlus,
   Users,
@@ -28,6 +29,7 @@ import {
   resendSchoolInvitationRequest,
   revokeSchoolInvitationRequest,
 } from './schoolAdminApi';
+import { BulkImportModal } from './BulkImportModal';
 
 export function UserInvitationsPage() {
   const { showToast } = useToast();
@@ -43,6 +45,7 @@ export function UserInvitationsPage() {
 
   // Invite Modal
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [inviteRole, setInviteRole] = useState<'TEACHER' | 'STUDENT' | 'PARENT'>('TEACHER');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteFirstName, setInviteFirstName] = useState('');
@@ -289,14 +292,24 @@ export function UserInvitationsPage() {
               cryptographic verification and zero default passwords.
             </p>
           </div>
-          <Button
-            variant="primary"
-            className="flex items-center gap-2 shrink-0 self-start sm:self-auto shadow-sm"
-            onClick={() => setIsInviteModalOpen(true)}
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Invite New User</span>
-          </Button>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 shadow-sm"
+              onClick={() => setIsBulkModalOpen(true)}
+            >
+              <UploadCloud className="h-4 w-4" />
+              <span>Bulk Import &amp; Invite</span>
+            </Button>
+            <Button
+              variant="primary"
+              className="flex items-center gap-2 shadow-sm"
+              onClick={() => setIsInviteModalOpen(true)}
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Invite New User</span>
+            </Button>
+          </div>
         </div>
 
         {/* Metric Cards */}
@@ -843,6 +856,12 @@ export function UserInvitationsPage() {
             </div>
           </div>
         </Modal>
+
+        <BulkImportModal
+          isOpen={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          onSuccess={() => loadInvitations()}
+        />
       </div>
     </AppShell>
   );

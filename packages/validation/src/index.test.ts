@@ -54,13 +54,44 @@ describe('@fsd-sdg4/validation — paginationSchema', () => {
   });
 });
 
-describe('@fsd-sdg4/validation — isoDateString', () => {
-  it('accepts a valid ISO date string', () => {
-    expect(isoDateString.safeParse('2026-11-05').success).toBe(true);
+describe('@fsd-sdg4/validation — isoDateString & Date Regression Suite', () => {
+  it('1. accepts valid admission date: 2026-06-01', () => {
+    const res = isoDateString.safeParse('2026-06-01');
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data).toBe('2026-06-01');
+    }
   });
 
-  it('rejects a non-ISO date string', () => {
-    expect(isoDateString.safeParse('Nov 5 2026').success).toBe(false);
+  it('2. accepts valid date of birth: 2010-04-15', () => {
+    const res = isoDateString.safeParse('2010-04-15');
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data).toBe('2010-04-15');
+    }
+  });
+
+  it('3. rejects invalid calendar date: 2026-02-30', () => {
+    const res = isoDateString.safeParse('2026-02-30');
+    expect(res.success).toBe(false);
+  });
+
+  it('4. rejects unsupported date format: 01-06-2026', () => {
+    const res = isoDateString.safeParse('01-06-2026');
+    expect(res.success).toBe(false);
+  });
+
+  it('5. handles empty optional date field', () => {
+    const emptyOptional = isoDateString.optional().safeParse(undefined);
+    expect(emptyOptional.success).toBe(true);
+  });
+
+  it('6. trims surrounding whitespace around valid date values: "  2026-06-01  "', () => {
+    const res = isoDateString.safeParse('  2026-06-01  ');
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data).toBe('2026-06-01');
+    }
   });
 });
 

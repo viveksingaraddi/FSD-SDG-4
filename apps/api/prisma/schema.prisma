@@ -186,6 +186,7 @@ model School {
   auditLogs             AuditLog[]
   invitations           UserInvitation[]
   emailOutbox           EmailOutbox[]
+  bulkImportJobs        BulkImportJob[]
 
   @@index([status])
   @@map("schools")
@@ -223,6 +224,7 @@ model User {
   auditLogs                 AuditLog[]
   invitations               UserInvitation[]       @relation("UserInvitations")
   sentInvitations           UserInvitation[]       @relation("SentInvitations")
+  initiatedImportJobs       BulkImportJob[]
 
   @@unique([schoolId, id])
   @@index([schoolId, role, status])
@@ -868,4 +870,59 @@ model AuditLog {
   @@index([schoolId, entityType, entityId])
   @@index([actorId, createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+// ============================================================================
+// 8. BULK ONBOARDING & DATA IMPORT (Phase 14)
+// ============================================================================
+
+enum BulkImportCategory {
+  STUDENTS
+  TEACHERS
+  PARENTS
+}
+
+enum BulkImportStatus {
+  PENDING
+  VALIDATING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model BulkImportJob {
+  id                 String             @id @default(uuid()) @db.Uuid
+  schoolId           String             @map("school_id") @db.Uuid
+  actorId            String?            @map("actor_id") @db.Uuid
+  category           BulkImportCategory
+  filename           String             @db.VarChar(255)
+  fileSize           Int                @map("file_size")
+  status             BulkImportStatus   @default(PENDING)
+  totalRows          Int                @default(0) @map("total_rows")
+  validRows          Int                @default(0) @map("valid_rows")
+  invalidRows        Int                @default(0) @map("invalid_rows")
+  duplicateRows      Int                @default(0) @map("duplicate_rows")
+  successfulRows     Int                @default(0) @map("successful_rows")
+  failedRows         Int                @default(0) @map("failed_rows")
+  skippedRows        Int                @default(0) @map("skipped_rows")
+  invitationsCreated Int                @default(0) @map("invitations_created")
+  invitationsSent    Int                @default(0) @map("invitations_sent")
+  invitationsFailed  Int                @default(0) @map("invitations_failed")
+  summary            Json?
+  errors             Json?
+  results            Json?
+  idempotencyKey     String?            @map("idempotency_key") @db.VarChar(255)
+  startedAt          DateTime?          @map("started_at") @db.Timestamptz(6)
+  completedAt        DateTime?          @map("completed_at") @db.Timestamptz(6)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  actor  User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([schoolId, status])
+  @@index([schoolId, category])
+  @@index([schoolId, createdAt(sort: Desc)])
+  @@unique([schoolId, idempotencyKey])
+  @@map("bulk_import_jobs")
 }
