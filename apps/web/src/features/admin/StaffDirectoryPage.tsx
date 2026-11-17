@@ -18,6 +18,7 @@ import {
   Edit2,
   RefreshCw,
   ShieldAlert,
+  UploadCloud,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -47,6 +48,7 @@ import {
   updateStaffRequest,
   updateStaffStatusRequest,
 } from './schoolAdminApi';
+import { BulkImportModal } from './BulkImportModal';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'LOCKED';
 type SortField = 'name' | 'employeeId' | 'specialization' | 'allocationCount' | 'status';
@@ -66,6 +68,7 @@ export function StaffDirectoryPage() {
 
   // Modals & targets
   const [createOpen, setCreateOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<StaffMemberDto | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
@@ -258,6 +261,13 @@ export function StaffDirectoryPage() {
               aria-label="Refresh teacher list"
             >
               Refresh
+            </Button>
+            <Button
+              variant="outline"
+              leftIcon={<UploadCloud className="h-4 w-4" />}
+              onClick={() => setBulkImportOpen(true)}
+            >
+              Bulk Import Staff
             </Button>
             <Button
               leftIcon={<UserPlus className="h-4 w-4" />}
@@ -783,6 +793,14 @@ export function StaffDirectoryPage() {
         }
         variant={statusTarget?.status === 'ACTIVE' ? 'danger' : 'primary'}
         loading={statusMutation.isPending}
+      />
+
+      <BulkImportModal
+        isOpen={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        initialCategory="TEACHERS"
+        allowCategorySwitch={false}
+        onSuccess={() => void refetch()}
       />
     </AppShell>
   );

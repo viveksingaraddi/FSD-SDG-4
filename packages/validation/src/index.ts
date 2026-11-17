@@ -49,11 +49,25 @@ export type PaginationParams = z.infer<typeof paginationSchema>;
 
 /**
  * Validates an ISO 8601 date string (YYYY-MM-DD).
- * Used for attendance date parameters, academic year boundaries.
+ * Used for attendance date parameters, academic year boundaries, and import records.
+ * Enforces calendar date correctness (rejects impossible dates such as Feb 30).
  */
 export const isoDateString = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be in YYYY-MM-DD format' });
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be in YYYY-MM-DD format' })
+  .refine(
+    (val) => {
+      const parts = val.split('-');
+      const y = Number(parts[0]);
+      const m = Number(parts[1]);
+      const d = Number(parts[2]);
+      if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return false;
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+    },
+    { message: 'Date must be a valid calendar date in YYYY-MM-DD format' },
+  );
 
 /**
  * Validates a standard UUID identifier (v4/v7).
@@ -462,3 +476,109 @@ export const studentGuardianParamSchema = z.object({
   id: uuidSchema,
   guardianUserId: uuidSchema,
 });
+
+// ─── Bulk Onboarding & Import Schemas (Task 14) ────────────────────────────
+
+export const bulkImportCategorySchema = z.enum(['STUDENTS', 'TEACHERS', 'PARENTS']);
+export const bulkImportStatusSchema = z.enum([
+  'PENDING',
+  'VALIDATING',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+]);
+
+export const studentImportRowSchema = z.object({
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  studentIdNumber: nonEmptyString('Student ID').max(64),
+  email: emailSchema,
+  className: nonEmptyString('Class name').max(100),
+  sectionName: nonEmptyString('Section name').max(100),
+  academicYearName: z.string().trim().max(100).optional(),
+  admissionDate: z.preprocess(
+    (val) =>
+      typeof val === 'string' && val.trim().length === 0
+        ? undefined
+        : typeof val === 'string'
+          ? val.trim()
+          : val,
+    isoDateString.optional(),
+  ),
+  dateOfBirth: z.preprocess(
+    (val) =>
+      typeof val === 'string' && val.trim().length === 0
+        ? undefined
+        : typeof val === 'string'
+          ? val.trim()
+          : val,
+    isoDateString.optional(),
+  ),
+  gender: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.string().trim().max(32).optional(),
+  ),
+  parentEmail: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    emailSchema.optional(),
+  ),
+  parentName: z.string().trim().max(100).optional(),
+  parentRelationship: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['MOTHER', 'FATHER', 'LEGAL_GUARDIAN', 'OTHER']).optional(),
+  ),
+});
+
+export const teacherImportRowSchema = z.object({
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  email: emailSchema,
+  employeeId: nonEmptyString('Employee ID').max(64),
+  specialization: z.string().trim().max(150).optional(),
+});
+
+export const parentImportRowSchema = z.object({
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  email: emailSchema,
+  studentIdNumber: nonEmptyString('Student ID').max(64),
+  relationshipType: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? 'LEGAL_GUARDIAN' : val),
+    z.enum(['MOTHER', 'FATHER', 'LEGAL_GUARDIAN', 'OTHER']).default('LEGAL_GUARDIAN'),
+  ),
+  isPrimaryContact: z.preprocess(
+    (val) =>
+      typeof val === 'string'
+        ? ['true', 'yes', '1', 'y'].includes(val.trim().toLowerCase())
+        : Boolean(val),
+    z.boolean().default(true),
+  ),
+});
+
+export const bulkImportFilterQuerySchema = z.object({
+  category: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'STUDENTS', 'TEACHERS', 'PARENTS']).optional(),
+  ),
+  status: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'PENDING', 'VALIDATING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
+  ),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  sortOrder: sortOrderSchema,
+});
+
+export const executeBulkImportSchema = z.object({
+  category: bulkImportCategorySchema,
+  idempotencyKey: z.string().trim().max(255).optional(),
+  skipInvalidRows: z.coerce.boolean().default(true),
+  sendInvitations: z.coerce.boolean().default(true),
+});
+
+export type BulkImportCategoryInput = z.infer<typeof bulkImportCategorySchema>;
+export type StudentImportRowInput = z.infer<typeof studentImportRowSchema>;
+export type TeacherImportRowInput = z.infer<typeof teacherImportRowSchema>;
+export type ParentImportRowInput = z.infer<typeof parentImportRowSchema>;
+export type BulkImportFilterQuery = z.infer<typeof bulkImportFilterQuerySchema>;
+export type ExecuteBulkImportInput = z.infer<typeof executeBulkImportSchema>;

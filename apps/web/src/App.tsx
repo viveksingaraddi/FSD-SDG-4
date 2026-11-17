@@ -25,6 +25,9 @@ const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirector
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
 const UserInvitationsPage = lazy(() => import('@/features/admin/UserInvitationsPage'));
 const UserManagementPage = lazy(() => import('@/features/admin/UserManagementPage'));
+const BulkImportPage = lazy(() =>
+  import('@/features/admin/BulkImportPage').then((m) => ({ default: m.BulkImportPage })),
+);
 const SchoolOnboardingPage = lazy(() => import('@/features/admin/SchoolOnboardingPage'));
 const AcceptInvitationPage = lazy(() => import('@/features/auth/AcceptInvitationPage'));
 
@@ -177,6 +180,14 @@ export function App() {
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
                     <StudentDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/bulk-import"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <BulkImportPage />
                   </ProtectedRoute>
                 }
               />

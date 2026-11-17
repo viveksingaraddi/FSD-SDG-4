@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createStudentSchema, type CreateStudentInput } from '@fsd-sdg4/validation';
-import { UserPlus } from 'lucide-react';
+import { UploadCloud, UserPlus } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import {
   Alert,
@@ -23,12 +23,14 @@ import {
 import { ApiClientError } from '@/lib/apiClient';
 import { createZodResolver } from '@/lib/zodResolver';
 import { createStudentRequest, fetchClasses, fetchStudents } from './schoolAdminApi';
+import { BulkImportModal } from './BulkImportModal';
 
 export function StudentDirectoryPage() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const studentsQuery = useQuery({
@@ -103,15 +105,24 @@ export function StudentDirectoryPage() {
               Register student admissions and assign them to active class sections.
             </Text>
           </div>
-          <Button
-            leftIcon={<UserPlus className="h-4 w-4" />}
-            onClick={() => {
-              setFormError(null);
-              setModalOpen(true);
-            }}
-          >
-            Register Student
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              leftIcon={<UploadCloud className="h-4 w-4" />}
+              onClick={() => setBulkImportOpen(true)}
+            >
+              Bulk Import Students
+            </Button>
+            <Button
+              leftIcon={<UserPlus className="h-4 w-4" />}
+              onClick={() => {
+                setFormError(null);
+                setModalOpen(true);
+              }}
+            >
+              Register Student
+            </Button>
+          </div>
         </div>
 
         <SearchInput
@@ -262,6 +273,16 @@ export function StudentDirectoryPage() {
           </FormField>
         </form>
       </Modal>
+
+      <BulkImportModal
+        isOpen={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        initialCategory="STUDENTS"
+        allowCategorySwitch={false}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['school-admin', 'students'] });
+        }}
+      />
     </AppShell>
   );
 }
