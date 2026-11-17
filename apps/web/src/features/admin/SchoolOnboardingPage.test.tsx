@@ -162,7 +162,7 @@ describe('SchoolOnboardingPage', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation((input: string | URL, init?: RequestInit) => {
+      vi.fn().mockImplementation((input: string | URL, init?: Parameters<typeof fetch>[1]) => {
         const url = String(input);
         if (url.includes('/api/v1/auth/me')) {
           return Promise.resolve(
@@ -300,7 +300,7 @@ describe('SchoolOnboardingPage', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation((input: string | URL, init?: RequestInit) => {
+      vi.fn().mockImplementation((input: string | URL, init?: Parameters<typeof fetch>[1]) => {
         const url = String(input);
         if (url.includes('/api/v1/auth/me')) {
           return Promise.resolve(

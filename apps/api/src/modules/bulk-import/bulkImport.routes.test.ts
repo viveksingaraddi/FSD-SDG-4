@@ -110,10 +110,6 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         .get('/api/v1/school/bulk-import/template?category=STUDENTS&format=csv')
         .set('x-test-role', 'SCHOOL_ADMIN')
         .set('x-test-school-id', testSchoolId);
-
-      if (res.status !== 200) {
-        console.log('JOB ERRORS FAILURE:', res.status, JSON.stringify(res.body));
-      }
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('text/csv');
       expect(res.headers['content-disposition']).toContain('edvarq-students-import-template.csv');
@@ -126,10 +122,6 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         .get('/api/v1/school/bulk-import/template?category=TEACHERS&format=xlsx')
         .set('x-test-role', 'SCHOOL_ADMIN')
         .set('x-test-school-id', testSchoolId);
-
-      if (res.status !== 200) {
-        console.log('JOB ERRORS FAILURE:', res.status, JSON.stringify(res.body));
-      }
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toBe(
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -174,7 +166,7 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
             },
           ],
         },
-      ] as any);
+      ] as never);
 
       vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({
         id: 'ay-1',
@@ -185,7 +177,7 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         endDate: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as any);
+      } as never);
 
       vi.mocked(prisma.user.findMany).mockResolvedValue([]);
       vi.mocked(prisma.studentProfile.findMany).mockResolvedValue([]);
@@ -200,10 +192,6 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         .set('x-test-school-id', testSchoolId)
         .field('category', 'STUDENTS')
         .attach('file', Buffer.from(csvContent, 'utf8'), 'students.csv');
-
-      if (res.status !== 200) {
-        console.log('JOB ERRORS FAILURE:', res.status, JSON.stringify(res.body));
-      }
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.totalRows).toBe(1);
@@ -245,7 +233,7 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
             { id: 'sec-10b', name: 'B', classId: 'class-10', schoolId: testSchoolId },
           ],
         },
-      ] as any);
+      ] as never);
 
       vi.mocked(prisma.academicYear.findMany).mockResolvedValue([
         {
@@ -253,14 +241,14 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
           schoolId: testSchoolId,
           name: '2026-2027',
           status: 'ACTIVE',
-        } as any,
+        } as never,
       ]);
       vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({
         id: 'ay-2026',
         schoolId: testSchoolId,
         name: '2026-2027',
         status: 'ACTIVE',
-      } as any);
+      } as never);
 
       vi.mocked(prisma.user.findMany).mockResolvedValue([]);
       vi.mocked(prisma.studentProfile.findMany).mockResolvedValue([]);
@@ -294,14 +282,14 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
       expect(res.body.data.duplicateRows).toBe(0);
       expect(res.body.data.canProceed).toBe(true);
       expect(res.body.data.detectedRows).toHaveLength(10);
-      expect(res.body.data.detectedRows.every((r: any) => r.isValid)).toBe(true);
+      expect(res.body.data.detectedRows.every((r: { isValid: boolean }) => r.isValid)).toBe(true);
     });
 
     it('identifies invalid class, section and duplicate email errors during preview', async () => {
       vi.mocked(prisma.class.findMany).mockResolvedValue([]);
       vi.mocked(prisma.academicYear.findFirst).mockResolvedValue(null);
       vi.mocked(prisma.user.findMany).mockResolvedValue([
-        { id: 'user-existing', email: 'taken@example.com', role: 'STUDENT' } as any,
+        { id: 'user-existing', email: 'taken@example.com', role: 'STUDENT' } as never,
       ]);
       vi.mocked(prisma.studentProfile.findMany).mockResolvedValue([]);
 
@@ -315,10 +303,6 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         .set('x-test-school-id', testSchoolId)
         .field('category', 'STUDENTS')
         .attach('file', Buffer.from(csvContent, 'utf8'), 'students.csv');
-
-      if (res.status !== 200) {
-        console.log('JOB ERRORS FAILURE:', res.status, JSON.stringify(res.body));
-      }
       expect(res.status).toBe(200);
       expect(res.body.data.validRows).toBe(0);
       expect(res.body.data.invalidRows).toBe(1);
@@ -379,26 +363,26 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         completedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
-      } as any);
+      } as never);
 
       vi.mocked(prisma.user.findMany).mockResolvedValue([]);
       vi.mocked(prisma.teacherProfile.findMany).mockResolvedValue([]);
       vi.mocked(prisma.school.findUnique).mockResolvedValue({
         id: testSchoolId,
         name: 'Greenfield Academy',
-      } as any);
+      } as never);
 
       vi.mocked(prisma.user.create).mockResolvedValue({
         id: 'new-teacher-user',
         email: 'priya.nair@school.example.com',
         role: 'TEACHER',
         status: 'ACTIVE',
-      } as any);
+      } as never);
 
       vi.mocked(prisma.teacherProfile.create).mockResolvedValue({
         id: 'profile-1',
         employeeId: 'EMP-999',
-      } as any);
+      } as never);
 
       vi.mocked(prisma.userInvitation.create).mockResolvedValue({
         id: 'inv-1',
@@ -411,9 +395,9 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         deliveryStatus: 'PENDING',
         deliveryAttempts: 0,
         expiresAt: new Date(Date.now() + 7 * 86400000),
-      } as any);
+      } as never);
 
-      vi.mocked(prisma.userInvitation.update).mockResolvedValue({} as any);
+      vi.mocked(prisma.userInvitation.update).mockResolvedValue({} as never);
 
       vi.mocked(prisma.bulkImportJob.update).mockResolvedValue({
         id: 'job-1',
@@ -442,7 +426,7 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         actor: { email: 'admin@school.com' },
-      } as any);
+      } as never);
 
       const csvContent =
         'First Name,Last Name,Email Address,Employee ID,Specialization\n' +
@@ -494,17 +478,13 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
           actor: { email: 'admin@school.com' },
-        } as any,
+        } as never,
       ]);
 
       const res = await request(app)
         .get('/api/v1/school/bulk-import/jobs?page=1&limit=10')
         .set('x-test-role', 'SCHOOL_ADMIN')
         .set('x-test-school-id', testSchoolId);
-
-      if (res.status !== 200) {
-        console.log('JOB ERRORS FAILURE:', res.status, JSON.stringify(res.body));
-      }
       expect(res.status).toBe(200);
       expect(res.body.data.total).toBe(1);
       expect(res.body.data.items[0].id).toBe('job-1');
@@ -523,7 +503,7 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
             rawData: { name: 'Aarav' },
           },
         ],
-      } as any);
+      } as never);
 
       const res = await request(app)
         .get('/api/v1/school/bulk-import/jobs/11111111-2222-4333-8444-555555555555/errors')

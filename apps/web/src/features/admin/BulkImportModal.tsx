@@ -9,23 +9,19 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  Clock,
   Download,
   Eye,
   FileSpreadsheet,
-  FileText,
   GraduationCap,
   HeartHandshake,
-  HelpCircle,
   Loader2,
   Mail,
   RotateCcw,
   ShieldCheck,
   UploadCloud,
   Users,
-  X,
 } from 'lucide-react';
-import { Badge, Button, Card, Modal, useToast } from '@/components/ui';
+import { Badge, Button, Modal, useToast } from '@/components/ui';
 import {
   downloadImportTemplate,
   downloadJobErrorReport,
@@ -68,7 +64,6 @@ export function BulkImportModal({
   const [sendInvitations, setSendInvitations] = useState(true);
   const [skipInvalidRows, setSkipInvalidRows] = useState(true);
   const [isPreviewEmailOpen, setIsPreviewEmailOpen] = useState(false);
-  const [isExecuting, setIsExecuting] = useState(false);
 
   // Reset state when closing or starting fresh
   const handleReset = useCallback(() => {
@@ -78,7 +73,6 @@ export function BulkImportModal({
     setJobResult(null);
     setError(null);
     setIsLoadingPreview(false);
-    setIsExecuting(false);
   }, []);
 
   const handleClose = () => {
@@ -179,7 +173,6 @@ export function BulkImportModal({
   const handleExecuteImport = async () => {
     if (!file) return;
 
-    setIsExecuting(true);
     setError(null);
     setStep('EXECUTING');
 
@@ -204,8 +197,6 @@ export function BulkImportModal({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute bulk import.');
       setStep('PREVIEW');
-    } finally {
-      setIsExecuting(false);
     }
   };
 

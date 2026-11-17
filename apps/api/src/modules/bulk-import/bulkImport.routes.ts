@@ -1,6 +1,6 @@
 import { Router, type Router as ExpressRouter } from 'express';
 import multer from 'multer';
-import { API_ROUTES, type BulkImportCategory } from '@fsd-sdg4/contracts';
+import { API_ROUTES } from '@fsd-sdg4/contracts';
 import {
   bulkImportCategorySchema,
   bulkImportFilterQuerySchema,

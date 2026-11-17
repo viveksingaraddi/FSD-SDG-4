@@ -764,7 +764,7 @@ describe('School Admin Portal', () => {
 
   it('renders school settings tabs, preferences form, and institutional audit trail', async () => {
     let patchedData: unknown = null;
-    const fetchMock = vi.fn((input: string | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: string | URL, init?: Parameters<typeof fetch>[1]) => {
       const url = String(input);
       const method = init?.method ?? 'GET';
 

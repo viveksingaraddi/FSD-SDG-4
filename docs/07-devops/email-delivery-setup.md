@@ -58,7 +58,7 @@ MAIL_HOST=smtp.gmail.com
 MAIL_PORT=465
 MAIL_SECURE=true
 MAIL_USER=your_organization_account@gmail.com
-MAIL_APP_PASSWORD=abcdefghijklmnop
+MAIL_APP_PASSWORD=your_16_character_app_password
 MAIL_FROM_NAME="FSD-SDG-4 Quality Education"
 ```
 

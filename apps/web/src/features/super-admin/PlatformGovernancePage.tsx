@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Eye, Filter, RefreshCw, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Eye, RefreshCw, ShieldCheck } from 'lucide-react';
 import type { AuditLogDto } from '@fsd-sdg4/contracts';
 import { AppShell } from '@/components/layout/AppShell';
 import {

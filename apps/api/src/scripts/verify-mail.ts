@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+/* eslint-disable no-console */
 /**
  * CLI utility to test Nodemailer SMTP connection using transporter.verify().
  * Usage:

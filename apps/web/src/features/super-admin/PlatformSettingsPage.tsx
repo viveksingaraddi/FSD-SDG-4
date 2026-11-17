@@ -1,16 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  CheckCircle2,
-  Clock,
-  KeyRound,
-  Layers,
-  Lock,
-  Mail,
-  RefreshCw,
-  Server,
-  ShieldAlert,
-  ShieldCheck,
-} from 'lucide-react';
+import { Clock, KeyRound, Layers, Mail, RefreshCw, Server, ShieldCheck } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Badge, Button, Card, ErrorState, Heading, Skeleton, Text } from '@/components/ui';
 import { fetchPlatformSettings } from './superAdminApi';

@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
@@ -8,7 +9,7 @@ import { InvitationPreviewModal } from './InvitationPreviewModal';
 import { BulkImportModal } from './BulkImportModal';
 import { BulkImportPage } from './BulkImportPage';
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(ui: ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });

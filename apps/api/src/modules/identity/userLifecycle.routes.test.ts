@@ -102,7 +102,7 @@ vi.mock('../../shared/db/prisma.js', () => ({
       create: vi.fn(),
       findMany: vi.fn(),
     },
-    $transaction: vi.fn(async (cb: (tx: any) => Promise<unknown>) => cb(prisma)),
+    $transaction: vi.fn(async (cb: (tx: typeof prisma) => Promise<unknown>) => cb(prisma)),
   },
 }));
 
@@ -129,7 +129,7 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
           teacherProfile: null,
           studentProfile: null,
           invitations: [],
-        } as any,
+        } as never,
       ]);
 
       const res = await request(app)
@@ -156,14 +156,14 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         id: '99999999-9999-4999-8999-999999999999',
         name: 'Evergreen Academy',
         status: 'ACTIVE',
-      } as any);
+      } as never);
       vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(null);
       vi.mocked(prisma.user.create).mockResolvedValueOnce({
         id: 'new-admin-1',
         email: 'headmaster@evergreen.edu',
         role: 'SCHOOL_ADMIN',
         status: 'INACTIVE',
-      } as any);
+      } as never);
       vi.mocked(prisma.userInvitation.create).mockResolvedValueOnce({
         id: 'inv-1',
         email: 'headmaster@evergreen.edu',
@@ -174,7 +174,7 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
         createdAt: new Date(),
         school: { name: 'Evergreen Academy' },
-      } as any);
+      } as never);
 
       const res = await request(app)
         .post('/api/v1/super-admin/users/invite')
@@ -197,7 +197,7 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         id: '99999999-9999-4999-8999-999999999999',
         name: 'Evergreen Academy',
         status: 'SUSPENDED',
-      } as any);
+      } as never);
 
       const res = await request(app)
         .post('/api/v1/super-admin/users/invite')
@@ -221,12 +221,12 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         status: 'ACTIVE',
         role: 'SCHOOL_ADMIN',
         schoolId: 'school-1',
-      } as any);
+      } as never);
       vi.mocked(prisma.user.update).mockResolvedValueOnce({
         id: '55555555-5555-4555-8555-555555555555',
         email: 'target@school.edu',
         status: 'INACTIVE',
-      } as any);
+      } as never);
 
       const res = await request(app)
         .patch('/api/v1/super-admin/users/55555555-5555-4555-8555-555555555555/status')
@@ -269,7 +269,7 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
           teacherProfile: { firstName: 'Alice', lastName: 'Wong', employeeId: 'EMP-01' },
           studentProfile: null,
           invitations: [],
-        } as any,
+        } as never,
         {
           id: 'user-student-1',
           email: 'alex.smith@oakridge.edu',
@@ -281,11 +281,11 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
           teacherProfile: null,
           studentProfile: { firstName: 'Alex', lastName: 'Smith', studentIdNumber: 'STU-01' },
           invitations: [],
-        } as any,
+        } as never,
       ]);
       vi.mocked(prisma.school.findUnique).mockResolvedValueOnce({
         name: 'Oakridge High School',
-      } as any);
+      } as never);
 
       const res = await request(app).get('/api/v1/school/users').set('x-test-role', 'SCHOOL_ADMIN');
 
@@ -312,12 +312,12 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         email: 'teacher@oakridge.edu',
         status: 'ACTIVE',
         role: 'TEACHER',
-      } as any);
+      } as never);
       vi.mocked(prisma.user.update).mockResolvedValueOnce({
         id: '22222222-2222-4222-8222-222222222222',
         email: 'teacher@oakridge.edu',
         status: 'LOCKED',
-      } as any);
+      } as never);
 
       const res = await request(app)
         .patch('/api/v1/school/users/22222222-2222-4222-8222-222222222222/status')
@@ -337,12 +337,12 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         id: '33333333-3333-4333-8333-333333333333',
         firstName: 'Alex',
         lastName: 'Smith',
-      } as any);
+      } as never);
       vi.mocked(prisma.user.findFirst).mockResolvedValueOnce({
         id: '44444444-4444-4444-8444-444444444444',
         email: 'mary.smith@parents.com',
         role: 'PARENT',
-      } as any);
+      } as never);
       vi.mocked(prisma.guardianRelationship.upsert).mockResolvedValueOnce({
         id: 'rel-1',
         schoolId: '33333333-3333-4333-8333-333333333333',
@@ -351,7 +351,7 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         relationshipType: 'MOTHER',
         isPrimaryContact: true,
         isVerified: true,
-      } as any);
+      } as never);
 
       const res = await request(app)
         .post('/api/v1/school/students/33333333-3333-4333-8333-333333333333/guardians')
@@ -373,7 +373,7 @@ describe('User Lifecycle Management APIs (Super Admin & School Admin)', () => {
         schoolId: '33333333-3333-4333-8333-333333333333',
         studentId: '33333333-3333-4333-8333-333333333333',
         guardianUserId: '44444444-4444-4444-8444-444444444444',
-      } as any);
+      } as never);
 
       const res = await request(app)
         .delete(

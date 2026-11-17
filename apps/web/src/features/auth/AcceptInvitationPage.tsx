@@ -8,7 +8,6 @@ import {
   Clock,
   Eye,
   EyeOff,
-  GraduationCap,
   KeyRound,
   Lock,
   Mail,
