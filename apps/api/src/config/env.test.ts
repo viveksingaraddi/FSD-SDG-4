@@ -30,8 +30,8 @@ describe('API environment validation', () => {
       MAIL_HOST: 'smtp.gmail.com',
       MAIL_PORT: '587',
       MAIL_SECURE: 'false',
-      MAIL_USER: 'notifications@fsd-sdg4.edu',
-      MAIL_APP_PASSWORD: 'abcd-efgh-ijkl-mnop',
+      MAIL_USER: 'notifications@example.com',
+      MAIL_APP_PASSWORD: 'mock_test_password',
       MAIL_FROM_NAME: 'FSD-SDG-4 Notifications',
     });
 
@@ -41,8 +41,8 @@ describe('API environment validation', () => {
     expect(parsed.APP_BASE_URL).toBe('https://app.fsd-sdg4.edu');
     expect(parsed.MAIL_PORT).toBe(587);
     expect(parsed.MAIL_SECURE).toBe(false);
-    expect(parsed.MAIL_USER).toBe('notifications@fsd-sdg4.edu');
-    expect(parsed.MAIL_APP_PASSWORD).toBe('abcd-efgh-ijkl-mnop');
+    expect(parsed.MAIL_USER).toBe('notifications@example.com');
+    expect(parsed.MAIL_APP_PASSWORD).toBe('mock_test_password');
     expect(parsed.MAIL_FROM_NAME).toBe('FSD-SDG-4 Notifications');
   });
 
