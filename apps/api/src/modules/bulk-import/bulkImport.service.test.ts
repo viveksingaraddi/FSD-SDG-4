@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import xlsx from 'xlsx';
 import {
+  findMatchingSection,
   generateTemplate,
   normalizeHeaderKey,
   parseRawSpreadsheet,
@@ -162,6 +163,42 @@ describe('Bulk Import Service Unit Tests', () => {
       expect(rows[0]!['firstName']).toBe('Aarav');
       expect(rows[0]!['admissionDate']).toBe('2026-06-01');
       expect(rows[0]!['dateOfBirth']).toBe('2010-04-15');
+    });
+
+    it('matches sections flexibly across A, Section A, 8-A, and custom names', () => {
+      const sections = [
+        { id: 'sec-1', name: 'A' },
+        { id: 'sec-2', name: 'B' },
+        { id: 'sec-3', name: '8-A' },
+        { id: 'sec-4', name: 'Rose' },
+      ];
+
+      // Exact match
+      expect(findMatchingSection(sections, 'A')?.id).toBe('sec-1');
+      expect(findMatchingSection(sections, 'B')?.id).toBe('sec-2');
+      expect(findMatchingSection(sections, 'Rose')?.id).toBe('sec-4');
+
+      // "Section A" matches DB section "A"
+      expect(findMatchingSection(sections, 'Section A')?.id).toBe('sec-1');
+      expect(findMatchingSection(sections, 'section b')?.id).toBe('sec-2');
+      expect(findMatchingSection(sections, 'Section Rose')?.id).toBe('sec-4');
+
+      // Suffix match: "Section A" or "A" matches "8-A" when "A" is not present
+      const sectionsWithoutA = [
+        { id: 'sec-3', name: '8-A' },
+        { id: 'sec-4', name: '8-B' },
+      ];
+      expect(findMatchingSection(sectionsWithoutA, 'Section A')?.id).toBe('sec-3');
+      expect(findMatchingSection(sectionsWithoutA, 'A')?.id).toBe('sec-3');
+      expect(findMatchingSection(sectionsWithoutA, 'B')?.id).toBe('sec-4');
+
+      // Inverse: DB has "Section A" and input is "A"
+      const sectionsWithPrefix = [
+        { id: 'sec-p1', name: 'Section A' },
+        { id: 'sec-p2', name: 'Section B' },
+      ];
+      expect(findMatchingSection(sectionsWithPrefix, 'A')?.id).toBe('sec-p1');
+      expect(findMatchingSection(sectionsWithPrefix, 'B')?.id).toBe('sec-p2');
     });
   });
 });

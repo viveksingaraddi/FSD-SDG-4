@@ -34,6 +34,7 @@ import {
   Text,
   useToast,
 } from '@/components/ui';
+import { formatSectionDisplay } from './academicFormatters';
 import {
   activateAcademicYearRequest,
   completeSchoolOnboardingRequest,
@@ -929,7 +930,7 @@ function StepClassesSections({
                   ) : (
                     c.sections.map((s) => (
                       <Badge key={s.id} variant="brand" className="text-xs">
-                        Section {s.name}
+                        {formatSectionDisplay(s.name)}
                       </Badge>
                     ))
                   )}
@@ -1014,13 +1015,24 @@ function StepClassesSections({
               />
             )}
           </FormField>
-          <FormField label="Section Name" required>
+          <FormField
+            label="Section Name"
+            hint="Enter a single capital letter (e.g. A, B) or a section name (e.g. Blue, Red)."
+            required
+          >
             {(props) => (
               <Input
                 {...props}
                 placeholder="e.g. A, B, Blue, Red"
                 value={sectionName}
-                onChange={(e) => setSectionName(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[a-z]$/.test(val)) {
+                    setSectionName(val.toUpperCase());
+                  } else {
+                    setSectionName(val);
+                  }
+                }}
                 required
               />
             )}
@@ -1359,7 +1371,7 @@ function StepStudents({
   const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().slice(0, 10));
 
   const allSections = classes.flatMap((c) =>
-    c.sections.map((s) => ({ value: s.id, label: `${c.name} - Section ${s.name}` })),
+    c.sections.map((s) => ({ value: s.id, label: `${c.name} - ${formatSectionDisplay(s.name)}` })),
   );
 
   const createMutation = useMutation({

@@ -51,6 +51,7 @@ import {
 } from '@/components/ui';
 import { ApiClientError } from '@/lib/apiClient';
 import { createZodResolver } from '@/lib/zodResolver';
+import { formatRoomDisplay, formatSectionDisplay } from './academicFormatters';
 import {
   activateAcademicYearRequest,
   assignOfferingTeacherRequest,
@@ -788,12 +789,12 @@ export function AcademicSetupPage() {
                                 <div className="space-y-0.5">
                                   <div className="flex items-center gap-2">
                                     <span className="font-semibold text-[var(--color-text-primary)]">
-                                      Section {sec.name}
+                                      {formatSectionDisplay(sec.name)}
                                     </span>
                                     <Badge variant="brand">{sec.academicYearName}</Badge>
                                     {sec.roomNumber && (
                                       <span className="text-[var(--color-text-muted)]">
-                                        Room {sec.roomNumber}
+                                        {formatRoomDisplay(sec.roomNumber)}
                                       </span>
                                     )}
                                   </div>
@@ -1072,7 +1073,7 @@ export function AcademicSetupPage() {
                           {r.className}
                         </div>
                         <div className="text-xs text-[var(--color-text-secondary)]">
-                          Section {r.sectionName}
+                          {formatSectionDisplay(r.sectionName)}
                         </div>
                       </div>
                     ),
@@ -1514,16 +1515,25 @@ export function AcademicSetupPage() {
             )}
           </FormField>
           <FormField
-            label="Section name"
+            label="Section name / identifier"
             error={sectionForm.formState.errors.name?.message}
+            hint="Enter a single capital letter (e.g. A, B) or a section name (e.g. Rose, Alpha). No need to type 'Section'."
             required
           >
             {(props) => (
               <Input
                 {...props}
                 {...sectionForm.register('name')}
-                placeholder="e.g. 8-A"
+                placeholder="e.g. A, B, or Rose"
                 hasError={Boolean(sectionForm.formState.errors.name)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[a-z]$/.test(val)) {
+                    sectionForm.setValue('name', val.toUpperCase(), { shouldValidate: true });
+                  } else {
+                    sectionForm.setValue('name', val, { shouldValidate: true });
+                  }
+                }}
               />
             )}
           </FormField>
@@ -1581,15 +1591,25 @@ export function AcademicSetupPage() {
           className="space-y-4"
         >
           <FormField
-            label="Section name"
+            label="Section name / identifier"
             error={editSectionForm.formState.errors.name?.message}
+            hint="Enter a single capital letter (e.g. A, B) or a section name (e.g. Rose, Alpha)."
             required
           >
             {(props) => (
               <Input
                 {...props}
                 {...editSectionForm.register('name')}
+                placeholder="e.g. A, B, or Rose"
                 hasError={Boolean(editSectionForm.formState.errors.name)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[a-z]$/.test(val)) {
+                    editSectionForm.setValue('name', val.toUpperCase(), { shouldValidate: true });
+                  } else {
+                    editSectionForm.setValue('name', val, { shouldValidate: true });
+                  }
+                }}
               />
             )}
           </FormField>

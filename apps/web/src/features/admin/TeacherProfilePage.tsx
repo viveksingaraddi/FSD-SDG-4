@@ -27,6 +27,7 @@ import {
 } from '@/components/ui';
 import { ApiClientError } from '@/lib/apiClient';
 import { createZodResolver } from '@/lib/zodResolver';
+import { formatSectionDisplay } from './academicFormatters';
 import {
   allocateTeacherRequest,
   deallocateTeacherRequest,
@@ -549,7 +550,7 @@ export function TeacherProfilePage() {
                             {a.className}
                           </p>
                           <p className="text-xs text-[var(--color-text-secondary)]">
-                            Section {a.sectionName}
+                            {formatSectionDisplay(a.sectionName)}
                           </p>
                         </div>
                       ),
@@ -745,7 +746,7 @@ export function TeacherProfilePage() {
                 <option value="">Select classroom section...</option>
                 {allSections.map((sec) => (
                   <option key={sec.id} value={sec.id}>
-                    {sec.className} — Section {sec.name} ({sec.stage})
+                    {sec.className} — {formatSectionDisplay(sec.name)} ({sec.stage})
                   </option>
                 ))}
               </select>
@@ -779,7 +780,7 @@ export function TeacherProfilePage() {
         title="Remove Course Allocation?"
         description={
           deallocateTarget
-            ? `Unassign "${teacher.firstName} ${teacher.lastName}" from ${deallocateTarget.subjectName} (${deallocateTarget.className} · Section ${deallocateTarget.sectionName})? Historical grading records will be retained.`
+            ? `Unassign "${teacher.firstName} ${teacher.lastName}" from ${deallocateTarget.subjectName} (${deallocateTarget.className} · ${formatSectionDisplay(deallocateTarget.sectionName)})? Historical grading records will be retained.`
             : ''
         }
         confirmLabel="Remove Allocation"

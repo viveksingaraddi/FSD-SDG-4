@@ -95,7 +95,74 @@ describe('@fsd-sdg4/validation — isoDateString & Date Regression Suite', () =>
   });
 });
 
-import { uuidSchema, idParamSchema, createSortSchema, paginatedQuerySchema } from './index.js';
+import {
+  uuidSchema,
+  idParamSchema,
+  createSortSchema,
+  paginatedQuerySchema,
+  sectionNameSchema,
+  normalizeSectionName,
+} from './index.js';
+
+describe('@fsd-sdg4/validation — sectionNameSchema & Section Input Rules', () => {
+  it('accepts single capital letters A, B, C', () => {
+    const resA = sectionNameSchema.safeParse('A');
+    expect(resA.success).toBe(true);
+    if (resA.success) expect(resA.data).toBe('A');
+
+    const resB = sectionNameSchema.safeParse('B');
+    expect(resB.success).toBe(true);
+    if (resB.success) expect(resB.data).toBe('B');
+  });
+
+  it('auto-uppercases single lowercase alphabet character: "a" -> "A"', () => {
+    const res = sectionNameSchema.safeParse('a');
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data).toBe('A');
+  });
+
+  it('normalizes redundant "Section " and "sec " prefixes: "Section A" -> "A"', () => {
+    const res1 = sectionNameSchema.safeParse('Section A');
+    expect(res1.success).toBe(true);
+    if (res1.success) expect(res1.data).toBe('A');
+
+    const res2 = sectionNameSchema.safeParse('section b');
+    expect(res2.success).toBe(true);
+    if (res2.success) expect(res2.data).toBe('B');
+
+    const res3 = sectionNameSchema.safeParse('Sec-C');
+    expect(res3.success).toBe(true);
+    if (res3.success) expect(res3.data).toBe('C');
+  });
+
+  it('accepts descriptive section names (e.g. Rose, Alpha, 8-A)', () => {
+    const resRose = sectionNameSchema.safeParse('Rose');
+    expect(resRose.success).toBe(true);
+    if (resRose.success) expect(resRose.data).toBe('Rose');
+
+    const resAlpha = sectionNameSchema.safeParse('Alpha');
+    expect(resAlpha.success).toBe(true);
+    if (resAlpha.success) expect(resAlpha.data).toBe('Alpha');
+
+    const res8A = sectionNameSchema.safeParse('8-A');
+    expect(res8A.success).toBe(true);
+    if (res8A.success) expect(res8A.data).toBe('8-A');
+  });
+
+  it('rejects single numbers or special characters for single-character sections', () => {
+    expect(sectionNameSchema.safeParse('1').success).toBe(false);
+    expect(sectionNameSchema.safeParse('$').success).toBe(false);
+  });
+
+  it('verifies normalizeSectionName helper directly', () => {
+    expect(normalizeSectionName('Section A')).toBe('A');
+    expect(normalizeSectionName('section b')).toBe('B');
+    expect(normalizeSectionName('c')).toBe('C');
+    expect(normalizeSectionName('Rose')).toBe('Rose');
+    expect(normalizeSectionName('Section-Rose')).toBe('Rose');
+    expect(normalizeSectionName('8-A')).toBe('8-A');
+  });
+});
 
 describe('@fsd-sdg4/validation — Phase 6 identifiers, sorting & query schemas', () => {
   it('validates UUIDs and rejects malformed identifiers', () => {
