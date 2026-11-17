@@ -30,7 +30,10 @@ export async function fetchImportPreview(
   return apiPost<BulkImportPreviewResponseDto>(
     API_ROUTES.SCHOOL.BULK_IMPORT.PREVIEW,
     formData,
-    signal ? { signal } : undefined,
+    {
+      timeoutMs: 60_000,
+      ...(signal ? { signal } : {}),
+    },
   );
 }
 
@@ -44,6 +47,7 @@ export async function executeBulkImport(
     idempotencyKey?: string | undefined;
     skipInvalidRows?: boolean | undefined;
     sendInvitations?: boolean | undefined;
+    timeoutMs?: number | undefined;
   } = {},
 ): Promise<BulkImportJobDto> {
   const formData = new FormData();
@@ -59,7 +63,9 @@ export async function executeBulkImport(
     formData.append('sendInvitations', String(options.sendInvitations));
   }
 
-  return apiPost<BulkImportJobDto>(API_ROUTES.SCHOOL.BULK_IMPORT.EXECUTE, formData);
+  return apiPost<BulkImportJobDto>(API_ROUTES.SCHOOL.BULK_IMPORT.EXECUTE, formData, {
+    timeoutMs: options.timeoutMs ?? 120_000,
+  });
 }
 
 /**
