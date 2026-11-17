@@ -221,8 +221,8 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
           name: 'Grade 8',
           gradeLevel: 8,
           sections: [
-            { id: 'sec-8a', name: 'Section A', classId: 'class-8', schoolId: testSchoolId },
-            { id: 'sec-8b', name: 'Section B', classId: 'class-8', schoolId: testSchoolId },
+            { id: 'sec-8a', name: '8-A', classId: 'class-8', schoolId: testSchoolId },
+            { id: 'sec-8b', name: '8-B', classId: 'class-8', schoolId: testSchoolId },
           ],
         },
         {
@@ -231,8 +231,8 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
           name: 'Grade 9',
           gradeLevel: 9,
           sections: [
-            { id: 'sec-9a', name: 'Section A', classId: 'class-9', schoolId: testSchoolId },
-            { id: 'sec-9b', name: 'Section B', classId: 'class-9', schoolId: testSchoolId },
+            { id: 'sec-9a', name: 'A', classId: 'class-9', schoolId: testSchoolId },
+            { id: 'sec-9b', name: 'B', classId: 'class-9', schoolId: testSchoolId },
           ],
         },
         {
@@ -241,8 +241,8 @@ describe('Bulk Onboarding & Import API Endpoints', () => {
           name: 'Grade 10',
           gradeLevel: 10,
           sections: [
-            { id: 'sec-10a', name: 'Section A', classId: 'class-10', schoolId: testSchoolId },
-            { id: 'sec-10b', name: 'Section B', classId: 'class-10', schoolId: testSchoolId },
+            { id: 'sec-10a', name: 'A', classId: 'class-10', schoolId: testSchoolId },
+            { id: 'sec-10b', name: 'B', classId: 'class-10', schoolId: testSchoolId },
           ],
         },
       ] as any);

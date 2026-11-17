@@ -10,6 +10,7 @@ import type {
   BulkImportRowPreviewDto,
 } from '@fsd-sdg4/contracts';
 import {
+  normalizeSectionName,
   parentImportRowSchema,
   studentImportRowSchema,
   teacherImportRowSchema,
@@ -48,6 +49,41 @@ export function sanitizeCsvField(value: unknown): string {
  */
 export function normalizeHeaderKey(key: string): string {
   return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Intelligent section matcher:
+ * Resolves section records whether the input or DB record is "A", "Section A", "8-A", or custom name.
+ */
+export function findMatchingSection(
+  sections: Array<{ id: string; name: string }>,
+  inputSectionName: string,
+): { id: string; name: string } | undefined {
+  if (!inputSectionName) return undefined;
+  const raw = inputSectionName.trim().toLowerCase();
+  const normalized = normalizeSectionName(inputSectionName).toLowerCase();
+
+  // 1. Exact match (case-insensitive)
+  const exact = sections.find((s) => s.name.trim().toLowerCase() === raw);
+  if (exact) return exact;
+
+  // 2. Normalized match (e.g. DB has "A" and input is "Section A", or vice-versa)
+  const normMatch = sections.find((s) => normalizeSectionName(s.name).toLowerCase() === normalized);
+  if (normMatch) return normMatch;
+
+  // 3. Substring / suffix match (e.g. DB has "8-A" and input is "Section A" or "A", or DB has "A" and input is "8-A")
+  const suffixMatch = sections.find((s) => {
+    const sNorm = normalizeSectionName(s.name).toLowerCase();
+    return (
+      sNorm.endsWith(`-${normalized}`) ||
+      sNorm.endsWith(` ${normalized}`) ||
+      normalized.endsWith(`-${sNorm}`) ||
+      normalized.endsWith(` ${sNorm}`)
+    );
+  });
+  if (suffixMatch) return suffixMatch;
+
+  return undefined;
 }
 
 /**
@@ -208,7 +244,7 @@ export function generateTemplate(
         'Student ID Number': 'STU-2026-001',
         'Student Email': 'aarav.patel@student.example.com',
         'Class Name': 'Grade 10',
-        'Section Name': 'Section A',
+        'Section Name': 'A',
         'Academic Year Name': '2026-2027',
         'Admission Date': '2026-06-01',
         'Date of Birth': '2010-04-15',
@@ -409,7 +445,7 @@ export async function validateImportRows(
           errors.push(`Class "${row['className']}" does not exist in this school.`);
         } else {
           resolvedClassId = cls.id;
-          const sec = cls.sections.find((s) => s.name.toLowerCase().trim() === sectionName);
+          const sec = findMatchingSection(cls.sections, row['sectionName'] ?? '');
           if (!sec) {
             errors.push(`Section "${row['sectionName']}" not found in class "${cls.name}".`);
           } else {

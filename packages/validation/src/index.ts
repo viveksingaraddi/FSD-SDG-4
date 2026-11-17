@@ -206,16 +206,54 @@ export const updateClassSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).max(999).optional(),
 });
 
+/**
+ * Normalizes section names:
+ * - Strips redundant leading "Section " or "Sec " prefixes
+ * - Converts single alphabet characters to uppercase (e.g. 'a' -> 'A')
+ * - Preserves custom section names (e.g. 'Rose', 'Alpha', '8-A')
+ */
+export function normalizeSectionName(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  const stripped = trimmed.replace(/^(?:section|sec)[\s\-_:]+/i, '').trim();
+  const candidate = stripped.length > 0 ? stripped : trimmed;
+  if (/^[a-zA-Z]$/.test(candidate)) {
+    return candidate.toUpperCase();
+  }
+  return candidate;
+}
+
+export const sectionNameSchema = z
+  .string()
+  .trim()
+  .transform((val) => normalizeSectionName(val))
+  .refine(
+    (val) => val.length >= 1 && val.length <= 64,
+    'Section name must be between 1 and 64 characters.',
+  )
+  .refine(
+    (val) => !/^(?:section|sec)[\s\-_:]+/i.test(val),
+    'Do not include "Section" in the section name — enter just "A", "B", or a section name.',
+  )
+  .refine((val) => {
+    // If single character, it MUST be an uppercase alphabet letter (A-Z)
+    if (val.length === 1) {
+      return /^[A-Z]$/.test(val);
+    }
+    // If longer than 1 character, it must be a valid section name (letters, numbers, spaces, hyphens)
+    return /^[a-zA-Z0-9\s\-_]+$/.test(val);
+  }, 'Section must be a single uppercase letter (A-Z) or a section name (e.g. Rose, Alpha, 8-A).');
+
 export const createSectionSchema = z.object({
   classId: uuidSchema,
   academicYearId: uuidSchema,
-  name: nonEmptyString('Section name').max(64),
+  name: sectionNameSchema,
   capacity: z.coerce.number().int().min(1).max(500).optional(),
   roomNumber: z.string().trim().max(32).optional(),
 });
 
 export const updateSectionSchema = z.object({
-  name: nonEmptyString('Section name').max(64).optional(),
+  name: sectionNameSchema.optional(),
   capacity: z.coerce.number().int().min(1).max(500).nullable().optional(),
   roomNumber: z.string().trim().max(32).nullable().optional(),
 });

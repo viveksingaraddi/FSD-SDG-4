@@ -26,6 +26,7 @@ import type {
   UserLifecycleDetailDto,
   PaginatedUsersResultDto,
 } from '@fsd-sdg4/contracts';
+import { normalizeSectionName } from '@fsd-sdg4/validation';
 import type {
   AllocateTeacherInput,
   AssignOfferingTeacherInput,
@@ -883,12 +884,14 @@ export async function createSection(
     throw new NotFoundError('Academic year not found in this school.');
   }
 
+  const normalizedName = normalizeSectionName(input.name);
+
   const existing = await prisma.section.findFirst({
     where: {
       schoolId,
       classId: input.classId,
       academicYearId: input.academicYearId,
-      name: input.name,
+      name: normalizedName,
     },
   });
   if (existing) {
@@ -902,9 +905,9 @@ export async function createSection(
       schoolId,
       classId: input.classId,
       academicYearId: input.academicYearId,
-      name: input.name,
+      name: normalizedName,
       capacity: input.capacity ?? null,
-      roomNumber: input.roomNumber ?? null,
+      roomNumber: input.roomNumber ? input.roomNumber.trim().replace(/^room\s+/i, '') : null,
     },
     include: {
       academicYear: { select: { name: true } },
@@ -954,13 +957,14 @@ export async function updateSection(
     throw new NotFoundError('Section not found.');
   }
 
-  if (input.name && input.name !== existing.name) {
+  const normalizedName = input.name ? normalizeSectionName(input.name) : undefined;
+  if (normalizedName && normalizedName !== existing.name) {
     const duplicate = await prisma.section.findFirst({
       where: {
         schoolId,
         academicYearId: existing.academicYearId,
         classId: existing.classId,
-        name: input.name,
+        name: normalizedName,
         id: { not: sectionId },
       },
     });
@@ -974,9 +978,13 @@ export async function updateSection(
   const updated = await prisma.section.update({
     where: { id: sectionId },
     data: {
-      ...(input.name ? { name: input.name } : {}),
+      ...(normalizedName ? { name: normalizedName } : {}),
       ...(input.capacity !== undefined ? { capacity: input.capacity } : {}),
-      ...(input.roomNumber !== undefined ? { roomNumber: input.roomNumber } : {}),
+      ...(input.roomNumber !== undefined
+        ? {
+            roomNumber: input.roomNumber ? input.roomNumber.trim().replace(/^room\s+/i, '') : null,
+          }
+        : {}),
     },
     include: {
       academicYear: { select: { name: true } },
