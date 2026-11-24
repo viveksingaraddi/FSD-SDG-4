@@ -17,8 +17,12 @@ export function generateInvitationToken(): { rawToken: string; tokenHash: string
 }
 
 export function buildInvitationUrl(rawToken: string): string {
-  const baseUrl =
-    process.env['APP_BASE_URL'] || process.env['FRONTEND_URL'] || 'http://localhost:5173';
+  const baseUrl = (
+    process.env['WEB_URL'] ||
+    process.env['APP_BASE_URL'] ||
+    process.env['FRONTEND_URL'] ||
+    'http://localhost:5173'
+  ).replace(/\/+$/, '');
   return `${baseUrl}/accept-invitation?token=${rawToken}`;
 }
 
