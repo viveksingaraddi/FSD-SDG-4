@@ -212,3 +212,37 @@ export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;
 export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchema>;
+
+// ─── Parent Portal Schemas (Phase 14 / Option A) ────────────────────────────
+
+export const parentStudentParamsSchema = z.object({
+  studentId: uuidSchema,
+});
+
+export const parentActionParamsSchema = z.object({
+  studentId: uuidSchema,
+  actionId: uuidSchema,
+});
+
+export const attendanceMonthQuerySchema = z.object({
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, { message: 'Month must be in YYYY-MM format' })
+    .optional(),
+});
+
+export const updateSupportActionStatusSchema = z.object({
+  status: z.enum(['PENDING', 'COMPLETED']),
+});
+
+export const submitAbsenceNoteSchema = z.object({
+  attendanceRecordId: uuidSchema,
+  reason: nonEmptyString('Absence explanation').max(500),
+});
+
+export type ParentStudentParams = z.infer<typeof parentStudentParamsSchema>;
+export type ParentActionParams = z.infer<typeof parentActionParamsSchema>;
+export type AttendanceMonthQueryParams = z.infer<typeof attendanceMonthQuerySchema>;
+export type UpdateSupportActionStatusInput = z.infer<typeof updateSupportActionStatusSchema>;
+export type SubmitAbsenceNoteInput = z.infer<typeof submitAbsenceNoteSchema>;
+

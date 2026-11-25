@@ -21,6 +21,10 @@ const AcademicSetupPage = lazy(() => import('@/features/admin/AcademicSetupPage'
 const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPage'));
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
+const ParentDashboardPage = lazy(() => import('@/features/parent/ParentDashboardPage'));
+const ParentAttendancePage = lazy(() => import('@/features/parent/ParentAttendancePage'));
+const ParentProgressPage = lazy(() => import('@/features/parent/ParentProgressPage'));
+const ParentSupportPage = lazy(() => import('@/features/parent/ParentSupportPage'));
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -185,14 +189,34 @@ export function App() {
               />
 
               <Route
-                path="/parent/*"
+                path="/parent"
                 element={
                   <ProtectedRoute allowedRoles={['PARENT']}>
-                    <PortalPlaceholderPage
-                      role="PARENT"
-                      portalTitle="Parent & Guardian Portal"
-                      description="Student attendance summaries, progress updates, and family support collaboration."
-                    />
+                    <ParentDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/attendance"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentAttendancePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/progress"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentProgressPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/support"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentSupportPage />
                   </ProtectedRoute>
                 }
               />
