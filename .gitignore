@@ -53,3 +53,5 @@ Thumbs.db
 tmp/
 .tmp/
 
+.prisma-composer/
+.alchemy/

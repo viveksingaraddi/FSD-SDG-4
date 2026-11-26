@@ -25,6 +25,7 @@
   "dependencies": {
     "@prisma/composer": "0.40.0",
     "@prisma/composer-prisma-cloud": "0.40.0",
+    "@prisma/orm-postgres": "8.0.0-rc.25",
     "effect": "4.1.4",
     "pg": "^8.22.0"
   },
@@ -40,5 +41,12 @@
     "rimraf": "6.1.4",
     "typescript": "^5.8.2",
     "typescript-eslint": "8.72.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "@effect/platform-bun": "4.1.4",
+      "@effect/platform-node": "4.1.4",
+      "@effect/platform-node-shared": "4.1.4"
+    }
   }
 }
