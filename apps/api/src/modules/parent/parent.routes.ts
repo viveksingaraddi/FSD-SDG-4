@@ -15,6 +15,7 @@ import { validateRequest } from '../../shared/validation/validateRequest.js';
 import { PERMISSIONS } from '../identity/permissions.js';
 import { resolveTenantSchoolId } from '../identity/tenantAuthorization.js';
 import {
+  getChildAssignments,
   getChildAttendance,
   getChildGrades,
   getChildSupportPlans,
@@ -91,6 +92,25 @@ export function createParentRouter(): ExpressRouter {
         req.ip ?? null,
       );
       sendSuccess(res, result, 200);
+    },
+  );
+
+  router.get(
+    API_ROUTES.PARENT.CHILD_ASSIGNMENTS,
+    authenticate,
+    requireRole(['PARENT']),
+    requirePermission(PERMISSIONS.PARENT_CHILDREN_READ_LINKED),
+    validateRequest({ params: parentStudentParamsSchema }),
+    async (req, res) => {
+      const schoolId = await resolveTenantSchoolId(req);
+      const { studentId } = req.validated!.params as { studentId: string };
+      const assignments = await getChildAssignments(
+        req.auth!.userId,
+        schoolId,
+        studentId,
+        req.ip ?? null,
+      );
+      sendSuccess(res, assignments);
     },
   );
 

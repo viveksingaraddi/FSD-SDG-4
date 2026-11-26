@@ -1,6 +1,7 @@
 import {
   API_ROUTES,
   type ChildAcademicReportDto,
+  type ChildAssignmentsResponseDto,
   type ChildAttendanceMonthSummaryDto,
   type ChildSupportPlanDto,
   type ParentAbsenceNoteResponseDto,
@@ -39,6 +40,14 @@ export function submitAbsenceNote(
 ): Promise<ParentAbsenceNoteResponseDto> {
   const url = API_ROUTES.PARENT.ABSENCE_NOTES.replace(':studentId', studentId);
   return apiPost<ParentAbsenceNoteResponseDto>(url, payload);
+}
+
+export function fetchChildAssignments(
+  studentId: string,
+  signal?: AbortSignal,
+): Promise<ChildAssignmentsResponseDto> {
+  const url = API_ROUTES.PARENT.CHILD_ASSIGNMENTS.replace(':studentId', studentId);
+  return apiGet<ChildAssignmentsResponseDto>(url, signal ? { signal } : undefined);
 }
 
 export function fetchChildGrades(

@@ -63,4 +63,14 @@ describe('Parent Portal API routes', () => {
     const res = await request(app).get(url).set('x-test-role', 'PARENT');
     expect(res.status).toBe(403);
   });
+
+  it('rejects unverified guardian access to child assignments with 403', async () => {
+    vi.spyOn(tenantAuth, 'assertVerifiedGuardian').mockRejectedValueOnce(
+      new ForbiddenError('Access requires a verified guardian-student relationship.'),
+    );
+
+    const url = API_ROUTES.PARENT.CHILD_ASSIGNMENTS.replace(':studentId', VALID_STUDENT_ID);
+    const res = await request(app).get(url).set('x-test-role', 'PARENT');
+    expect(res.status).toBe(403);
+  });
 });

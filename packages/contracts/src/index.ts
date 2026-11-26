@@ -83,6 +83,7 @@ export const API_ROUTES = {
     CHILDREN: '/api/v1/parent/children',
     CHILD_ATTENDANCE: '/api/v1/parent/children/:studentId/attendance',
     ABSENCE_NOTES: '/api/v1/parent/children/:studentId/attendance-notes',
+    CHILD_ASSIGNMENTS: '/api/v1/parent/children/:studentId/assignments',
     CHILD_GRADES: '/api/v1/parent/children/:studentId/grades',
     CHILD_SUPPORT_PLANS: '/api/v1/parent/children/:studentId/support-plans',
     SUPPORT_ACTION_UPDATE: '/api/v1/parent/children/:studentId/support-actions/:actionId',
@@ -421,5 +422,27 @@ export interface ChildSupportPlanDto {
   status: string;
   leadTeacherName: string;
   actionItems: ChildSupportActionDto[];
+}
+
+export interface ParentAssignmentItemDto {
+  assignmentId: string;
+  title: string;
+  instructions: string;
+  subjectName: string;
+  subjectCode: string;
+  teacherName: string;
+  assignedDate: string;
+  dueDate: string;
+  maxPoints: number;
+  score: number | null;
+  status: 'PENDING' | 'SUBMITTED' | 'LATE' | 'GRADED' | 'OVERDUE';
+  submittedAt: string | null;
+  feedback: string | null;
+}
+
+export interface ChildAssignmentsResponseDto {
+  studentId: string;
+  studentName: string;
+  assignments: ParentAssignmentItemDto[];
 }
 

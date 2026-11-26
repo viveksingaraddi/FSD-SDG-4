@@ -2,9 +2,15 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
+  Bell,
+  Calendar,
   CalendarCheck,
+  ClipboardList,
+  CreditCard,
+  FileText,
   GraduationCap,
   HeartHandshake,
+  MessageSquare,
   RefreshCw,
   ShieldCheck,
   Users,
@@ -23,7 +29,11 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/features/auth/AuthContext';
 import { QuickNavigationCard } from './components/QuickNavigationCard';
-import { fetchParentOverview } from './parentApi';
+import {
+  fetchChildAssignments,
+  fetchChildSupportPlans,
+  fetchParentOverview,
+} from './parentApi';
 
 export function ParentDashboardPage() {
   const { user } = useAuth();
@@ -35,8 +45,27 @@ export function ParentDashboardPage() {
   });
 
   const children = data?.children ?? [];
-  const activeChild =
-    children.find((c) => c.id === selectedChildId) ?? children[0] ?? null;
+  const activeChild = children.find((c) => c.id === selectedChildId) ?? children[0] ?? null;
+
+  const assignmentsQuery = useQuery({
+    queryKey: ['parent', 'assignments', activeChild?.id ?? ''],
+    queryFn: ({ signal }) => fetchChildAssignments(activeChild!.id, signal),
+    enabled: Boolean(activeChild?.id),
+  });
+
+  const supportPlansQuery = useQuery({
+    queryKey: ['parent', 'support-plans', activeChild?.id ?? ''],
+    queryFn: ({ signal }) => fetchChildSupportPlans(activeChild!.id, signal),
+    enabled: Boolean(activeChild?.id),
+  });
+
+  const upcomingAssignments = (assignmentsQuery.data?.assignments ?? [])
+    .filter((a) => a.status === 'PENDING' || a.status === 'OVERDUE')
+    .slice(0, 3);
+
+  const homeActivities = (supportPlansQuery.data ?? [])
+    .flatMap((p) => p.actionItems.filter((i) => i.isHomeAction && i.status !== 'COMPLETED'))
+    .slice(0, 3);
 
   const welcomeName = user?.email ?? data?.guardianName ?? 'Parent / Guardian';
 
@@ -53,7 +82,7 @@ export function ParentDashboardPage() {
               Welcome, {welcomeName}
             </Heading>
             <Text variant="small" className="mt-1">
-              Monitor your verified children&apos;s attendance, academic progress, and active
+              Monitor your verified children&apos;s attendance, academic progress, assignments, and
               support plans.
             </Text>
           </div>
@@ -167,7 +196,7 @@ export function ParentDashboardPage() {
               </div>
             </Card>
 
-            {/* Key Metrics Grid */}
+            {/* Primary Metrics Row */}
             <div className="grid gap-6 md:grid-cols-3">
               <Card>
                 <div className="flex items-center justify-between">
@@ -212,13 +241,13 @@ export function ParentDashboardPage() {
                       aria-hidden="true"
                     />
                     <Heading level={3} size="h3">
-                      Published Grades
+                      Academic Progress
                     </Heading>
                   </div>
                   <Badge variant="neutral">{activeChild.recentGradesCount} results</Badge>
                 </div>
                 <Text variant="small" className="mt-2">
-                  Review published assessments and coursework feedback.
+                  Published assessment results and coursework feedback.
                 </Text>
                 <div className="mt-4">
                   <Link to="/parent/progress">
@@ -251,6 +280,178 @@ export function ParentDashboardPage() {
                   <Link to="/parent/support">
                     <Button variant="outline" size="sm">
                       View Support Plans
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+            </div>
+
+            {/* Assignments & Home Activities Row */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList
+                      className="h-5 w-5 text-[var(--color-brand-primary)]"
+                      aria-hidden="true"
+                    />
+                    <Heading level={3} size="h3">
+                      Upcoming Assignments
+                    </Heading>
+                  </div>
+                  <Link to="/parent/assignments">
+                    <Button variant="ghost" size="sm">
+                      View All
+                    </Button>
+                  </Link>
+                </div>
+                {upcomingAssignments.length === 0 ? (
+                  <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
+                    No pending or overdue assignments right now.
+                  </p>
+                ) : (
+                  <ul className="mt-3 divide-y divide-[var(--color-border-default)]">
+                    {upcomingAssignments.map((a) => (
+                      <li
+                        key={a.assignmentId}
+                        className="flex items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{a.title}</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            {a.subjectName} · Due {a.dueDate}
+                          </p>
+                        </div>
+                        <Badge variant={a.status === 'OVERDUE' ? 'danger' : 'warning'}>
+                          {a.status}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+
+              <Card>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <HeartHandshake
+                      className="h-5 w-5 text-[var(--color-brand-primary)]"
+                      aria-hidden="true"
+                    />
+                    <Heading level={3} size="h3">
+                      Parent-Assisted Home Activities
+                    </Heading>
+                  </div>
+                  <Link to="/parent/assignments">
+                    <Button variant="ghost" size="sm">
+                      Manage
+                    </Button>
+                  </Link>
+                </div>
+                {homeActivities.length === 0 ? (
+                  <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
+                    No pending home-support activities assigned.
+                  </p>
+                ) : (
+                  <ul className="mt-3 divide-y divide-[var(--color-border-default)]">
+                    {homeActivities.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{item.description}</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            Due {item.dueDate}
+                          </p>
+                        </div>
+                        <Badge variant="neutral">{item.status}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </div>
+
+            {/* Secondary Portal Modules Summary */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[var(--color-brand-primary)]" />
+                  <Heading level={4} size="h4">
+                    Calendar Events
+                  </Heading>
+                </div>
+                <Text variant="small" className="mt-1.5">
+                  View upcoming academic dates and deadlines.
+                </Text>
+                <div className="mt-3">
+                  <Link to="/parent/calendar">
+                    <Button variant="outline" size="sm">
+                      Open Calendar
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-[var(--color-brand-primary)]" />
+                  <Heading level={4} size="h4">
+                    Teacher Messages
+                  </Heading>
+                </div>
+                <Text variant="small" className="mt-1.5">
+                  Messaging backend pending provisioning.
+                </Text>
+                <div className="mt-3">
+                  <Link to="/parent/messages">
+                    <Button variant="outline" size="sm">
+                      Open Messages
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-[var(--color-brand-primary)]" />
+                  <Heading level={4} size="h4">
+                    Notifications
+                  </Heading>
+                </div>
+                <Text variant="small" className="mt-1.5">
+                  Notification center pending backend feed.
+                </Text>
+                <div className="mt-3">
+                  <Link to="/parent/notifications">
+                    <Button variant="outline" size="sm">
+                      Open Notifications
+                    </Button>
+                  </Link>
+                </div>
+              </Card>
+
+              <Card>
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-[var(--color-brand-primary)]" />
+                  <Heading level={4} size="h4">
+                    Fees &amp; Documents
+                  </Heading>
+                </div>
+                <Text variant="small" className="mt-1.5">
+                  Review fee status &amp; published reports.
+                </Text>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link to="/parent/fees">
+                    <Button variant="outline" size="sm">
+                      Fees
+                    </Button>
+                  </Link>
+                  <Link to="/parent/documents">
+                    <Button variant="outline" size="sm">
+                      <FileText className="mr-1 h-3.5 w-3.5" />
+                      Docs
                     </Button>
                   </Link>
                 </div>

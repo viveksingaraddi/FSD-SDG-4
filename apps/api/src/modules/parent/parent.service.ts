@@ -1,8 +1,10 @@
 import type {
   ChildAcademicReportDto,
+  ChildAssignmentsResponseDto,
   ChildAttendanceMonthSummaryDto,
   ChildSupportPlanDto,
   ParentAbsenceNoteResponseDto,
+  ParentAssignmentItemDto,
   ParentChildSummaryDto,
   ParentFamilyOverviewChildDto,
   ParentFamilyOverviewDto,
@@ -456,5 +458,114 @@ export async function updateChildSupportAction(
     id: updated.id,
     status: input.status,
     completedAt: updated.completedAt ? updated.completedAt.toISOString() : null,
+  };
+}
+
+export async function getChildAssignments(
+  guardianUserId: string,
+  schoolId: string,
+  studentId: string,
+  ipAddress?: string | null,
+): Promise<ChildAssignmentsResponseDto> {
+  await assertVerifiedGuardian(guardianUserId, schoolId, studentId, ipAddress);
+
+  const student = await prisma.studentProfile.findFirst({
+    where: { id: studentId, schoolId, deletedAt: null },
+    include: {
+      enrollments: {
+        where: { schoolId, status: 'ACTIVE' },
+        take: 1,
+        include: {
+          section: {
+            include: {
+              courseOfferings: {
+                where: { schoolId },
+                include: {
+                  subject: { select: { name: true, code: true } },
+                  courseTeachers: {
+                    where: { schoolId, role: 'PRIMARY' },
+                    take: 1,
+                    include: {
+                      teacher: { select: { firstName: true, lastName: true } },
+                    },
+                  },
+                  assignments: {
+                    where: { schoolId, status: 'PUBLISHED' },
+                    orderBy: { dueDate: 'asc' },
+                    include: {
+                      submissions: {
+                        where: { schoolId, studentId },
+                        take: 1,
+                        include: {
+                          feedbacks: {
+                            where: { schoolId },
+                            orderBy: { createdAt: 'desc' },
+                            take: 1,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!student) {
+    throw new NotFoundError('Student profile not found.');
+  }
+
+  const now = new Date();
+  const offerings = student.enrollments[0]?.section.courseOfferings ?? [];
+  const assignments: ParentAssignmentItemDto[] = [];
+
+  for (const offering of offerings) {
+    const primaryTeacher = offering.courseTeachers[0]?.teacher;
+    const teacherName = primaryTeacher
+      ? `${primaryTeacher.firstName} ${primaryTeacher.lastName}`
+      : 'Assigned Teacher';
+
+    for (const assignment of offering.assignments) {
+      const submission = assignment.submissions[0];
+      let status: ParentAssignmentItemDto['status'];
+      if (submission) {
+        status = submission.status;
+      } else if (assignment.dueDate < now) {
+        status = 'OVERDUE';
+      } else {
+        status = 'PENDING';
+      }
+
+      assignments.push({
+        assignmentId: assignment.id,
+        title: assignment.title,
+        instructions: assignment.instructions,
+        subjectName: offering.subject.name,
+        subjectCode: offering.subject.code,
+        teacherName,
+        assignedDate: assignment.createdAt.toISOString().slice(0, 10),
+        dueDate: assignment.dueDate.toISOString().slice(0, 10),
+        maxPoints: Number(assignment.maxPoints),
+        score:
+          submission?.score !== null && submission?.score !== undefined
+            ? Number(submission.score)
+            : null,
+        status,
+        submittedAt: submission?.submittedAt ? submission.submittedAt.toISOString() : null,
+        feedback: submission?.feedbacks[0]?.comment ?? null,
+      });
+    }
+  }
+
+  assignments.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+  return {
+    studentId: student.id,
+    studentName: `${student.firstName} ${student.lastName}`,
+    assignments,
   };
 }
