@@ -49,11 +49,25 @@ export type PaginationParams = z.infer<typeof paginationSchema>;
 
 /**
  * Validates an ISO 8601 date string (YYYY-MM-DD).
- * Used for attendance date parameters, academic year boundaries.
+ * Used for attendance date parameters, academic year boundaries, and import records.
+ * Enforces calendar date correctness (rejects impossible dates such as Feb 30).
  */
 export const isoDateString = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be in YYYY-MM-DD format' });
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date must be in YYYY-MM-DD format' })
+  .refine(
+    (val) => {
+      const parts = val.split('-');
+      const y = Number(parts[0]);
+      const m = Number(parts[1]);
+      const d = Number(parts[2]);
+      if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return false;
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+    },
+    { message: 'Date must be a valid calendar date in YYYY-MM-DD format' },
+  );
 
 /**
  * Validates a standard UUID identifier (v4/v7).
@@ -89,8 +103,14 @@ export function createSortSchema<T extends readonly [string, ...string[]]>(
 
 /**
  * Validates optional search query string (trimmed, bounded length to prevent abuse).
+ * Coerces empty or whitespace-only strings to undefined for robust query parsing.
  */
-export const searchQuerySchema = z.string().trim().min(1).max(100).optional();
+export const searchQuerySchema = z
+  .string()
+  .trim()
+  .max(100)
+  .optional()
+  .transform((val) => (val && val.length > 0 ? val : undefined));
 
 /**
  * Reusable paginated list query schema with optional search and sort direction.
@@ -119,24 +139,41 @@ export const passwordSchema = z
 
 export const schoolStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'ARCHIVED']);
 
-export const createSchoolSchema = z.object({
-  name: nonEmptyString('School name').max(200),
-  code: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .min(2, 'School code must be at least 2 characters')
-    .max(64)
-    .regex(/^[A-Z0-9_-]+$/, 'School code may contain letters, numbers, hyphens, and underscores'),
-  subdomain: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .min(2, 'Subdomain must be at least 2 characters')
-    .max(64)
-    .regex(/^[a-z0-9-]+$/, 'Subdomain may contain lowercase letters, numbers, and hyphens'),
-  contactEmail: emailSchema,
-});
+export const createSchoolSchema = z
+  .object({
+    name: nonEmptyString('School name').max(200),
+    code: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .min(2, 'School code must be at least 2 characters')
+      .max(64)
+      .regex(/^[A-Z0-9_-]+$/, 'School code may contain letters, numbers, hyphens, and underscores'),
+    subdomain: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(2, 'Subdomain must be at least 2 characters')
+      .max(64)
+      .regex(/^[a-z0-9-]+$/, 'Subdomain may contain lowercase letters, numbers, and hyphens'),
+    contactEmail: emailSchema,
+    adminFirstName: z.string().trim().max(100).optional(),
+    adminLastName: z.string().trim().max(100).optional(),
+    adminEmail: emailSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.adminEmail || data.adminFirstName || data.adminLastName) {
+        return !!data.adminEmail && !!data.adminFirstName && !!data.adminLastName;
+      }
+      return true;
+    },
+    {
+      message:
+        'When provisioning an initial administrator, first name, last name, and admin email are all required.',
+      path: ['adminEmail'],
+    },
+  );
 
 export const updateSchoolSchema = z.object({
   name: nonEmptyString('School name').max(200).optional(),
@@ -150,18 +187,75 @@ export const createAcademicYearSchema = z.object({
   endDate: isoDateString,
 });
 
+export const updateAcademicYearSchema = z.object({
+  name: nonEmptyString('Academic year name').max(64).optional(),
+  startDate: isoDateString.optional(),
+  endDate: isoDateString.optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
+});
+
 export const createClassSchema = z.object({
   name: nonEmptyString('Class name').max(100),
   stage: nonEmptyString('Stage').max(64),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
 });
 
+export const updateClassSchema = z.object({
+  name: nonEmptyString('Class name').max(100).optional(),
+  stage: nonEmptyString('Stage').max(64).optional(),
+  sortOrder: z.coerce.number().int().min(0).max(999).optional(),
+});
+
+/**
+ * Normalizes section names:
+ * - Strips redundant leading "Section " or "Sec " prefixes
+ * - Converts single alphabet characters to uppercase (e.g. 'a' -> 'A')
+ * - Preserves custom section names (e.g. 'Rose', 'Alpha', '8-A')
+ */
+export function normalizeSectionName(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  const trimmed = input.trim();
+  const stripped = trimmed.replace(/^(?:section|sec)[\s\-_:]+/i, '').trim();
+  const candidate = stripped.length > 0 ? stripped : trimmed;
+  if (/^[a-zA-Z]$/.test(candidate)) {
+    return candidate.toUpperCase();
+  }
+  return candidate;
+}
+
+export const sectionNameSchema = z
+  .string()
+  .trim()
+  .transform((val) => normalizeSectionName(val))
+  .refine(
+    (val) => val.length >= 1 && val.length <= 64,
+    'Section name must be between 1 and 64 characters.',
+  )
+  .refine(
+    (val) => !/^(?:section|sec)[\s\-_:]+/i.test(val),
+    'Do not include "Section" in the section name — enter just "A", "B", or a section name.',
+  )
+  .refine((val) => {
+    // If single character, it MUST be an uppercase alphabet letter (A-Z)
+    if (val.length === 1) {
+      return /^[A-Z]$/.test(val);
+    }
+    // If longer than 1 character, it must be a valid section name (letters, numbers, spaces, hyphens)
+    return /^[a-zA-Z0-9\s\-_]+$/.test(val);
+  }, 'Section must be a single uppercase letter (A-Z) or a section name (e.g. Rose, Alpha, 8-A).');
+
 export const createSectionSchema = z.object({
   classId: uuidSchema,
   academicYearId: uuidSchema,
-  name: nonEmptyString('Section name').max(64),
+  name: sectionNameSchema,
   capacity: z.coerce.number().int().min(1).max(500).optional(),
   roomNumber: z.string().trim().max(32).optional(),
+});
+
+export const updateSectionSchema = z.object({
+  name: sectionNameSchema.optional(),
+  capacity: z.coerce.number().int().min(1).max(500).nullable().optional(),
+  roomNumber: z.string().trim().max(32).nullable().optional(),
 });
 
 export const createSubjectSchema = z.object({
@@ -175,6 +269,40 @@ export const createSubjectSchema = z.object({
   description: z.string().trim().max(500).optional(),
 });
 
+export const updateSubjectSchema = z.object({
+  name: nonEmptyString('Subject name').max(120).optional(),
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(2, 'Subject code must be at least 2 characters')
+    .max(32)
+    .optional(),
+  description: z.string().trim().max(500).nullable().optional(),
+  credits: z.coerce.number().min(0).max(99.99).nullable().optional(),
+});
+
+export const createOfferingSchema = z.object({
+  academicYearId: uuidSchema,
+  sectionId: uuidSchema,
+  subjectId: uuidSchema,
+  syllabus: z.string().trim().max(5000).optional(),
+  teacherId: uuidSchema.optional(),
+  role: z.enum(['PRIMARY', 'ASSISTANT']).default('PRIMARY'),
+});
+
+export const offeringFilterQuerySchema = z.object({
+  academicYearId: uuidSchema.optional(),
+  classId: uuidSchema.optional(),
+  sectionId: uuidSchema.optional(),
+  subjectId: uuidSchema.optional(),
+});
+
+export const assignOfferingTeacherSchema = z.object({
+  teacherId: uuidSchema,
+  role: z.enum(['PRIMARY', 'ASSISTANT']).default('PRIMARY'),
+});
+
 export const createStaffSchema = z.object({
   email: emailSchema,
   employeeId: nonEmptyString('Employee ID').max(64),
@@ -182,6 +310,26 @@ export const createStaffSchema = z.object({
   lastName: nonEmptyString('Last name').max(100),
   specialization: z.string().trim().max(150).optional(),
   temporaryPassword: passwordSchema,
+});
+
+export const updateStaffSchema = z.object({
+  firstName: nonEmptyString('First name').max(100).optional(),
+  lastName: nonEmptyString('Last name').max(100).optional(),
+  specialization: z.string().trim().max(150).nullable().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
+});
+
+export const staffFilterQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  status: z.enum(['ALL', 'ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
+  specialization: z.string().trim().optional(),
+});
+
+export const allocateTeacherSchema = z.object({
+  academicYearId: uuidSchema,
+  subjectId: uuidSchema,
+  sectionId: uuidSchema,
+  role: z.enum(['PRIMARY', 'ASSISTANT']).default('PRIMARY'),
 });
 
 export const updateUserStatusSchema = z.object({
@@ -194,24 +342,111 @@ export const createStudentSchema = z.object({
   firstName: nonEmptyString('First name').max(100),
   lastName: nonEmptyString('Last name').max(100),
   admissionDate: isoDateString,
+  dateOfBirth: isoDateString.optional(),
+  gender: z.string().trim().max(32).optional(),
   temporaryPassword: passwordSchema,
   sectionId: uuidSchema.optional(),
 });
 
+export const updateStudentSchema = z.object({
+  firstName: nonEmptyString('First name').max(100).optional(),
+  lastName: nonEmptyString('Last name').max(100).optional(),
+  dateOfBirth: isoDateString.nullable().optional(),
+  gender: z.string().trim().max(32).nullable().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'TRANSFERRED']).optional(),
+  sectionId: uuidSchema.nullable().optional(),
+});
+
+export const studentFilterQuerySchema = z.object({
+  search: searchQuerySchema,
+  classId: uuidSchema.optional(),
+  sectionId: uuidSchema.optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'TRANSFERRED']).optional(),
+});
+
+export const overviewQuerySchema = z.object({
+  period: z.enum(['all', '30d', '90d', 'year']).optional(),
+});
+export type OverviewQuery = z.infer<typeof overviewQuerySchema>;
+
+export const schoolOverviewQuerySchema = z.object({
+  period: z.enum(['all', '7d', '30d']).optional(),
+});
+export type SchoolOverviewQuery = z.infer<typeof schoolOverviewQuerySchema>;
+
+export const auditLogsQuerySchema = z.object({
+  action: searchQuerySchema,
+  schoolId: uuidSchema.optional(),
+  category: z.enum(['ALL', 'AUTH', 'SCHOOL', 'ACADEMIC', 'USER', 'SETTINGS']).optional(),
+  startDate: isoDateString.optional(),
+  endDate: isoDateString.optional(),
+});
+export type AuditLogsQuery = z.infer<typeof auditLogsQuerySchema>;
+
 export const updateSchoolSettingsSchema = z.object({
   name: nonEmptyString('School name').max(200),
   contactEmail: emailSchema,
+  preferences: z
+    .object({
+      emailNotificationsEnabled: z.boolean().default(true),
+      weeklyAttendanceDigest: z.boolean().default(true),
+      studentSupportAlerts: z.boolean().default(true),
+    })
+    .optional(),
+});
+
+export const inviteUserSchema = z.object({
+  email: emailSchema,
+  role: z.enum(['TEACHER', 'STUDENT', 'PARENT']),
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  employeeId: z.string().trim().max(64).optional(),
+  specialization: z.string().trim().max(150).optional(),
+  studentIdNumber: z.string().trim().max(64).optional(),
+  dateOfBirth: isoDateString.optional(),
+  gender: z.string().trim().max(32).optional(),
+  admissionDate: isoDateString.optional(),
+  sectionId: uuidSchema.optional(),
+  phone: z.string().trim().max(32).optional(),
+  studentId: uuidSchema.optional(),
+});
+
+export const acceptInvitationSchema = z.object({
+  token: z.string().trim().min(32, 'Invitation token must be at least 32 characters'),
+  password: passwordSchema,
+});
+
+export const invitationFilterQuerySchema = z.object({
+  search: searchQuerySchema,
+  status: z.enum(['ALL', 'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED']).optional(),
+  role: z.enum(['ALL', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).optional(),
+  deliveryStatus: z.enum(['ALL', 'PENDING', 'SENT', 'FAILED']).optional(),
 });
 
 export type CreateSchoolInput = z.infer<typeof createSchoolSchema>;
 export type UpdateSchoolInput = z.infer<typeof updateSchoolSchema>;
 export type CreateAcademicYearInput = z.infer<typeof createAcademicYearSchema>;
+export type UpdateAcademicYearInput = z.infer<typeof updateAcademicYearSchema>;
 export type CreateClassInput = z.infer<typeof createClassSchema>;
+export type UpdateClassInput = z.infer<typeof updateClassSchema>;
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;
+export type UpdateSectionInput = z.infer<typeof updateSectionSchema>;
 export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
+export type UpdateSubjectInput = z.infer<typeof updateSubjectSchema>;
+export type CreateOfferingInput = z.infer<typeof createOfferingSchema>;
+export type OfferingFilterQuery = z.infer<typeof offeringFilterQuerySchema>;
+export type AssignOfferingTeacherInput = z.infer<typeof assignOfferingTeacherSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
+export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
+export type StaffFilterQuery = z.infer<typeof staffFilterQuerySchema>;
+export type AllocateTeacherInput = z.infer<typeof allocateTeacherSchema>;
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;
+export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
+export type StudentFilterQuery = z.infer<typeof studentFilterQuerySchema>;
 export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchema>;
+export type InviteUserInput = z.infer<typeof inviteUserSchema>;
+export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
+export type InvitationFilterQuery = z.infer<typeof invitationFilterQuerySchema>;
 
 // ─── Parent Portal Schemas (Phase 14 / Option A) ────────────────────────────
 
@@ -246,3 +481,218 @@ export type AttendanceMonthQueryParams = z.infer<typeof attendanceMonthQuerySche
 export type UpdateSupportActionStatusInput = z.infer<typeof updateSupportActionStatusSchema>;
 export type SubmitAbsenceNoteInput = z.infer<typeof submitAbsenceNoteSchema>;
 
+export const saveOnboardingProgressSchema = z.object({
+  step: z.enum([
+    'profile',
+    'academic-year',
+    'classes-sections',
+    'subjects',
+    'teachers',
+    'students',
+    'parents',
+    'summary',
+  ]),
+  notes: z.string().trim().max(500).optional(),
+});
+
+export type SaveOnboardingProgressInput = z.infer<typeof saveOnboardingProgressSchema>;
+
+// ─── User Lifecycle Management Schemas (Task 13) ───────────────────────────
+
+export const userFilterQuerySchema = z.object({
+  search: searchQuerySchema,
+  role: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).optional(),
+  ),
+  status: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'ACTIVE', 'INACTIVE', 'LOCKED']).optional(),
+  ),
+  invitationStatus: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED', 'NONE']).optional(),
+  ),
+  schoolId: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    uuidSchema.optional(),
+  ),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(['createdAt', 'email', 'name', 'role', 'status']).default('createdAt'),
+  sortOrder: sortOrderSchema,
+});
+
+export type UserFilterQuery = z.infer<typeof userFilterQuerySchema>;
+export type UserFilterQueryInput = Partial<UserFilterQuery>;
+
+export const superAdminInviteAdminSchema = z.object({
+  schoolId: uuidSchema,
+  email: emailSchema,
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+});
+
+export type SuperAdminInviteAdminInput = z.infer<typeof superAdminInviteAdminSchema>;
+
+export const linkGuardianSchema = z.object({
+  guardianUserId: uuidSchema,
+  relationshipType: z.enum(['MOTHER', 'FATHER', 'LEGAL_GUARDIAN', 'OTHER']),
+  isPrimaryContact: z.boolean().default(false),
+});
+
+export type LinkGuardianInput = z.infer<typeof linkGuardianSchema>;
+
+export const studentGuardianParamSchema = z.object({
+  id: uuidSchema,
+  guardianUserId: uuidSchema,
+});
+
+// ─── Bulk Onboarding & Import Schemas (Task 14) ────────────────────────────
+
+export const bulkImportCategorySchema = z.enum(['STUDENTS', 'TEACHERS', 'PARENTS']);
+export const bulkImportStatusSchema = z.enum([
+  'PENDING',
+  'VALIDATING',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+]);
+
+export const studentImportRowSchema = z.object({
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  studentIdNumber: nonEmptyString('Student ID').max(64),
+  email: emailSchema,
+  className: nonEmptyString('Class name').max(100),
+  sectionName: nonEmptyString('Section name').max(100),
+  academicYearName: z.string().trim().max(100).optional(),
+  admissionDate: z.preprocess(
+    (val) =>
+      typeof val === 'string' && val.trim().length === 0
+        ? undefined
+        : typeof val === 'string'
+          ? val.trim()
+          : val,
+    isoDateString.optional(),
+  ),
+  dateOfBirth: z.preprocess(
+    (val) =>
+      typeof val === 'string' && val.trim().length === 0
+        ? undefined
+        : typeof val === 'string'
+          ? val.trim()
+          : val,
+    isoDateString.optional(),
+  ),
+  gender: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.string().trim().max(32).optional(),
+  ),
+  parentEmail: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    emailSchema.optional(),
+  ),
+  parentName: z.string().trim().max(100).optional(),
+  parentRelationship: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['MOTHER', 'FATHER', 'LEGAL_GUARDIAN', 'OTHER']).optional(),
+  ),
+});
+
+export const teacherImportRowSchema = z.object({
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  email: emailSchema,
+  employeeId: nonEmptyString('Employee ID').max(64),
+  specialization: z.string().trim().max(150).optional(),
+});
+
+export const parentImportRowSchema = z.object({
+  firstName: nonEmptyString('First name').max(100),
+  lastName: nonEmptyString('Last name').max(100),
+  email: emailSchema,
+  studentIdNumber: nonEmptyString('Student ID').max(64),
+  relationshipType: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? 'LEGAL_GUARDIAN' : val),
+    z.enum(['MOTHER', 'FATHER', 'LEGAL_GUARDIAN', 'OTHER']).default('LEGAL_GUARDIAN'),
+  ),
+  isPrimaryContact: z.preprocess(
+    (val) =>
+      typeof val === 'string'
+        ? ['true', 'yes', '1', 'y'].includes(val.trim().toLowerCase())
+        : Boolean(val),
+    z.boolean().default(true),
+  ),
+});
+
+export const bulkImportFilterQuerySchema = z.object({
+  category: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'STUDENTS', 'TEACHERS', 'PARENTS']).optional(),
+  ),
+  status: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim().length === 0 ? undefined : val),
+    z.enum(['ALL', 'PENDING', 'VALIDATING', 'PROCESSING', 'COMPLETED', 'FAILED']).optional(),
+  ),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  sortOrder: sortOrderSchema,
+});
+
+export const executeBulkImportSchema = z.object({
+  category: bulkImportCategorySchema,
+  idempotencyKey: z.string().trim().max(255).optional(),
+  skipInvalidRows: z.coerce.boolean().default(true),
+  sendInvitations: z.coerce.boolean().default(true),
+});
+
+export type BulkImportCategoryInput = z.infer<typeof bulkImportCategorySchema>;
+export type StudentImportRowInput = z.infer<typeof studentImportRowSchema>;
+export type TeacherImportRowInput = z.infer<typeof teacherImportRowSchema>;
+export type ParentImportRowInput = z.infer<typeof parentImportRowSchema>;
+export type BulkImportFilterQuery = z.infer<typeof bulkImportFilterQuerySchema>;
+export type ExecuteBulkImportInput = z.infer<typeof executeBulkImportSchema>;
+
+// ─── Teacher Module Schemas ─────────────────────────────────────────────────
+
+export const markAttendanceRecordSchema = z.object({
+  studentId: uuidSchema,
+  status: z.enum(['PRESENT', 'ABSENT', 'LATE', 'EXCUSED']),
+  lateMinutes: z.coerce.number().int().min(0).max(360).optional(),
+  remarks: z.string().trim().max(500).optional(),
+});
+
+export const submitAttendanceRosterSchema = z.object({
+  sectionId: uuidSchema,
+  attendanceDate: isoDateString,
+  records: z.array(markAttendanceRecordSchema).min(1, 'At least one student record is required'),
+});
+
+export const createTeacherAssignmentSchema = z.object({
+  courseOfferingId: uuidSchema,
+  title: nonEmptyString('Assignment title').max(200),
+  instructions: nonEmptyString('Instructions'),
+  maxPoints: z.coerce.number().min(1, 'Max points must be at least 1').max(1000),
+  dueDate: z.string().min(10, 'Due date is required'),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('PUBLISHED'),
+});
+
+export const createTeacherAssessmentSchema = z.object({
+  courseOfferingId: uuidSchema,
+  title: nonEmptyString('Assessment title').max(200),
+  assessmentDate: isoDateString,
+  weightPercentage: z.coerce.number().min(1).max(100),
+  maxMarks: z.coerce.number().min(1).max(1000),
+});
+
+export const teacherSectionDateQuerySchema = z.object({
+  sectionId: uuidSchema.optional(),
+  date: isoDateString.optional(),
+});
+
+export type MarkAttendanceRecordInput = z.infer<typeof markAttendanceRecordSchema>;
+export type SubmitAttendanceRosterInput = z.infer<typeof submitAttendanceRosterSchema>;
+export type CreateTeacherAssignmentInput = z.infer<typeof createTeacherAssignmentSchema>;
+export type CreateTeacherAssessmentInput = z.infer<typeof createTeacherAssessmentSchema>;
+export type TeacherSectionDateQuery = z.infer<typeof teacherSectionDateQuerySchema>;

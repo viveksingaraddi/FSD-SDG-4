@@ -15,15 +15,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    'bg-[var(--color-brand-primary)] text-[var(--color-text-inverse)] hover:bg-[var(--color-brand-primary-hover)] active:bg-[var(--color-brand-primary-active)] border border-transparent shadow-xs',
+    'bg-[var(--color-brand-primary)] text-white hover:bg-[var(--color-brand-primary-hover)] active:bg-[var(--color-brand-primary-active)] border border-transparent shadow-xs',
   secondary:
     'bg-[var(--color-surface-sunken)] text-[var(--color-text-primary)] hover:bg-[var(--color-border-default)] border border-[var(--color-border-default)]',
   outline:
-    'bg-[var(--color-surface-card)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] border border-[var(--color-border-strong)]',
+    'bg-white text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] border border-[var(--color-border-strong)]',
   ghost:
     'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)] hover:text-[var(--color-text-primary)] border border-transparent',
   danger:
-    'bg-[var(--color-semantic-danger)] text-[var(--color-text-inverse)] hover:bg-[#991b1b] active:bg-[#7f1d1d] border border-transparent shadow-xs font-semibold',
+    'bg-red-700 text-white hover:bg-red-800 active:bg-red-900 border border-transparent shadow-xs font-semibold',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

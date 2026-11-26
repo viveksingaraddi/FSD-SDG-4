@@ -1,15 +1,20 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
+  AlertCircle,
   BookOpen,
   Calendar,
+  CheckCircle2,
   Clock,
   FileText,
   GraduationCap,
   HeartHandshake,
   Layers,
+  Mail,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   UserCheck,
   UserPlus,
   Users,
@@ -26,12 +31,19 @@ import {
   Skeleton,
   Text,
 } from '@/components/ui';
-import { fetchSchoolOverview } from './schoolAdminApi';
+import { fetchSchoolOnboarding, fetchSchoolOverview } from './schoolAdminApi';
 
 export function SchoolAdminDashboardPage() {
+  const [attendancePeriod, setAttendancePeriod] = useState<'7d' | '30d'>('7d');
+
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['school-admin', 'overview'],
-    queryFn: ({ signal }) => fetchSchoolOverview(signal),
+    queryKey: ['school-admin', 'overview', attendancePeriod],
+    queryFn: ({ signal }) => fetchSchoolOverview(attendancePeriod, signal),
+  });
+
+  const { data: onboarding } = useQuery({
+    queryKey: ['school-admin', 'onboarding'],
+    queryFn: ({ signal }) => fetchSchoolOnboarding(signal),
   });
 
   return (
@@ -60,6 +72,15 @@ export function SchoolAdminDashboardPage() {
             >
               Refresh
             </Button>
+            <Link to="/admin/onboarding">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Sparkles className="h-4 w-4 text-primary" />}
+              >
+                Setup Guide
+              </Button>
+            </Link>
             <Link to="/admin/academic">
               <Button variant="primary" size="sm">
                 Academic Setup
@@ -77,6 +98,62 @@ export function SchoolAdminDashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Initial Onboarding Setup Banner */}
+        {onboarding && !onboarding.isComplete && onboarding.completionPercentage < 100 && (
+          <div
+            role="region"
+            aria-label="Initial school setup reminder"
+            className="rounded-[var(--radius-lg)] border border-[var(--color-brand-primary)]/20 bg-[var(--color-brand-primary-subtle)] p-5 shadow-xs"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles
+                    className="h-5 w-5 text-[var(--color-brand-accent)]"
+                    aria-hidden="true"
+                  />
+                  <Heading level={3} size="h4">
+                    Initial School Setup in Progress
+                  </Heading>
+                  <Badge variant="warning">{onboarding.completionPercentage}% Configured</Badge>
+                </div>
+                <Text variant="small" className="text-muted-foreground">
+                  {onboarding.completedSteps.length} of 7 foundation steps completed. Continue
+                  configuring your academic schedule, faculty, and student rosters.
+                </Text>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link to="/admin/onboarding">
+                  <Button variant="primary" size="sm">
+                    Resume Setup Wizard
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+                <span>Setup Completion</span>
+                <span>{onboarding.completionPercentage}%</span>
+              </div>
+              <div
+                role="progressbar"
+                aria-label="Onboarding progress"
+                aria-valuenow={onboarding.completionPercentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-border-default)]"
+              >
+                <div
+                  className="h-full bg-[var(--color-brand-accent)] transition-all duration-300 ease-out"
+                  style={{ width: `${onboarding.completionPercentage}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tenant Scoping Isolation Verification Badge */}
         {data && (
@@ -264,9 +341,35 @@ export function SchoolAdminDashboardPage() {
                     Attendance Overview
                   </Heading>
                 </div>
-                {data.attendance && (
-                  <Badge variant="neutral">Recorded for: {data.attendance.recordedDate}</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-[var(--radius-sm)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setAttendancePeriod('7d')}
+                      className={`px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors ${
+                        attendancePeriod === '7d'
+                          ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                    >
+                      7D
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAttendancePeriod('30d')}
+                      className={`px-2 py-0.5 rounded-[var(--radius-sm)] transition-colors ${
+                        attendancePeriod === '30d'
+                          ? 'bg-[var(--color-surface-elevated)] font-semibold text-[var(--color-text-primary)] shadow-xs'
+                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                    >
+                      30D
+                    </button>
+                  </div>
+                  {data.attendance && (
+                    <Badge variant="neutral">Recorded for: {data.attendance.recordedDate}</Badge>
+                  )}
+                </div>
               </div>
 
               {data.attendance && data.attendance.totalRecorded > 0 ? (
@@ -403,22 +506,30 @@ export function SchoolAdminDashboardPage() {
               {data.academic ? (
                 <div className="mt-4 space-y-4">
                   {/* Academic Key Counters */}
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
+                      <Text variant="caption">Course Offerings</Text>
+                      <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
+                        {data.academic.totalCourseOfferings ?? 0}
+                      </p>
+                    </div>
                     <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
                       <Text variant="caption">Published Assignments</Text>
-                      <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
-                        {data.academic.activeAssignments}
+                      <p className="mt-1 text-2xl font-bold text-emerald-600">
+                        {data.academic.assignmentsByStatus?.published ??
+                          data.academic.activeAssignments}
                       </p>
                     </div>
                     <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
-                      <Text variant="caption">Upcoming Assessments</Text>
-                      <p className="mt-1 text-2xl font-bold text-[var(--color-brand-primary)]">
-                        {data.academic.upcomingAssessments}
+                      <Text variant="caption">Draft / Archived</Text>
+                      <p className="mt-1 text-2xl font-bold text-[var(--color-text-secondary)]">
+                        {(data.academic.assignmentsByStatus?.draft ?? 0) +
+                          (data.academic.assignmentsByStatus?.archived ?? 0)}
                       </p>
                     </div>
-                    <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3 col-span-2 sm:col-span-1">
-                      <Text variant="caption">Total Assessments</Text>
-                      <p className="mt-1 text-2xl font-bold text-[var(--color-text-primary)]">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
+                      <Text variant="caption">Assessments</Text>
+                      <p className="mt-1 text-2xl font-bold text-[var(--color-brand-primary)]">
                         {data.academic.totalAssessments}
                       </p>
                     </div>
@@ -472,6 +583,146 @@ export function SchoolAdminDashboardPage() {
                     title="Academic Overview Unavailable"
                     description="Academic activities will be tracked once courses and assignments are published."
                   />
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* Section C2: Operational Tasks & Account Activation Telemetry */}
+        {data && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Pending Administrative Tasks Widget */}
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-default)] pb-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-600" aria-hidden="true" />
+                  <Heading level={3} size="h3">
+                    Pending Administrative Tasks
+                  </Heading>
+                </div>
+                <Badge
+                  variant={
+                    data.pendingTasks && data.pendingTasks.length > 0 ? 'warning' : 'success'
+                  }
+                >
+                  {data.pendingTasks ? `${data.pendingTasks.length} Pending` : 'All Clear'}
+                </Badge>
+              </div>
+
+              {data.pendingTasks && data.pendingTasks.length > 0 ? (
+                <div className="mt-4 divide-y divide-[var(--color-border-default)]">
+                  {data.pendingTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3 text-xs first:pt-0 last:pb-0"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+                        <div>
+                          <p className="font-semibold text-[var(--color-text-primary)]">
+                            {task.title}
+                          </p>
+                          <span className="text-[11px] text-[var(--color-text-muted)] font-mono">
+                            {task.category}
+                          </span>
+                        </div>
+                      </div>
+                      <Link to={task.actionUrl}>
+                        <Button variant="outline" size="sm">
+                          {task.actionLabel}
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
+                  <CheckCircle2 className="mx-auto h-6 w-6 text-emerald-600 mb-1" />
+                  No pending administrative actions requiring immediate review.
+                </div>
+              )}
+            </Card>
+
+            {/* Account Invitations & Activation Progress Widget */}
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-default)] pb-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-[var(--color-brand-primary)]" aria-hidden="true" />
+                  <Heading level={3} size="h3">
+                    User Invitations &amp; Activation
+                  </Heading>
+                </div>
+                <Link to="/admin/invitations">
+                  <Button variant="outline" size="sm">
+                    Manage Invitations
+                  </Button>
+                </Link>
+              </div>
+
+              {data.invitations ? (
+                <div className="mt-4 space-y-4">
+                  {/* Progress Indicator */}
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-[var(--color-text-primary)]">Activation Rate</span>
+                      <span className="font-mono text-emerald-600">
+                        {data.invitations.total > 0
+                          ? Math.round((data.invitations.accepted / data.invitations.total) * 100)
+                          : 0}
+                        %
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-500"
+                        style={{
+                          width: `${
+                            data.invitations.total > 0
+                              ? Math.round(
+                                  (data.invitations.accepted / data.invitations.total) * 100,
+                                )
+                              : 0
+                          }%`,
+                        }}
+                        role="progressbar"
+                        aria-valuenow={data.invitations.accepted}
+                        aria-valuemin={0}
+                        aria-valuemax={data.invitations.total}
+                        aria-label="User invitation activation rate"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Counters Grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-2.5 text-center">
+                      <Text variant="caption">Total Sent</Text>
+                      <p className="mt-1 text-xl font-bold text-[var(--color-text-primary)]">
+                        {data.invitations.total}
+                      </p>
+                    </div>
+                    <div className="rounded-[var(--radius-md)] border border-amber-100 bg-amber-50/50 p-2.5 text-center">
+                      <Text variant="caption" className="text-amber-800">
+                        Pending
+                      </Text>
+                      <p className="mt-1 text-xl font-bold text-amber-900">
+                        {data.invitations.pending}
+                      </p>
+                    </div>
+                    <div className="rounded-[var(--radius-md)] border border-emerald-100 bg-emerald-50/50 p-2.5 text-center">
+                      <Text variant="caption" className="text-emerald-800">
+                        Activated
+                      </Text>
+                      <p className="mt-1 text-xl font-bold text-emerald-900">
+                        {data.invitations.accepted}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
+                  No invitation activity recorded yet.
                 </div>
               )}
             </Card>

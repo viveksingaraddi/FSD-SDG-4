@@ -14,6 +14,7 @@
     "db:generate": "pnpm --filter '@fsd-sdg4/api' db:generate",
     "db:migrate": "pnpm --filter '@fsd-sdg4/api' db:migrate",
     "db:seed": "pnpm --filter '@fsd-sdg4/api' db:seed",
+    "seed": "pnpm --filter '@fsd-sdg4/api' db:seed",
     "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
     "test": "pnpm --recursive --filter './packages/*' test && pnpm --recursive --filter './apps/*' test",
     "test:unit": "pnpm --recursive test:unit",
@@ -22,6 +23,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
+    "mail:verify": "pnpm --filter '@fsd-sdg4/api' mail:verify",
     "typecheck": "pnpm --recursive typecheck",
     "clean": "pnpm --recursive clean && rimraf node_modules",
     "prepare": "echo 'Monorepo root ready'"

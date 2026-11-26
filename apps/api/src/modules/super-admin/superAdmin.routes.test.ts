@@ -108,4 +108,94 @@ describe('Super Admin API routes', () => {
     expect(res.status).toBe(201);
     expect(res.body.data.code).toBe('SYNTH01');
   });
+
+  it('allows SUPER_ADMIN to filter overview by period', async () => {
+    const spy = vi.spyOn(superAdminService, 'getPlatformOverview').mockResolvedValue({
+      totalSchools: 5,
+      activeSchools: 4,
+      suspendedSchools: 1,
+      totalUsers: 120,
+      recentAuditEvents: 45,
+      period: '30d',
+    });
+
+    const res = await request(app)
+      .get(`${API_ROUTES.SUPER_ADMIN.OVERVIEW}?period=30d`)
+      .set('x-test-role', 'SUPER_ADMIN');
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith('30d');
+    expect(res.body.data.period).toBe('30d');
+  });
+
+  it('allows SUPER_ADMIN to fetch platform settings & governance policies', async () => {
+    vi.spyOn(superAdminService, 'getPlatformSettings').mockResolvedValue({
+      policies: {
+        sessionPolicy: {
+          maxAgeSeconds: 604800,
+          sameSite: 'lax',
+          secure: false,
+          httpOnly: true,
+        },
+        csrfProtection: {
+          enabled: true,
+          headerName: 'X-CSRF-Token',
+        },
+        passwordPolicy: {
+          minLength: 12,
+          requireUppercase: true,
+          requireLowercase: true,
+          requireNumber: true,
+          requireSpecial: true,
+          hashingAlgorithm: 'Argon2id',
+        },
+        tenantIsolation: {
+          model: 'Multi-Tenant Shared Schema with Tenant Discriminator (school_id)',
+          zeroTrust: true,
+          enforcementLayer: 'Session Context resolveTenantSchoolId(req)',
+        },
+        rateLimiting: {
+          globalLimit: 100,
+          authLimit: 10,
+        },
+        emailDelivery: {
+          provider: 'Official FSD-SDG-4 Gmail SMTP (Nodemailer TLS)',
+          secureTls: true,
+        },
+      },
+      version: '1.0.0',
+      environment: 'test',
+    });
+
+    const res = await request(app)
+      .get(API_ROUTES.SUPER_ADMIN.SETTINGS)
+      .set('x-test-role', 'SUPER_ADMIN');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.policies.passwordPolicy.hashingAlgorithm).toBe('Argon2id');
+    expect(res.body.data.policies.tenantIsolation.zeroTrust).toBe(true);
+  });
+
+  it('allows SUPER_ADMIN to filter audit logs by category', async () => {
+    const spy = vi.spyOn(superAdminService, 'listPlatformAuditLogs').mockResolvedValue([
+      {
+        id: '99999999-9999-4999-8999-999999999999',
+        schoolId: null,
+        actorId: '11111111-1111-4111-8111-111111111111',
+        actorEmail: 'admin@platform.edu',
+        action: 'PLATFORM_TENANT_PROVISIONED',
+        entityType: 'School',
+        entityId: '44444444-4444-4444-8444-444444444444',
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+
+    const res = await request(app)
+      .get(`${API_ROUTES.SUPER_ADMIN.AUDIT_LOGS}?category=SCHOOL`)
+      .set('x-test-role', 'SUPER_ADMIN');
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith(undefined, undefined, 'SCHOOL', undefined, undefined);
+    expect(res.body.data).toHaveLength(1);
+  });
 });

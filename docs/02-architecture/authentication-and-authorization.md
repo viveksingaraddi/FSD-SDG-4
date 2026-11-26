@@ -83,3 +83,38 @@ Authenticating the user's role is necessary but **not sufficient**. The API must
 1. **Context Population**: The authentication middleware extracts `{ userId, schoolId, role }` from the active session.
 2. **Path Parameter Validation**: If an endpoint includes an explicit `:schoolId` route parameter, the middleware asserts that `req.sessionContext.schoolId === req.params.schoolId` (unless the caller is a `SUPER_ADMIN`).
 3. **Implicit ORM Scoping**: All database queries automatically filter by `req.sessionContext.schoolId`. Insecure Direct Object Reference (IDOR) attacks attempting to query an entity by its surrogate `id` without verifying `schoolId` result in an immediate `404 Not Found` response.
+
+---
+
+## 4. Hierarchical User Provisioning & Secure Account Activation
+
+The platform enforces strict hierarchical provisioning rules:
+
+- **Platform Super Admin**: Creates educational institution tenants (`School`) and provisions their initial `SCHOOL_ADMIN`.
+- **School Administrator**: Provisions staff (`TEACHER`), learners (`STUDENT`), and guardians (`PARENT`) bound strictly to their authenticated `schoolId`.
+- **Other Roles**: Have zero user creation authority.
+
+### 4.1 Invitation State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: Provisioned by Admin (expires in 7 days)
+    PENDING --> ACCEPTED: User verifies token & sets Argon2id password
+    PENDING --> EXPIRED: 7-day TTL elapses
+    PENDING --> REVOKED: Admin revokes invitation
+    EXPIRED --> PENDING: Admin resends invitation (fresh entropy)
+    REVOKED --> PENDING: Admin re-invites user
+    ACCEPTED --> [*]: Account ACTIVE & authenticated
+```
+
+### 4.2 Role-Aware Portal Home Routing
+
+Upon successful first authentication, the application resolves canonical destination routes according to the user's role:
+
+| Role           | Canonical Home Path | Dedicated Portal Name          |
+| :------------- | :------------------ | :----------------------------- |
+| `SUPER_ADMIN`  | `/super-admin`      | Platform Super Admin Portal    |
+| `SCHOOL_ADMIN` | `/admin`            | School Administrator Workspace |
+| `TEACHER`      | `/teacher`          | Teacher & Faculty Portal       |
+| `STUDENT`      | `/student`          | Student Learning Portal        |
+| `PARENT`       | `/parent`           | Parent & Guardian Portal       |

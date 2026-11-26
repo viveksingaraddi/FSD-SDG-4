@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/ui';
 import { AuthProvider } from '@/features/auth/AuthContext';
 import { SchoolAdminDashboardPage } from './SchoolAdminDashboardPage';
 import { AcademicSetupPage } from './AcademicSetupPage';
+import { StaffDirectoryPage } from './StaffDirectoryPage';
+import { TeacherProfilePage } from './TeacherProfilePage';
+import { SchoolSettingsPage } from './SchoolSettingsPage';
 
 function renderWithProviders(ui: ReactNode, initialPath = '/admin') {
   const queryClient = new QueryClient({
@@ -137,9 +140,12 @@ describe('School Admin Portal', () => {
     renderWithProviders(<SchoolAdminDashboardPage />);
 
     // School Overview & Tenant Isolation Badge
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Synthetic High School' })).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('heading', { name: 'Synthetic High School' })).toBeInTheDocument();
+      },
+      { timeout: 4000 },
+    );
     expect(screen.getByText(/Tenant-Isolated Domain:/)).toBeInTheDocument();
     expect(screen.getByText('2026-2027')).toBeInTheDocument();
     expect(screen.getByText('240')).toBeInTheDocument();
@@ -371,6 +377,68 @@ describe('School Admin Portal', () => {
           ),
         );
       }
+      if (url.includes('/api/v1/school/classes')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'cls-1',
+                  name: 'Grade 8',
+                  stage: 'Middle School',
+                  sortOrder: 8,
+                  studentCount: 30,
+                  sections: [
+                    {
+                      id: 'sec-1',
+                      name: '8-A',
+                      capacity: 35,
+                      roomNumber: 'Room 101',
+                      academicYearId: 'ay-1',
+                      academicYearName: '2026-2027',
+                      studentCount: 30,
+                    },
+                  ],
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+      if (url.includes('/api/v1/school/offerings')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'off-1',
+                  academicYearId: 'ay-1',
+                  academicYearName: '2026-2027',
+                  classId: 'cls-1',
+                  className: 'Grade 8',
+                  sectionId: 'sec-1',
+                  sectionName: '8-A',
+                  subjectId: 'sub-1',
+                  subjectName: 'Mathematics',
+                  subjectCode: 'MATH-8',
+                  syllabus: null,
+                  teachers: [
+                    {
+                      allocationId: 'alloc-1',
+                      teacherId: 'tch-1',
+                      teacherName: 'Ananya Verma',
+                      employeeId: 'GF-TCH-001',
+                      role: 'PRIMARY',
+                    },
+                  ],
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
       return Promise.resolve(
         new Response(JSON.stringify({ data: [] }), {
           status: 200,
@@ -386,9 +454,452 @@ describe('School Admin Portal', () => {
       expect(screen.getByRole('cell', { name: '2026-2027' })).toBeInTheDocument();
     });
 
+    fireEvent.click(screen.getByRole('tab', { name: /classes/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Grade 8' })).toBeInTheDocument();
+      expect(screen.getByText(/Section 8-A/i)).toBeInTheDocument();
+    });
+
     fireEvent.click(screen.getByRole('tab', { name: /subjects/i }));
     await waitFor(() => {
       expect(screen.getByText('MATH-8')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: /course allocations/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Ananya Verma')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create course offering/i })).toBeInTheDocument();
+    });
+  });
+
+  it('renders teacher directory with KPI metrics, filters, and modal provisioning', async () => {
+    const fetchMock = vi.fn((input: string | URL, init?: { method?: string }) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'adm-1',
+                  email: 'admin@example.edu',
+                  role: 'SCHOOL_ADMIN',
+                  schoolId: 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/staff') && method === 'GET') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'tch-1',
+                  userId: 'usr-1',
+                  employeeId: 'TCH-001',
+                  firstName: 'Eleanor',
+                  lastName: 'Vance',
+                  email: 'e.vance@school.edu',
+                  specialization: 'STEM, Calculus',
+                  status: 'ACTIVE',
+                  allocationCount: 2,
+                },
+                {
+                  id: 'tch-2',
+                  userId: 'usr-2',
+                  employeeId: 'TCH-002',
+                  firstName: 'Marcus',
+                  lastName: 'Holloway',
+                  email: 'm.holloway@school.edu',
+                  specialization: 'Computer Science',
+                  status: 'INACTIVE',
+                  allocationCount: 0,
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/staff') && method === 'POST') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'tch-3',
+                userId: 'usr-3',
+                employeeId: 'TCH-003',
+                firstName: 'Sophia',
+                lastName: 'Patel',
+                email: 's.patel@school.edu',
+                specialization: 'Literature',
+                status: 'ACTIVE',
+                allocationCount: 0,
+              },
+            }),
+            { status: 201, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<StaffDirectoryPage />, '/admin/staff');
+
+    // Wait for teacher data to render
+    await waitFor(() => {
+      expect(screen.getByText('Eleanor Vance')).toBeInTheDocument();
+      expect(screen.getByText('Marcus Holloway')).toBeInTheDocument();
+      expect(screen.getByText('TCH-001')).toBeInTheDocument();
+    });
+
+    // Check KPI counts
+    expect(screen.getByText('Total Teachers')).toBeInTheDocument();
+    expect(screen.getByText('Active Faculty')).toBeInTheDocument();
+
+    // Verify inspect button links to /admin/staff/tch-1
+    expect(screen.getByRole('button', { name: 'Inspect Eleanor Vance' })).toBeInTheDocument();
+
+    // Open Provision Teacher modal
+    const provisionButtons = screen.getAllByRole('button', { name: 'Provision Teacher' });
+    fireEvent.click(provisionButtons[0]!);
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    // Fill form and submit
+    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: 'Sophia' } });
+    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: 'Patel' } });
+    fireEvent.change(screen.getByLabelText(/institutional email/i), {
+      target: { value: 's.patel@school.edu' },
+    });
+    fireEvent.change(screen.getByLabelText(/employee id/i), { target: { value: 'TCH-003' } });
+    fireEvent.change(screen.getByLabelText(/temporary password/i), {
+      target: { value: 'TeacherPass@2026!' },
+    });
+
+    const submitButtons = screen.getAllByRole('button', { name: 'Provision Teacher' });
+    fireEvent.click(submitButtons[1]!);
+  }, 15000);
+
+  it('renders teacher profile inspection with course allocations and actions', async () => {
+    const fetchMock = vi.fn((input: string | URL, init?: { method?: string }) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'adm-1',
+                  email: 'admin@example.edu',
+                  role: 'SCHOOL_ADMIN',
+                  schoolId: 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/staff/tch-1') && method === 'GET') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'tch-1',
+                userId: 'usr-1',
+                employeeId: 'TCH-001',
+                firstName: 'Eleanor',
+                lastName: 'Vance',
+                email: 'e.vance@school.edu',
+                specialization: 'STEM, Calculus',
+                status: 'ACTIVE',
+                createdAt: '2026-08-15T08:00:00Z',
+                updatedAt: '2026-08-15T08:00:00Z',
+                allocations: [
+                  {
+                    id: 'alloc-1',
+                    courseOfferingId: 'co-1',
+                    subjectId: 'sub-1',
+                    subjectName: 'Advanced Calculus',
+                    subjectCode: 'MATH-12',
+                    sectionId: 'sec-1',
+                    sectionName: '12A',
+                    classId: 'cls-1',
+                    className: 'Grade 12',
+                    academicYearId: 'yr-1',
+                    academicYearName: '2026-2027',
+                    role: 'PRIMARY',
+                    assignedAt: '2026-08-20T10:00:00Z',
+                  },
+                ],
+                recentAuditLogs: [
+                  {
+                    id: 'aud-1',
+                    schoolId: 'school-1',
+                    actorId: 'adm-1',
+                    actorEmail: 'admin@example.edu',
+                    action: 'SCHOOL_TEACHER_ALLOCATED',
+                    entityType: 'CourseTeacher',
+                    entityId: 'alloc-1',
+                    createdAt: '2026-08-20T10:00:00Z',
+                  },
+                ],
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/academic-years')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'yr-1', name: '2026-2027', status: 'ACTIVE' }],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/subjects')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'sub-1', name: 'Advanced Calculus', code: 'MATH-12' }],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/classes')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'cls-1',
+                  name: 'Grade 12',
+                  stage: 'High School',
+                  sortOrder: 12,
+                  sections: [{ id: 'sec-1', name: '12A' }],
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/allocations/alloc-1') && method === 'DELETE') {
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { success: true } }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Render with Route to populate useParams: id: 'tch-1'
+    renderWithProviders(
+      <Routes>
+        <Route path="/admin/staff/:id" element={<TeacherProfilePage />} />
+      </Routes>,
+      '/admin/staff/tch-1',
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Eleanor Vance')[0]).toBeInTheDocument();
+      expect(screen.getByText('Advanced Calculus')).toBeInTheDocument();
+      expect(screen.getByText('MATH-12')).toBeInTheDocument();
+      expect(screen.getByText('Section 12A')).toBeInTheDocument();
+    });
+
+    // Check presence of action buttons
+    expect(screen.getByRole('button', { name: 'Edit Profile' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Allocate Course' })[0]!).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Suspend Access' })).toBeInTheDocument();
+
+    // Trigger deallocation dialog
+    fireEvent.click(screen.getByRole('button', { name: /unassign advanced calculus/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Remove Course Allocation/i)).toBeInTheDocument();
+  });
+
+  it('renders school settings tabs, preferences form, and institutional audit trail', async () => {
+    let patchedData: unknown = null;
+    const fetchMock = vi.fn((input: string | URL, init?: Parameters<typeof fetch>[1]) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'adm-1',
+                  email: 'admin@stjudes.edu',
+                  role: 'SCHOOL_ADMIN',
+                  schoolId: 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/settings') && method === 'PATCH') {
+        patchedData = JSON.parse(String(init?.body));
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'school-1',
+                name: 'St. Jude Academy Updated',
+                code: 'SJA-2026',
+                subdomain: 'st-jude',
+                contactEmail: 'principal@stjudes.edu',
+                status: 'ACTIVE',
+                activeAcademicYearId: 'ay-2026',
+                activeAcademicYearName: '2026-2027 Academic Year',
+                totalAcademicYears: 2,
+                preferences: {
+                  emailNotificationsEnabled: true,
+                  weeklyAttendanceDigest: false,
+                  studentSupportAlerts: true,
+                },
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-11-16T00:00:00.000Z',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/settings')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'school-1',
+                name: 'St. Jude Academy',
+                code: 'SJA-2026',
+                subdomain: 'st-jude',
+                contactEmail: 'principal@stjudes.edu',
+                status: 'ACTIVE',
+                activeAcademicYearId: 'ay-2026',
+                activeAcademicYearName: '2026-2027 Academic Year',
+                totalAcademicYears: 2,
+                preferences: {
+                  emailNotificationsEnabled: true,
+                  weeklyAttendanceDigest: true,
+                  studentSupportAlerts: true,
+                },
+                createdAt: '2026-01-01T00:00:00.000Z',
+                updatedAt: '2026-01-01T00:00:00.000Z',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      if (url.includes('/api/v1/school/audit-logs')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                {
+                  id: 'audit-log-1',
+                  action: 'SCHOOL_SETTINGS_UPDATED',
+                  entityType: 'School',
+                  entityId: 'school-1',
+                  schoolId: 'school-1',
+                  userId: 'adm-1',
+                  userEmail: 'admin@stjudes.edu',
+                  userRole: 'SCHOOL_ADMIN',
+                  delta: { preferences: { emailNotificationsEnabled: true } },
+                  createdAt: '2026-11-16T12:00:00.000Z',
+                },
+              ],
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<SchoolSettingsPage />, '/admin/settings');
+
+    // Verify School Profile & Preferences tab is active
+    await waitFor(() => {
+      expect(screen.getByText('Institutional Profile & Contact Information')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('St. Jude Academy')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('principal@stjudes.edu')).toBeInTheDocument();
+      expect(screen.getByText('SJA-2026')).toBeInTheDocument();
+      expect(screen.getByText('2026-2027 Academic Year')).toBeInTheDocument();
+    });
+
+    // Save preferences update
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => {
+      expect(patchedData).not.toBeNull();
+    });
+
+    // Switch to Institutional Audit Log tab
+    fireEvent.click(screen.getByRole('button', { name: /institutional audit log/i }));
+    await waitFor(() => {
+      expect(screen.getByText('SCHOOL_SETTINGS_UPDATED')).toBeInTheDocument();
+      expect(screen.getByText('Settings')).toBeInTheDocument();
     });
   });
 });

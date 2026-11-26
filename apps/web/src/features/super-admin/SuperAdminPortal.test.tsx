@@ -8,6 +8,8 @@ import { AuthProvider } from '@/features/auth/AuthContext';
 import { SuperAdminDashboardPage } from './SuperAdminDashboardPage';
 import { SchoolsDirectoryPage } from './SchoolsDirectoryPage';
 import { SchoolInspectionPage } from './SchoolInspectionPage';
+import { PlatformSettingsPage } from './PlatformSettingsPage';
+import { PlatformGovernancePage } from './PlatformGovernancePage';
 
 function renderWithProviders(ui: ReactNode, initialPath = '/super-admin') {
   const queryClient = new QueryClient({
@@ -483,5 +485,141 @@ describe('Super Admin Portal', () => {
     expect(screen.getByText('2026-2027')).toBeInTheDocument();
     expect(screen.getByText('PLATFORM_SCHOOL_CREATED')).toBeInTheDocument();
     expect(screen.getByText(/Tenant Isolation Active/i)).toBeInTheDocument();
+  });
+
+  it('renders platform settings with security policies and runtime telemetry', async () => {
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = String(input);
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'sup-1',
+                  email: 'superadmin@example.edu',
+                  role: 'SUPER_ADMIN',
+                  schoolId: null,
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: {
+              policies: {
+                sessionPolicy: {
+                  maxAgeSeconds: 604800,
+                  sameSite: 'lax',
+                  secure: false,
+                  httpOnly: true,
+                },
+                csrfProtection: {
+                  enabled: true,
+                  headerName: 'X-CSRF-Token',
+                },
+                passwordPolicy: {
+                  minLength: 12,
+                  requireUppercase: true,
+                  requireLowercase: true,
+                  requireNumber: true,
+                  requireSpecial: true,
+                  hashingAlgorithm: 'Argon2id',
+                },
+                tenantIsolation: {
+                  model: 'Multi-Tenant Shared Schema with Tenant Discriminator (school_id)',
+                  zeroTrust: true,
+                  enforcementLayer: 'Session Context resolveTenantSchoolId(req)',
+                },
+                rateLimiting: {
+                  globalLimit: 100,
+                  authLimit: 10,
+                },
+                emailDelivery: {
+                  provider: 'Official FSD-SDG-4 Gmail SMTP (Nodemailer TLS)',
+                  secureTls: true,
+                },
+              },
+              version: '1.0.0',
+              environment: 'test',
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<PlatformSettingsPage />, '/super-admin/settings');
+
+    await waitFor(() => {
+      expect(screen.getByText('Platform Security & Operational Governance')).toBeInTheDocument();
+      expect(screen.getByText('Tenant Isolation')).toBeInTheDocument();
+      expect(screen.getByText('Session & Cookies')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Password & Crypto')).toBeInTheDocument();
+    expect(screen.getAllByText('Argon2id')[0]).toBeInTheDocument();
+    expect(screen.getByText('X-CSRF-Token')).toBeInTheDocument();
+  });
+
+  it('renders platform governance audit stream with category filters', async () => {
+    const fetchMock = vi.fn((input: string | URL) => {
+      const url = String(input);
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: 'sup-1',
+                  email: 'superadmin@example.edu',
+                  role: 'SUPER_ADMIN',
+                  schoolId: null,
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: 'log-1',
+                schoolId: null,
+                actorId: 'sup-1',
+                actorEmail: 'superadmin@example.edu',
+                action: 'PLATFORM_TENANT_PROVISIONED',
+                entityType: 'School',
+                entityId: 'sch-1',
+                delta: { name: 'New Academy' },
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderWithProviders(<PlatformGovernancePage />, '/super-admin/governance');
+
+    await waitFor(() => {
+      expect(screen.getByText('Cross-Tenant Audit & Security Stream')).toBeInTheDocument();
+      expect(screen.getByText('PLATFORM_TENANT_PROVISIONED')).toBeInTheDocument();
+      expect(screen.getByText('View Payload')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Provisioning')).toBeInTheDocument();
   });
 });

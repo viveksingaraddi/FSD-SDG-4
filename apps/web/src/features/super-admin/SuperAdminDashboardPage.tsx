@@ -11,6 +11,7 @@ import {
   Filter,
   GraduationCap,
   Layers,
+  Mail,
   RefreshCw,
   School,
   ShieldCheck,
@@ -63,8 +64,8 @@ export function SuperAdminDashboardPage() {
   const [timeFilter, setTimeFilter] = useState<'all' | '30d' | 'year'>('all');
 
   const overviewQuery = useQuery({
-    queryKey: ['super-admin', 'overview'],
-    queryFn: ({ signal }) => fetchPlatformOverview(signal),
+    queryKey: ['super-admin', 'overview', timeFilter],
+    queryFn: ({ signal }) => fetchPlatformOverview(timeFilter, signal),
   });
 
   const auditQuery = useQuery({
@@ -232,7 +233,6 @@ export function SuperAdminDashboardPage() {
 
             <Button
               variant="outline"
-              size="sm"
               leftIcon={
                 <RefreshCw
                   className={`h-4 w-4 ${overviewQuery.isFetching ? 'animate-spin' : ''}`}
@@ -483,13 +483,13 @@ export function SuperAdminDashboardPage() {
                 {trends.length > 0 ? (
                   <div className="mt-3">
                     <div
-                      className="flex items-end gap-3 h-36 pt-3 pb-2 px-1"
+                      className="flex items-end gap-3 h-44 pt-3 pb-3 px-1"
                       role="img"
                       aria-label="School registration trends by period"
                     >
                       {trends.map((item) => {
                         const heightPct = Math.max(
-                          20,
+                          18,
                           Math.round((item.count / maxTrendCount) * 100),
                         );
                         return (
@@ -497,7 +497,7 @@ export function SuperAdminDashboardPage() {
                             key={item.period}
                             className="flex flex-1 flex-col items-center justify-end h-full"
                           >
-                            <span className="text-xs font-bold text-[var(--color-text-primary)] mb-1.5">
+                            <span className="text-xs font-bold text-[var(--color-text-primary)] mb-1">
                               {item.count}
                             </span>
                             <div className="flex-1 w-full max-w-[44px] flex items-end justify-center">
@@ -507,7 +507,7 @@ export function SuperAdminDashboardPage() {
                                 title={`${item.period}: ${item.count} school(s)`}
                               />
                             </div>
-                            <span className="text-[11px] font-medium text-[var(--color-text-muted)] truncate max-w-[72px] mt-2 text-center">
+                            <span className="text-[11px] font-medium text-[var(--color-text-muted)] truncate max-w-[80px] mt-2 pb-1 text-center">
                               {item.period}
                             </span>
                           </div>
@@ -554,6 +554,69 @@ export function SuperAdminDashboardPage() {
                   </Text>
                 </div>
               </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Section C2: Institutional Adoption & Platform Operations Telemetry */}
+        {overview && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Total Student Footprint</Text>
+                <GraduationCap className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.adoptionMetrics?.totalStudentsAcrossSchools ??
+                  overview.schoolsAnalytics?.totalStudents ??
+                  0}
+              </p>
+              <Text variant="caption" className="mt-1">
+                ~{overview.adoptionMetrics?.averageStudentsPerSchool ?? 0} students / institution
+              </Text>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Active Academic Calendars</Text>
+                <Calendar
+                  className="h-5 w-5 text-[var(--color-brand-primary)]"
+                  aria-hidden="true"
+                />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.adoptionMetrics?.schoolsWithActiveYear ?? 0} / {overview.totalSchools}
+              </p>
+              <Text variant="caption" className="mt-1">
+                Institutions running active terms
+              </Text>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Course Offerings &amp; Curriculum</Text>
+                <BookOpen className="h-5 w-5 text-indigo-600" aria-hidden="true" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.operationalStats?.totalCourseOfferings ?? 0}
+              </p>
+              <Text variant="caption" className="mt-1">
+                {overview.operationalStats?.totalAssessments ?? 0} active assessments
+              </Text>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between">
+                <Text variant="muted">Account Activation Rate</Text>
+                <Mail className="h-5 w-5 text-amber-600" aria-hidden="true" />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-[var(--color-text-primary)]">
+                {overview.adoptionMetrics?.invitationAcceptanceRate ?? 0}%
+              </p>
+              <Text variant="caption" className="mt-1">
+                {overview.operationalStats?.invitations.accepted ?? 0} accepted of{' '}
+                {overview.operationalStats?.invitations.total ?? 0} invitations
+              </Text>
             </Card>
           </div>
         )}

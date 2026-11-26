@@ -4,7 +4,29 @@
  * No secrets are logged or exposed in error messages.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
+
+// Automatically load local .env if present and process.loadEnvFile is available
+if (process.env['NODE_ENV'] !== 'test' && typeof process.loadEnvFile === 'function') {
+  const envCandidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(process.cwd(), 'apps/api/.env'),
+    path.resolve(import.meta.dirname, '../../../.env'),
+    path.resolve(import.meta.dirname, '../../.env'),
+  ];
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      try {
+        process.loadEnvFile(envPath);
+        break;
+      } catch {
+        // Fall through if file cannot be parsed
+      }
+    }
+  }
+}
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
@@ -15,8 +37,45 @@ export const envSchema = z.object({
     .url('DATABASE_URL must be a valid PostgreSQL connection URL')
     .optional()
     .or(z.literal('')),
-  CORS_ORIGIN: z.string().min(1, 'CORS_ORIGIN must not be empty').default('http://localhost:5173'),
+  CORS_ORIGIN: z
+    .string()
+    .refine(
+      (val) => {
+        if (val === '*') return true;
+        const origins = val
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        if (origins.length === 0) return false;
+        return origins.every((o) => {
+          try {
+            const parsed = new URL(o);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+          } catch {
+            return false;
+          }
+        });
+      },
+      {
+        message:
+          'CORS_ORIGIN must be a valid URL, wildcard (*), or comma-separated list of valid URLs',
+      },
+    )
+    .default('http://localhost:5173'),
   API_VERSION: z.string().default('0.0.0'),
+  APP_BASE_URL: z.string().url('APP_BASE_URL must be a valid URL').default('http://localhost:5173'),
+  // Mail configuration (Gmail SMTP)
+  MAIL_HOST: z.string().min(1).default('smtp.gmail.com'),
+  MAIL_PORT: z.coerce.number().int().min(1).max(65535).default(465),
+  MAIL_SECURE: z.preprocess((val) => {
+    if (val === undefined || val === '') return true;
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') return val.toLowerCase() === 'true' || val === '1';
+    return Boolean(val);
+  }, z.boolean().default(true)),
+  MAIL_USER: z.string().trim().default(''),
+  MAIL_APP_PASSWORD: z.string().trim().default(''),
+  MAIL_FROM_NAME: z.string().default('EDVARQ'),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

@@ -3,13 +3,16 @@ import { buildSessionCookieOptions, SESSION_COOKIE_NAME } from '../../middleware
 import { UnauthorizedError } from '../../shared/errors/appError.js';
 import { sendSuccess } from '../../shared/http/response.js';
 import type {
+  AcceptInvitationBody,
   ChangePasswordBody,
   ForgotPasswordBody,
   LoginBody,
   ResetPasswordBody,
   SessionIdParams,
+  VerifyInvitationQuery,
 } from './auth.schemas.js';
 import * as authService from './auth.service.js';
+import { acceptInvitation, verifyInvitation } from '../invitations/invitation.service.js';
 
 export async function loginController(
   req: Request,
@@ -175,6 +178,38 @@ export async function revokeSessionController(
     }
 
     sendSuccess(res, { revoked: true }, 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function verifyInvitationController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const query = req.validated?.query as VerifyInvitationQuery;
+    const result = await verifyInvitation(query.token);
+    sendSuccess(res, result, 200);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function acceptInvitationController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const body = req.validated?.body as AcceptInvitationBody;
+    const result = await acceptInvitation({
+      rawToken: body.token,
+      password: body.password,
+      ipAddress: req.ip ?? null,
+    });
+    sendSuccess(res, result, 200);
   } catch (err) {
     next(err);
   }

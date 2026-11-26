@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { emailSchema, nonEmptyString, z } from '@fsd-sdg4/validation';
-import { ShieldCheck } from 'lucide-react';
 import {
   Alert,
   Button,
   Card,
+  EdvarqMark,
   FormField,
   Heading,
   Input,
@@ -30,6 +30,16 @@ export function LoginPage() {
   const location = useLocation();
   const [serverError, setServerError] = useState<string | null>(null);
 
+  const locationState = location.state as {
+    from?: { pathname?: string };
+    email?: string;
+    activated?: boolean;
+  } | null;
+
+  const [activationSuccess, setActivationSuccess] = useState<boolean>(
+    Boolean(locationState?.activated),
+  );
+
   const {
     register,
     handleSubmit,
@@ -37,7 +47,7 @@ export function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: createZodResolver(loginFormSchema),
     defaultValues: {
-      email: '',
+      email: locationState?.email ?? '',
       password: '',
     },
   });
@@ -68,18 +78,33 @@ export function LoginPage() {
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--color-surface-canvas)] px-4 py-10">
       <main id="main-content" tabIndex={-1} className="w-full max-w-md outline-none">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-brand-primary)] text-[var(--color-text-inverse)] shadow-sm">
-            <ShieldCheck className="h-6 w-6" aria-hidden="true" />
+          <div className="mb-3">
+            <EdvarqMark size={48} />
           </div>
           <Heading level={1} size="h1">
-            Sign in to FSD-SDG-4
+            Sign in to EDVARQ
           </Heading>
-          <Text variant="small" className="mt-1.5">
-            Quality Education SaaS Platform — Multi-tenant academic &amp; student support portal
+          <Text variant="small" className="mt-1.5 font-medium text-[var(--color-text-secondary)]">
+            One institution. One connected intelligence platform.
+          </Text>
+          <Text variant="muted" className="mt-0.5 text-xs">
+            Enterprise Education Management &amp; Institutional Intelligence
           </Text>
         </div>
 
         <Card padding="lg">
+          {activationSuccess && !serverError && (
+            <Alert
+              variant="success"
+              title="Account Activated"
+              className="mb-4"
+              onDismiss={() => setActivationSuccess(false)}
+            >
+              Your account has been successfully activated. Sign in below with your new password to
+              access your portal.
+            </Alert>
+          )}
+
           {serverError && (
             <Alert
               variant="danger"
@@ -122,6 +147,10 @@ export function LoginPage() {
             </Button>
           </form>
         </Card>
+
+        <p className="mt-6 text-center text-[11px] text-[var(--color-text-muted)]">
+          The Edvarq name is a working brand pending trademark and domain clearance.
+        </p>
       </main>
     </div>
   );

@@ -11,7 +11,9 @@ export function parseAllowedOrigins(corsOriginEnv: string): string[] {
 }
 
 export function createCorsMiddleware(
-  allowedOrigins = parseAllowedOrigins(env.CORS_ORIGIN),
+  allowedOrigins = parseAllowedOrigins(
+    process.env['WEB_URL'] ? `${env.CORS_ORIGIN},${process.env['WEB_URL']}` : env.CORS_ORIGIN,
+  ),
 ): RequestHandler {
   const allowSet = new Set(allowedOrigins);
 
@@ -28,11 +30,38 @@ export function createCorsMiddleware(
         return;
       }
 
+      if (allowSet.has('*')) {
+        callback(null, true);
+        return;
+      }
+
+      // In development or test, automatically allow local development origins (localhost, 127.0.0.1, ::1, LAN subnets on any port)
+      if (env.NODE_ENV === 'development' || env.NODE_ENV === 'test') {
+        try {
+          const parsed = new URL(origin);
+          if (
+            parsed.hostname === 'localhost' ||
+            parsed.hostname === '127.0.0.1' ||
+            parsed.hostname === '::1' ||
+            parsed.hostname === '0.0.0.0' ||
+            parsed.hostname.endsWith('.localhost') ||
+            parsed.hostname.startsWith('192.168.') ||
+            parsed.hostname.startsWith('10.') ||
+            /^172\.(1[6-9]|2[0-9]|3[01])\./.test(parsed.hostname)
+          ) {
+            callback(null, true);
+            return;
+          }
+        } catch {
+          // Ignore invalid URL format and fall through
+        }
+      }
+
       callback(new ForbiddenError('Origin not allowed by CORS policy.'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Requested-With', 'Accept'],
     exposedHeaders: ['X-Request-Id', 'RateLimit', 'RateLimit-Policy'],
     maxAge: 600,
   });

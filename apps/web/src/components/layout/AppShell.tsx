@@ -1,12 +1,14 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, Menu, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Bell, LogOut, Menu, User as UserIcon } from 'lucide-react';
 import {
   Avatar,
   Badge,
   Breadcrumbs,
   Drawer,
   DropdownMenu,
+  EdvarqLogo,
+  EdvarqMark,
   IconButton,
   type BreadcrumbItem,
 } from '@/components/ui';
@@ -72,14 +74,8 @@ export function AppShell({ title, breadcrumbs, children }: AppShellProps) {
         aria-label="Primary navigation"
         className="hidden lg:flex lg:w-[240px] lg:shrink-0 lg:flex-col lg:border-r lg:border-[var(--color-border-default)] lg:bg-[var(--color-surface-elevated)]"
       >
-        <div className="flex h-[64px] items-center gap-2.5 border-b border-[var(--color-border-default)] px-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-brand-primary)] text-[var(--color-text-inverse)]">
-            <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-[var(--color-text-primary)]">FSD-SDG-4</p>
-            <p className="truncate text-[11px] text-[var(--color-text-muted)]">{roleLabel}</p>
-          </div>
+        <div className="flex h-[64px] items-center border-b border-[var(--color-border-default)] px-4">
+          <EdvarqLogo size="md" subtitle={roleLabel} />
         </div>
         <nav className="flex-1 overflow-y-auto p-3">{renderNavLinks(false)}</nav>
       </aside>
@@ -90,9 +86,7 @@ export function AppShell({ title, breadcrumbs, children }: AppShellProps) {
         className="hidden md:flex md:w-[64px] md:shrink-0 md:flex-col md:border-r md:border-[var(--color-border-default)] md:bg-[var(--color-surface-elevated)] lg:hidden"
       >
         <div className="flex h-[64px] items-center justify-center border-b border-[var(--color-border-default)]">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-brand-primary)] text-[var(--color-text-inverse)]">
-            <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-          </div>
+          <EdvarqMark size={28} />
         </div>
         <nav className="flex-1 overflow-y-auto p-2">{renderNavLinks(true)}</nav>
       </aside>
@@ -104,7 +98,8 @@ export function AppShell({ title, breadcrumbs, children }: AppShellProps) {
         title="Navigation"
         side="left"
       >
-        <div className="mb-4 flex items-center gap-2 border-b border-[var(--color-border-default)] pb-3">
+        <div className="mb-4 flex items-center justify-between border-b border-[var(--color-border-default)] pb-3">
+          <EdvarqLogo size="sm" subtitle={roleLabel} />
           <Badge variant="brand">{roleLabel}</Badge>
         </div>
         <nav aria-label="Mobile drawer navigation">

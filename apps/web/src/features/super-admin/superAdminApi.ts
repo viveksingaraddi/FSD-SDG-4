@@ -1,16 +1,38 @@
 import {
   API_ROUTES,
   type AuditLogDto,
+  type PaginatedUsersResultDto,
   type PlatformOverviewDto,
+  type PlatformSettingsDto,
+  type ProvisionSchoolResultDto,
   type SchoolDetailDto,
   type SchoolSummaryDto,
+  type UserInvitationDto,
+  type UserLifecycleDetailDto,
 } from '@fsd-sdg4/contracts';
-import type { CreateSchoolInput, UpdateSchoolInput } from '@fsd-sdg4/validation';
-import { apiGet, apiPatch, apiPost } from '@/lib/apiClient';
+import type {
+  CreateSchoolInput,
+  InvitationFilterQuery,
+  SuperAdminInviteAdminInput,
+  UpdateSchoolInput,
+  UserFilterQueryInput,
+} from '@fsd-sdg4/validation';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
-export function fetchPlatformOverview(signal?: AbortSignal): Promise<PlatformOverviewDto> {
+export function fetchPlatformOverview(
+  period?: 'all' | '30d' | '90d' | 'year',
+  signal?: AbortSignal,
+): Promise<PlatformOverviewDto> {
+  const qs = period && period !== 'all' ? `?period=${encodeURIComponent(period)}` : '';
   return apiGet<PlatformOverviewDto>(
-    API_ROUTES.SUPER_ADMIN.OVERVIEW,
+    `${API_ROUTES.SUPER_ADMIN.OVERVIEW}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchPlatformSettings(signal?: AbortSignal): Promise<PlatformSettingsDto> {
+  return apiGet<PlatformSettingsDto>(
+    API_ROUTES.SUPER_ADMIN.SETTINGS,
     signal ? { signal } : undefined,
   );
 }
@@ -40,8 +62,8 @@ export function fetchSchoolDetail(
   );
 }
 
-export function createSchoolRequest(input: CreateSchoolInput): Promise<SchoolSummaryDto> {
-  return apiPost<SchoolSummaryDto>(API_ROUTES.SUPER_ADMIN.SCHOOLS, input);
+export function createSchoolRequest(input: CreateSchoolInput): Promise<ProvisionSchoolResultDto> {
+  return apiPost<ProvisionSchoolResultDto>(API_ROUTES.SUPER_ADMIN.SCHOOLS, input);
 }
 
 export function updateSchoolRequest(
@@ -54,9 +76,39 @@ export function updateSchoolRequest(
   );
 }
 
+export function fetchPlatformInvitations(
+  query?: InvitationFilterQuery,
+  signal?: AbortSignal,
+): Promise<UserInvitationDto[]> {
+  const params = new URLSearchParams();
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<UserInvitationDto[]>(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function resendPlatformInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}/${encodeURIComponent(id)}/resend`,
+  );
+}
+
+export function revokePlatformInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiDelete<UserInvitationDto>(
+    `${API_ROUTES.SUPER_ADMIN.INVITATIONS}/${encodeURIComponent(id)}`,
+  );
+}
+
 export interface FetchAuditLogsParams {
-  action?: string;
-  schoolId?: string;
+  action?: string | undefined;
+  schoolId?: string | undefined;
+  category?: ('ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS') | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
 }
 
 export function fetchPlatformAuditLogs(
@@ -77,11 +129,71 @@ export function fetchPlatformAuditLogs(
     if (filterOrAction.schoolId && filterOrAction.schoolId.trim().length > 0) {
       params.set('schoolId', filterOrAction.schoolId.trim());
     }
+    if (filterOrAction.category && filterOrAction.category !== 'ALL') {
+      params.set('category', filterOrAction.category);
+    }
+    if (filterOrAction.startDate) {
+      params.set('startDate', filterOrAction.startDate);
+    }
+    if (filterOrAction.endDate) {
+      params.set('endDate', filterOrAction.endDate);
+    }
   }
 
   const qs = params.toString() ? `?${params.toString()}` : '';
   return apiGet<AuditLogDto[]>(
     `${API_ROUTES.SUPER_ADMIN.AUDIT_LOGS}${qs}`,
     signal ? { signal } : undefined,
+  );
+}
+
+export function fetchPlatformUsers(
+  query?: UserFilterQueryInput,
+  signal?: AbortSignal,
+): Promise<PaginatedUsersResultDto> {
+  const params = new URLSearchParams();
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.invitationStatus && query.invitationStatus !== 'ALL')
+    params.set('invitationStatus', query.invitationStatus);
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.schoolId && query.schoolId.trim().length > 0)
+    params.set('schoolId', query.schoolId.trim());
+  if (query?.page) params.set('page', String(query.page));
+  if (query?.limit) params.set('limit', String(query.limit));
+  if (query?.sortBy) params.set('sortBy', query.sortBy);
+  if (query?.sortOrder) params.set('sortOrder', query.sortOrder);
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<PaginatedUsersResultDto>(
+    `${API_ROUTES.SUPER_ADMIN.USERS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchPlatformUserDetail(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserLifecycleDetailDto> {
+  return apiGet<UserLifecycleDetailDto>(
+    `${API_ROUTES.SUPER_ADMIN.USERS}/${encodeURIComponent(userId)}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function inviteSchoolAdminRequest(
+  input: SuperAdminInviteAdminInput,
+): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(`${API_ROUTES.SUPER_ADMIN.USERS}/invite`, input);
+}
+
+export function updatePlatformUserStatusRequest(
+  userId: string,
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED',
+  reason?: string,
+): Promise<UserLifecycleDetailDto> {
+  return apiPatch<UserLifecycleDetailDto>(
+    `${API_ROUTES.SUPER_ADMIN.USERS}/${encodeURIComponent(userId)}/status`,
+    { status, reason },
   );
 }
