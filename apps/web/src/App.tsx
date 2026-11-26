@@ -21,6 +21,17 @@ const AcademicSetupPage = lazy(() => import('@/features/admin/AcademicSetupPage'
 const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPage'));
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
+const TeacherDashboardPage = lazy(() => import('@/features/teacher/TeacherDashboardPage'));
+const TeacherClassesPage = lazy(() => import('@/features/teacher/TeacherClassesPage'));
+const TeacherStudentsPage = lazy(() => import('@/features/teacher/TeacherStudentsPage'));
+const TeacherAttendancePage = lazy(() => import('@/features/teacher/TeacherAttendancePage'));
+const TeacherAssignmentsPage = lazy(() => import('@/features/teacher/TeacherAssignmentsPage'));
+const TeacherGradesPage = lazy(() => import('@/features/teacher/TeacherGradesPage'));
+const TeacherTimetablePage = lazy(() => import('@/features/teacher/TeacherTimetablePage'));
+const TeacherAnnouncementsPage = lazy(() => import('@/features/teacher/TeacherAnnouncementsPage'));
+const TeacherMessagesPage = lazy(() => import('@/features/teacher/TeacherMessagesPage'));
+const TeacherProfilePage = lazy(() => import('@/features/teacher/TeacherProfilePage'));
+const TeacherSettingsPage = lazy(() => import('@/features/teacher/TeacherSettingsPage'));
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -158,15 +169,92 @@ export function App() {
                 }
               />
 
+              {/* Teacher Portal Routes */}
               <Route
-                path="/teacher/*"
+                path="/teacher"
                 element={
                   <ProtectedRoute allowedRoles={['TEACHER']}>
-                    <PortalPlaceholderPage
-                      role="TEACHER"
-                      portalTitle="Teacher Portal"
-                      description="Daily attendance, assignments, grading, and human-reviewed student support plans."
-                    />
+                    <TeacherDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/classes"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherClassesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/students"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherStudentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/attendance"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherAttendancePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/assignments"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherAssignmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/grades"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherGradesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/timetable"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherTimetablePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/announcements"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherAnnouncementsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/messages"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherMessagesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/profile"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/teacher/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['TEACHER']}>
+                    <TeacherSettingsPage />
                   </ProtectedRoute>
                 }
               />

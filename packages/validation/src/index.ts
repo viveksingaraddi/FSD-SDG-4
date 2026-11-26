@@ -212,3 +212,46 @@ export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
 export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;
 export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchema>;
+
+// ─── Teacher Module Schemas ─────────────────────────────────────────────────
+
+export const markAttendanceRecordSchema = z.object({
+  studentId: uuidSchema,
+  status: z.enum(['PRESENT', 'ABSENT', 'LATE', 'EXCUSED']),
+  lateMinutes: z.coerce.number().int().min(0).max(360).optional(),
+  remarks: z.string().trim().max(500).optional(),
+});
+
+export const submitAttendanceRosterSchema = z.object({
+  sectionId: uuidSchema,
+  attendanceDate: isoDateString,
+  records: z.array(markAttendanceRecordSchema).min(1, 'At least one student record is required'),
+});
+
+export const createTeacherAssignmentSchema = z.object({
+  courseOfferingId: uuidSchema,
+  title: nonEmptyString('Assignment title').max(200),
+  instructions: nonEmptyString('Instructions'),
+  maxPoints: z.coerce.number().min(1, 'Max points must be at least 1').max(1000),
+  dueDate: z.string().min(10, 'Due date is required'),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('PUBLISHED'),
+});
+
+export const createTeacherAssessmentSchema = z.object({
+  courseOfferingId: uuidSchema,
+  title: nonEmptyString('Assessment title').max(200),
+  assessmentDate: isoDateString,
+  weightPercentage: z.coerce.number().min(1).max(100),
+  maxMarks: z.coerce.number().min(1).max(1000),
+});
+
+export const teacherSectionDateQuerySchema = z.object({
+  sectionId: uuidSchema.optional(),
+  date: isoDateString.optional(),
+});
+
+export type MarkAttendanceRecordInput = z.infer<typeof markAttendanceRecordSchema>;
+export type SubmitAttendanceRosterInput = z.infer<typeof submitAttendanceRosterSchema>;
+export type CreateTeacherAssignmentInput = z.infer<typeof createTeacherAssignmentSchema>;
+export type CreateTeacherAssessmentInput = z.infer<typeof createTeacherAssessmentSchema>;
+export type TeacherSectionDateQuery = z.infer<typeof teacherSectionDateQuerySchema>;

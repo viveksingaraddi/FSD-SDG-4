@@ -15,7 +15,31 @@ export const envSchema = z.object({
     .url('DATABASE_URL must be a valid PostgreSQL connection URL')
     .optional()
     .or(z.literal('')),
-  CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
+  CORS_ORIGIN: z
+    .string()
+    .refine(
+      (val) => {
+        if (val === '*') return true;
+        const origins = val
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        if (origins.length === 0) return false;
+        return origins.every((o) => {
+          try {
+            const parsed = new URL(o);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+          } catch {
+            return false;
+          }
+        });
+      },
+      {
+        message:
+          'CORS_ORIGIN must be a valid URL, wildcard (*), or comma-separated list of valid URLs',
+      },
+    )
+    .default('http://localhost:5173'),
   API_VERSION: z.string().default('0.0.0'),
 });
 
