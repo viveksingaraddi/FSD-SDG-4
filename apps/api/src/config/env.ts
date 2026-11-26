@@ -15,7 +15,7 @@ export const envSchema = z.object({
     .url('DATABASE_URL must be a valid PostgreSQL connection URL')
     .optional()
     .or(z.literal('')),
-  CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
+  CORS_ORIGIN: z.string().min(1, 'CORS_ORIGIN must not be empty').default('http://localhost:5173'),
   API_VERSION: z.string().default('0.0.0'),
 });
 
