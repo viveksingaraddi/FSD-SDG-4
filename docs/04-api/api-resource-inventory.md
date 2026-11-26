@@ -18,20 +18,23 @@ This catalog enumerates the authoritative REST API resources, methods, route pat
 
 ## 2. School Setup & Academic Structure (`/api/v1/schools`, `/api/v1/academic-years`)
 
-| HTTP Method | Route Path                          | Authorized Roles | Description & Functionality                                     |
-| :---------- | :---------------------------------- | :--------------- | :-------------------------------------------------------------- |
-| `POST`      | `/api/v1/admin/schools`             | `SUPER_ADMIN`    | Registers a new institutional school tenant.                    |
-| `GET`       | `/api/v1/schools/settings`          | `SCHOOL_ADMIN`   | Retrieves active tenant profile, branding, and status.          |
-| `PATCH`     | `/api/v1/schools/settings`          | `SCHOOL_ADMIN`   | Updates tenant configuration and contact parameters.            |
-| `GET`       | `/api/v1/academic-years`            | Staff, Students  | Lists all academic terms configured for the tenant.             |
-| `POST`      | `/api/v1/academic-years`            | `SCHOOL_ADMIN`   | Creates a new academic year with date boundaries.               |
-| `PATCH`     | `/api/v1/academic-years/:id/status` | `SCHOOL_ADMIN`   | Transitions term status (`ACTIVE`, `COMPLETED`, `ARCHIVED`).    |
-| `GET`       | `/api/v1/classes`                   | Staff, Students  | Lists grade levels and their associated sections.               |
-| `POST`      | `/api/v1/classes`                   | `SCHOOL_ADMIN`   | Creates a new grade level and sections.                         |
-| `GET`       | `/api/v1/subjects`                  | Staff, Students  | Lists curriculum subjects registered in the school.             |
-| `POST`      | `/api/v1/subjects`                  | `SCHOOL_ADMIN`   | Adds a new subject to the school curriculum catalog.            |
-| `GET`       | `/api/v1/course-offerings`          | Staff, Students  | Lists scheduled courses for active sections.                    |
-| `POST`      | `/api/v1/course-offerings`          | `SCHOOL_ADMIN`   | Creates course offering linking subject, section, and teachers. |
+| HTTP Method | Route Path                           | Authorized Roles | Description & Functionality                                               |
+| :---------- | :----------------------------------- | :--------------- | :------------------------------------------------------------------------ |
+| `POST`      | `/api/v1/admin/schools`              | `SUPER_ADMIN`    | Registers a new institutional school tenant.                              |
+| `GET`       | `/api/v1/school/onboarding`          | `SCHOOL_ADMIN`   | Retrieves institutional onboarding status, step completions, and metrics. |
+| `POST`      | `/api/v1/school/onboarding/progress` | `SCHOOL_ADMIN`   | Saves onboarding step bookmark and notes to backend audit log.            |
+| `POST`      | `/api/v1/school/onboarding/complete` | `SCHOOL_ADMIN`   | Formally completes initial school onboarding with audit trail.            |
+| `GET`       | `/api/v1/schools/settings`           | `SCHOOL_ADMIN`   | Retrieves active tenant profile, branding, and status.                    |
+| `PATCH`     | `/api/v1/schools/settings`           | `SCHOOL_ADMIN`   | Updates tenant configuration and contact parameters.                      |
+| `GET`       | `/api/v1/academic-years`             | Staff, Students  | Lists all academic terms configured for the tenant.                       |
+| `POST`      | `/api/v1/academic-years`             | `SCHOOL_ADMIN`   | Creates a new academic year with date boundaries.                         |
+| `PATCH`     | `/api/v1/academic-years/:id/status`  | `SCHOOL_ADMIN`   | Transitions term status (`ACTIVE`, `COMPLETED`, `ARCHIVED`).              |
+| `GET`       | `/api/v1/classes`                    | Staff, Students  | Lists grade levels and their associated sections.                         |
+| `POST`      | `/api/v1/classes`                    | `SCHOOL_ADMIN`   | Creates a new grade level and sections.                                   |
+| `GET`       | `/api/v1/subjects`                   | Staff, Students  | Lists curriculum subjects registered in the school.                       |
+| `POST`      | `/api/v1/subjects`                   | `SCHOOL_ADMIN`   | Adds a new subject to the school curriculum catalog.                      |
+| `GET`       | `/api/v1/course-offerings`           | Staff, Students  | Lists scheduled courses for active sections.                              |
+| `POST`      | `/api/v1/course-offerings`           | `SCHOOL_ADMIN`   | Creates course offering linking subject, section, and teachers.           |
 
 ---
 

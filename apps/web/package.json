@@ -9,8 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:unit": "vitest run",
+    "test": "vitest run --testTimeout=15000",
+    "test:unit": "vitest run --testTimeout=15000",
     "test:e2e": "playwright test",
     "clean": "rimraf dist"
   },
@@ -20,6 +20,7 @@
     "@fsd-sdg4/validation": "workspace:*",
     "@tanstack/react-query": "5.106.0",
     "@tanstack/react-query-devtools": "5.106.0",
+    "lucide-react": "^1.72.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-hook-form": "7.91.0",

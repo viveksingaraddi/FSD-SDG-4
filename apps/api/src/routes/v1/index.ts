@@ -2,6 +2,10 @@ import { Router, type Router as ExpressRouter } from 'express';
 import { API_ROUTES } from '@fsd-sdg4/contracts';
 import { buildOpenApiSpec } from '../../docs/openapi.js';
 import { createAuthRouter } from '../../modules/auth/auth.routes.js';
+import { createBulkImportRouter } from '../../modules/bulk-import/bulkImport.routes.js';
+import { createSchoolAdminRouter } from '../../modules/school-admin/schoolAdmin.routes.js';
+import { createSuperAdminRouter } from '../../modules/super-admin/superAdmin.routes.js';
+import { createTeacherRouter } from '../../modules/teacher/teacher.routes.js';
 import { sendSuccess } from '../../shared/http/response.js';
 
 export interface CreateV1RouterOptions {
@@ -20,6 +24,10 @@ export function createV1Router(options: CreateV1RouterOptions = {}): ExpressRout
   });
 
   router.use(createAuthRouter({ enableRateLimit: options.enableRateLimit ?? true }));
+  router.use(createSuperAdminRouter());
+  router.use(createSchoolAdminRouter());
+  router.use(createBulkImportRouter());
+  router.use(createTeacherRouter());
 
   return router;
 }

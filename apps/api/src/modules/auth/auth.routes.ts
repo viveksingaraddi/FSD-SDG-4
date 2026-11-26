@@ -7,6 +7,7 @@ import { createSensitiveRateLimiter } from '../../shared/security/rateLimiter.js
 import { validateRequest } from '../../shared/validation/validateRequest.js';
 import { PERMISSIONS } from '../identity/permissions.js';
 import {
+  acceptInvitationController,
   changePasswordController,
   forgotPasswordController,
   listSessionsController,
@@ -15,13 +16,16 @@ import {
   meController,
   resetPasswordController,
   revokeSessionController,
+  verifyInvitationController,
 } from './auth.controller.js';
 import {
+  acceptInvitationBodySchema,
   changePasswordBodySchema,
   forgotPasswordBodySchema,
   loginBodySchema,
   resetPasswordBodySchema,
   sessionIdParamsSchema,
+  verifyInvitationQuerySchema,
 } from './auth.schemas.js';
 
 export interface CreateAuthRouterOptions {
@@ -53,6 +57,19 @@ export function createAuthRouter(options: CreateAuthRouterOptions = {}): Express
       ]
     : [validateRequest({ body: resetPasswordBodySchema }), resetPasswordController];
 
+  const verifyMiddlewares = [
+    validateRequest({ query: verifyInvitationQuerySchema }),
+    verifyInvitationController,
+  ];
+
+  const acceptMiddlewares = applyLimiter
+    ? [
+        sensitiveLimiter,
+        validateRequest({ body: acceptInvitationBodySchema }),
+        acceptInvitationController,
+      ]
+    : [validateRequest({ body: acceptInvitationBodySchema }), acceptInvitationController];
+
   router.post(API_ROUTES.AUTH.LOGIN, ...loginMiddlewares);
 
   router.post(API_ROUTES.AUTH.LOGOUT, authenticate, requireCsrfHeader, logoutController);
@@ -62,6 +79,10 @@ export function createAuthRouter(options: CreateAuthRouterOptions = {}): Express
   router.post(API_ROUTES.AUTH.FORGOT_PASSWORD, ...forgotMiddlewares);
 
   router.post(API_ROUTES.AUTH.RESET_PASSWORD, ...resetMiddlewares);
+
+  router.get(API_ROUTES.AUTH.INVITATIONS_VERIFY, ...verifyMiddlewares);
+
+  router.post(API_ROUTES.AUTH.INVITATIONS_ACCEPT, ...acceptMiddlewares);
 
   router.post(
     API_ROUTES.AUTH.CHANGE_PASSWORD,
