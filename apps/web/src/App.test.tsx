@@ -31,10 +31,11 @@ describe('App — foundation shell', () => {
     expect(skipLink.getAttribute('href')).toBe('#main-content');
   });
 
-  it('renders the placeholder h1 on the root route', () => {
+  it('renders the student overview h1 on the root route', async () => {
     renderWithProviders('/');
-    const heading = screen.getByRole('heading', { level: 1 });
+    const heading = await screen.findByRole('heading', { level: 1 });
     expect(heading).toBeDefined();
+    expect(heading.textContent).toMatch(/Welcome back, Aarav/i);
   });
 
   it('renders the 404 page for an unknown route', () => {
