@@ -91,6 +91,13 @@ describe('CORS enforcement', () => {
     expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173');
   });
 
+  it('allows 127.0.0.1 and alternative localhost ports in local environment', async () => {
+    const response = await request(app).get('/api/v1/ping').set('Origin', 'http://127.0.0.1:5173');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['access-control-allow-origin']).toBe('http://127.0.0.1:5173');
+  });
+
   it('rejects disallowed origin with 403 RFC 7807 error', async () => {
     const response = await request(app)
       .get('/api/v1/ping')
