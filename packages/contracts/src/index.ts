@@ -8,6 +8,10 @@
  * MUST NOT import backend-only packages.
  */
 
+import type {
+  AttendanceStatus,
+} from '@fsd-sdg4/shared-types';
+
 export type {
   ApiSuccessResponse,
   ApiErrorResponse,
@@ -100,6 +104,17 @@ export const API_ROUTES = {
     SETTINGS: '/api/v1/teacher/settings',
     SUPPORT_FLAGS: '/api/v1/teacher/support/flags',
     SUPPORT_PLANS: '/api/v1/teacher/support/plans',
+  },
+  // Parent (Phase 14 / Option A)
+  PARENT: {
+    OVERVIEW: '/api/v1/parent/overview',
+    CHILDREN: '/api/v1/parent/children',
+    CHILD_ATTENDANCE: '/api/v1/parent/children/:studentId/attendance',
+    ABSENCE_NOTES: '/api/v1/parent/children/:studentId/attendance-notes',
+    CHILD_ASSIGNMENTS: '/api/v1/parent/children/:studentId/assignments',
+    CHILD_GRADES: '/api/v1/parent/children/:studentId/grades',
+    CHILD_SUPPORT_PLANS: '/api/v1/parent/children/:studentId/support-plans',
+    SUPPORT_ACTION_UPDATE: '/api/v1/parent/children/:studentId/support-actions/:actionId',
   },
 } as const;
 
@@ -964,3 +979,144 @@ export interface TeacherMessageDto {
   timestamp: string;
   unread: boolean;
 }
+
+// ─── Parent Portal DTOs (Phase 14 / Option A) ────────────────────────────────
+
+export type GuardianRelationshipType = 'MOTHER' | 'FATHER' | 'LEGAL_GUARDIAN' | 'OTHER';
+
+export interface ParentChildSummaryDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  studentIdNumber: string;
+  className: string;
+  sectionName: string;
+  relationshipType: GuardianRelationshipType;
+  isPrimaryContact: boolean;
+}
+
+export interface ParentFamilyOverviewChildDto extends ParentChildSummaryDto {
+  attendanceRate: number;
+  unexcusedAbsenceCount: number;
+  activeSupportPlanCount: number;
+  recentGradesCount: number;
+}
+
+export interface ParentFamilyOverviewDto {
+  guardianName: string;
+  children: ParentFamilyOverviewChildDto[];
+}
+
+export interface ChildAttendanceRecordDto {
+  id: string;
+  attendanceDate: string;
+  status: AttendanceStatus;
+  lateMinutes: number | null;
+  remarks: string | null;
+  amendmentReason: string | null;
+}
+
+export interface ChildAttendanceStatsDto {
+  totalDays: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  attendanceRate: number;
+}
+
+export interface ChildAttendanceMonthSummaryDto {
+  studentId: string;
+  month: string;
+  stats: ChildAttendanceStatsDto;
+  records: ChildAttendanceRecordDto[];
+}
+
+export interface ParentAbsenceNoteResponseDto {
+  recorded: boolean;
+  message: string;
+  attendanceRecordId: string;
+}
+
+export interface ChildCourseworkSubmissionDto {
+  assignmentId: string;
+  title: string;
+  dueDate: string;
+  score: number | null;
+  maxPoints: number;
+  status: string;
+  submittedAt: string | null;
+  feedback: string | null;
+  feedbackAuthorName: string | null;
+}
+
+export interface ChildAssessmentResultDto {
+  assessmentId: string;
+  title: string;
+  assessmentDate: string;
+  score: number;
+  maxMarks: number;
+  weightPercentage: number;
+  gradeLetter: string | null;
+  notes: string | null;
+  feedback: string | null;
+}
+
+export interface ChildSubjectAcademicReportDto {
+  courseOfferingId: string;
+  subjectName: string;
+  subjectCode: string;
+  teacherName: string;
+  assignments: ChildCourseworkSubmissionDto[];
+  assessments: ChildAssessmentResultDto[];
+}
+
+export interface ChildAcademicReportDto {
+  studentId: string;
+  studentName: string;
+  academicYearName: string;
+  subjects: ChildSubjectAcademicReportDto[];
+}
+
+export interface ChildSupportActionDto {
+  id: string;
+  supportPlanId: string;
+  description: string;
+  dueDate: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  completedAt: string | null;
+  isHomeAction: boolean;
+}
+
+export interface ChildSupportPlanDto {
+  id: string;
+  problemSummary: string;
+  targetGoal: string;
+  reviewDate: string;
+  status: string;
+  leadTeacherName: string;
+  actionItems: ChildSupportActionDto[];
+}
+
+export interface ParentAssignmentItemDto {
+  assignmentId: string;
+  title: string;
+  instructions: string;
+  subjectName: string;
+  subjectCode: string;
+  teacherName: string;
+  assignedDate: string;
+  dueDate: string;
+  maxPoints: number;
+  score: number | null;
+  status: 'PENDING' | 'SUBMITTED' | 'LATE' | 'GRADED' | 'OVERDUE';
+  submittedAt: string | null;
+  feedback: string | null;
+}
+
+export interface ChildAssignmentsResponseDto {
+  studentId: string;
+  studentName: string;
+  assignments: ParentAssignmentItemDto[];
+}
+

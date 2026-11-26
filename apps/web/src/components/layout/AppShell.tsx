@@ -134,7 +134,9 @@ export function AppShell({ title, breadcrumbs, children }: AppShellProps) {
               label="Notifications"
               variant="ghost"
               onClick={() => {
-                /* Notification center placeholder for future portal phases */
+                if (user?.role === 'PARENT') {
+                  navigate('/parent/notifications');
+                }
               }}
             />
 

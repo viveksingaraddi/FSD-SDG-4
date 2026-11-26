@@ -23,6 +23,16 @@ const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPag
 const AdminTeacherProfilePage = lazy(() => import('@/features/admin/TeacherProfilePage'));
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
+const ParentDashboardPage = lazy(() => import('@/features/parent/ParentDashboardPage'));
+const ParentAttendancePage = lazy(() => import('@/features/parent/ParentAttendancePage'));
+const ParentProgressPage = lazy(() => import('@/features/parent/ParentProgressPage'));
+const ParentAssignmentsPage = lazy(() => import('@/features/parent/ParentAssignmentsPage'));
+const ParentSupportPage = lazy(() => import('@/features/parent/ParentSupportPage'));
+const ParentMessagesPage = lazy(() => import('@/features/parent/ParentMessagesPage'));
+const ParentNotificationsPage = lazy(() => import('@/features/parent/ParentNotificationsPage'));
+const ParentCalendarPage = lazy(() => import('@/features/parent/ParentCalendarPage'));
+const ParentFeesPage = lazy(() => import('@/features/parent/ParentFeesPage'));
+const ParentDocumentsPage = lazy(() => import('@/features/parent/ParentDocumentsPage'));
 const UserInvitationsPage = lazy(() => import('@/features/admin/UserInvitationsPage'));
 const UserManagementPage = lazy(() => import('@/features/admin/UserManagementPage'));
 const BulkImportPage = lazy(() =>
@@ -332,14 +342,82 @@ export function App() {
               />
 
               <Route
-                path="/parent/*"
+                path="/parent"
                 element={
                   <ProtectedRoute allowedRoles={['PARENT']}>
-                    <PortalPlaceholderPage
-                      role="PARENT"
-                      portalTitle="Parent & Guardian Portal"
-                      description="Student attendance summaries, progress updates, and family support collaboration."
-                    />
+                    <ParentDashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/attendance"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentAttendancePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/progress"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentProgressPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/assignments"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentAssignmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/support"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentSupportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/messages"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentMessagesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/notifications"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentNotificationsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/calendar"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentCalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/fees"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentFeesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/parent/documents"
+                element={
+                  <ProtectedRoute allowedRoles={['PARENT']}>
+                    <ParentDocumentsPage />
                   </ProtectedRoute>
                 }
               />

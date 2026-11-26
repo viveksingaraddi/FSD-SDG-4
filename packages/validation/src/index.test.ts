@@ -181,3 +181,71 @@ describe('@fsd-sdg4/validation — Phase 6 identifiers, sorting & query schemas'
     expect(parsed).toEqual({ page: 2, limit: 10, search: 'math', sortOrder: 'desc' });
   });
 });
+
+import {
+  parentStudentParamsSchema,
+  parentActionParamsSchema,
+  attendanceMonthQuerySchema,
+  updateSupportActionStatusSchema,
+  submitAbsenceNoteSchema,
+} from './index.js';
+
+describe('@fsd-sdg4/validation — Parent Portal Schemas (Phase 14 / Option A)', () => {
+  const validUuid1 = '10000000-0000-4000-8000-000000000001';
+  const validUuid2 = '20000000-0000-4000-8000-000000000002';
+
+  it('validates parentStudentParamsSchema', () => {
+    expect(parentStudentParamsSchema.safeParse({ studentId: validUuid1 }).success).toBe(true);
+    expect(parentStudentParamsSchema.safeParse({ studentId: 'invalid-uuid' }).success).toBe(false);
+  });
+
+  it('validates parentActionParamsSchema', () => {
+    expect(
+      parentActionParamsSchema.safeParse({
+        studentId: validUuid1,
+        actionId: validUuid2,
+      }).success,
+    ).toBe(true);
+    expect(
+      parentActionParamsSchema.safeParse({
+        studentId: validUuid1,
+        actionId: 'invalid-uuid',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('validates attendanceMonthQuerySchema', () => {
+    expect(attendanceMonthQuerySchema.safeParse({ month: '2026-11' }).success).toBe(true);
+    expect(attendanceMonthQuerySchema.safeParse({}).success).toBe(true);
+    expect(attendanceMonthQuerySchema.safeParse({ month: '2026-1' }).success).toBe(false);
+    expect(attendanceMonthQuerySchema.safeParse({ month: 'Nov-2026' }).success).toBe(false);
+  });
+
+  it('validates updateSupportActionStatusSchema', () => {
+    expect(updateSupportActionStatusSchema.safeParse({ status: 'COMPLETED' }).success).toBe(true);
+    expect(updateSupportActionStatusSchema.safeParse({ status: 'PENDING' }).success).toBe(true);
+    expect(updateSupportActionStatusSchema.safeParse({ status: 'CANCELLED' }).success).toBe(false);
+  });
+
+  it('validates submitAbsenceNoteSchema', () => {
+    expect(
+      submitAbsenceNoteSchema.safeParse({
+        attendanceRecordId: validUuid1,
+        reason: 'Student had a medical appointment with documentation.',
+      }).success,
+    ).toBe(true);
+    expect(
+      submitAbsenceNoteSchema.safeParse({
+        attendanceRecordId: validUuid1,
+        reason: '',
+      }).success,
+    ).toBe(false);
+    expect(
+      submitAbsenceNoteSchema.safeParse({
+        attendanceRecordId: 'bad-id',
+        reason: 'Valid reason',
+      }).success,
+    ).toBe(false);
+  });
+});
+
