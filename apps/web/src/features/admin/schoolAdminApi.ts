@@ -3,26 +3,59 @@ import {
   type AcademicYearDto,
   type AuditLogDto,
   type ClassDto,
+  type CompleteOnboardingResultDto,
+  type CourseOfferingDto,
+  type GuardianRelationshipDto,
+  type OfferingTeacherDto,
+  type PaginatedUsersResultDto,
+  type SaveOnboardingProgressResultDto,
+  type SchoolOnboardingStatusDto,
   type SchoolOverviewDto,
   type SchoolSettingsDto,
   type SectionDto,
   type StaffMemberDto,
   type StudentDirectoryDto,
   type SubjectDto,
+  type TeacherAllocationDto,
+  type TeacherDetailDto,
+  type UserInvitationDto,
+  type UserLifecycleDetailDto,
 } from '@fsd-sdg4/contracts';
 import type {
+  AllocateTeacherInput,
+  AssignOfferingTeacherInput,
   CreateAcademicYearInput,
   CreateClassInput,
+  CreateOfferingInput,
   CreateSectionInput,
   CreateStaffInput,
   CreateStudentInput,
   CreateSubjectInput,
+  InvitationFilterQuery,
+  InviteUserInput,
+  LinkGuardianInput,
+  OfferingFilterQuery,
+  SaveOnboardingProgressInput,
+  StaffFilterQuery,
+  UpdateAcademicYearInput,
+  UpdateClassInput,
   UpdateSchoolSettingsInput,
+  UpdateSectionInput,
+  UpdateStaffInput,
+  UpdateSubjectInput,
+  UserFilterQueryInput,
 } from '@fsd-sdg4/validation';
-import { apiGet, apiPatch, apiPost } from '@/lib/apiClient';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/lib/apiClient';
 
-export function fetchSchoolOverview(signal?: AbortSignal): Promise<SchoolOverviewDto> {
-  return apiGet<SchoolOverviewDto>(API_ROUTES.SCHOOL.OVERVIEW, signal ? { signal } : undefined);
+export function fetchSchoolOverview(
+  period?: 'all' | '7d' | '30d',
+  signal?: AbortSignal,
+): Promise<SchoolOverviewDto> {
+  const qs = period && period !== 'all' ? `?period=${encodeURIComponent(period)}` : '';
+  return apiGet<SchoolOverviewDto>(
+    `${API_ROUTES.SCHOOL.OVERVIEW}${qs}`,
+    signal ? { signal } : undefined,
+  );
 }
 
 export function fetchAcademicYears(signal?: AbortSignal): Promise<AcademicYearDto[]> {
@@ -36,6 +69,16 @@ export function createAcademicYearRequest(
   input: CreateAcademicYearInput,
 ): Promise<AcademicYearDto> {
   return apiPost<AcademicYearDto>(API_ROUTES.SCHOOL.ACADEMIC_YEARS, input);
+}
+
+export function updateAcademicYearRequest(
+  id: string,
+  input: UpdateAcademicYearInput,
+): Promise<AcademicYearDto> {
+  return apiPatch<AcademicYearDto>(
+    `${API_ROUTES.SCHOOL.ACADEMIC_YEARS}/${encodeURIComponent(id)}`,
+    input,
+  );
 }
 
 export function activateAcademicYearRequest(id: string): Promise<AcademicYearDto> {
@@ -52,8 +95,24 @@ export function createClassRequest(input: CreateClassInput): Promise<ClassDto> {
   return apiPost<ClassDto>(API_ROUTES.SCHOOL.CLASSES, input);
 }
 
+export function updateClassRequest(id: string, input: UpdateClassInput): Promise<ClassDto> {
+  return apiPatch<ClassDto>(`${API_ROUTES.SCHOOL.CLASSES}/${encodeURIComponent(id)}`, input);
+}
+
+export function deleteClassRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.CLASSES}/${encodeURIComponent(id)}`);
+}
+
 export function createSectionRequest(input: CreateSectionInput): Promise<SectionDto> {
   return apiPost<SectionDto>(API_ROUTES.SCHOOL.SECTIONS, input);
+}
+
+export function updateSectionRequest(id: string, input: UpdateSectionInput): Promise<SectionDto> {
+  return apiPatch<SectionDto>(`${API_ROUTES.SCHOOL.SECTIONS}/${encodeURIComponent(id)}`, input);
+}
+
+export function deleteSectionRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.SECTIONS}/${encodeURIComponent(id)}`);
 }
 
 export function fetchSubjects(signal?: AbortSignal): Promise<SubjectDto[]> {
@@ -64,12 +123,91 @@ export function createSubjectRequest(input: CreateSubjectInput): Promise<Subject
   return apiPost<SubjectDto>(API_ROUTES.SCHOOL.SUBJECTS, input);
 }
 
-export function fetchStaff(signal?: AbortSignal): Promise<StaffMemberDto[]> {
-  return apiGet<StaffMemberDto[]>(API_ROUTES.SCHOOL.STAFF, signal ? { signal } : undefined);
+export function updateSubjectRequest(id: string, input: UpdateSubjectInput): Promise<SubjectDto> {
+  return apiPatch<SubjectDto>(`${API_ROUTES.SCHOOL.SUBJECTS}/${encodeURIComponent(id)}`, input);
+}
+
+export function deleteSubjectRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.SUBJECTS}/${encodeURIComponent(id)}`);
+}
+
+export function fetchCourseOfferings(
+  filter?: OfferingFilterQuery,
+  signal?: AbortSignal,
+): Promise<CourseOfferingDto[]> {
+  const params = new URLSearchParams();
+  if (filter?.academicYearId) params.set('academicYearId', filter.academicYearId);
+  if (filter?.classId) params.set('classId', filter.classId);
+  if (filter?.sectionId) params.set('sectionId', filter.sectionId);
+  if (filter?.subjectId) params.set('subjectId', filter.subjectId);
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<CourseOfferingDto[]>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function createCourseOfferingRequest(
+  input: CreateOfferingInput,
+): Promise<CourseOfferingDto> {
+  return apiPost<CourseOfferingDto>(API_ROUTES.SCHOOL.OFFERINGS, input);
+}
+
+export function deleteCourseOfferingRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/${encodeURIComponent(id)}`,
+  );
+}
+
+export function assignOfferingTeacherRequest(
+  id: string,
+  input: AssignOfferingTeacherInput,
+): Promise<OfferingTeacherDto> {
+  return apiPost<OfferingTeacherDto>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/${encodeURIComponent(id)}/teachers`,
+    input,
+  );
+}
+
+export function removeOfferingTeacherRequest(
+  id: string,
+  teacherId: string,
+): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `${API_ROUTES.SCHOOL.OFFERINGS}/${encodeURIComponent(id)}/teachers/${encodeURIComponent(teacherId)}`,
+  );
+}
+
+export function fetchStaff(
+  query?: StaffFilterQuery,
+  signal?: AbortSignal,
+): Promise<StaffMemberDto[]> {
+  const params = new URLSearchParams();
+  if (query?.search?.trim()) params.set('search', query.search.trim());
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.specialization?.trim()) params.set('specialization', query.specialization.trim());
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<StaffMemberDto[]>(
+    `${API_ROUTES.SCHOOL.STAFF}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchStaffById(id: string, signal?: AbortSignal): Promise<TeacherDetailDto> {
+  return apiGet<TeacherDetailDto>(
+    `${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}`,
+    signal ? { signal } : undefined,
+  );
 }
 
 export function createStaffRequest(input: CreateStaffInput): Promise<StaffMemberDto> {
   return apiPost<StaffMemberDto>(API_ROUTES.SCHOOL.STAFF, input);
+}
+
+export function updateStaffRequest(id: string, input: UpdateStaffInput): Promise<StaffMemberDto> {
+  return apiPatch<StaffMemberDto>(`${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}`, input);
 }
 
 export function updateStaffStatusRequest(
@@ -79,6 +217,29 @@ export function updateStaffStatusRequest(
   return apiPatch<StaffMemberDto>(`${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}/status`, {
     status,
   });
+}
+
+export function allocateTeacherRequest(
+  id: string,
+  input: AllocateTeacherInput,
+): Promise<TeacherAllocationDto> {
+  return apiPost<TeacherAllocationDto>(
+    `${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}/allocations`,
+    input,
+  );
+}
+
+export function deallocateTeacherRequest(
+  id: string,
+  allocationId: string,
+): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(
+    `${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}/allocations/${encodeURIComponent(allocationId)}`,
+  );
+}
+
+export function deleteStaffRequest(id: string): Promise<{ success: boolean }> {
+  return apiDelete<{ success: boolean }>(`${API_ROUTES.SCHOOL.STAFF}/${encodeURIComponent(id)}`);
 }
 
 export function fetchStudents(
@@ -97,8 +258,43 @@ export function createStudentRequest(input: CreateStudentInput): Promise<Student
   return apiPost<StudentDirectoryDto>(API_ROUTES.SCHOOL.STUDENTS, input);
 }
 
-export function fetchSchoolAuditLogs(signal?: AbortSignal): Promise<AuditLogDto[]> {
-  return apiGet<AuditLogDto[]>(API_ROUTES.SCHOOL.AUDIT_LOGS, signal ? { signal } : undefined);
+export function fetchSchoolAuditLogs(
+  optionsOrSignal?:
+    | {
+        action?: string | undefined;
+        category?: ('ALL' | 'AUTH' | 'SCHOOL' | 'ACADEMIC' | 'USER' | 'SETTINGS') | undefined;
+        startDate?: string | undefined;
+        endDate?: string | undefined;
+      }
+    | AbortSignal,
+  maybeSignal?: AbortSignal,
+): Promise<AuditLogDto[]> {
+  const params = new URLSearchParams();
+  let signal: AbortSignal | undefined;
+
+  if (optionsOrSignal instanceof AbortSignal) {
+    signal = optionsOrSignal;
+  } else if (optionsOrSignal && typeof optionsOrSignal === 'object') {
+    if (optionsOrSignal.action && optionsOrSignal.action.trim().length > 0) {
+      params.set('action', optionsOrSignal.action.trim());
+    }
+    if (optionsOrSignal.category && optionsOrSignal.category !== 'ALL') {
+      params.set('category', optionsOrSignal.category);
+    }
+    if (optionsOrSignal.startDate) {
+      params.set('startDate', optionsOrSignal.startDate);
+    }
+    if (optionsOrSignal.endDate) {
+      params.set('endDate', optionsOrSignal.endDate);
+    }
+    signal = maybeSignal;
+  }
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<AuditLogDto[]>(
+    `${API_ROUTES.SCHOOL.AUDIT_LOGS}${qs}`,
+    signal ? { signal } : undefined,
+  );
 }
 
 export function fetchSchoolSettings(signal?: AbortSignal): Promise<SchoolSettingsDto> {
@@ -109,4 +305,112 @@ export function updateSchoolSettingsRequest(
   input: UpdateSchoolSettingsInput,
 ): Promise<SchoolSettingsDto> {
   return apiPatch<SchoolSettingsDto>(API_ROUTES.SCHOOL.SETTINGS, input);
+}
+
+export function fetchSchoolInvitations(
+  query?: InvitationFilterQuery,
+  signal?: AbortSignal,
+): Promise<UserInvitationDto[]> {
+  const params = new URLSearchParams();
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<UserInvitationDto[]>(
+    `${API_ROUTES.SCHOOL.INVITATIONS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function inviteSchoolUserRequest(input: InviteUserInput): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(API_ROUTES.SCHOOL.INVITATIONS, input);
+}
+
+export function resendSchoolInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiPost<UserInvitationDto>(
+    `${API_ROUTES.SCHOOL.INVITATIONS}/${encodeURIComponent(id)}/resend`,
+  );
+}
+
+export function revokeSchoolInvitationRequest(id: string): Promise<UserInvitationDto> {
+  return apiDelete<UserInvitationDto>(`${API_ROUTES.SCHOOL.INVITATIONS}/${encodeURIComponent(id)}`);
+}
+
+export function fetchSchoolOnboarding(signal?: AbortSignal): Promise<SchoolOnboardingStatusDto> {
+  return apiGet<SchoolOnboardingStatusDto>(
+    API_ROUTES.SCHOOL.ONBOARDING,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function saveOnboardingProgressRequest(
+  input: SaveOnboardingProgressInput,
+): Promise<SaveOnboardingProgressResultDto> {
+  return apiPost<SaveOnboardingProgressResultDto>(API_ROUTES.SCHOOL.ONBOARDING_PROGRESS, input);
+}
+
+export function completeSchoolOnboardingRequest(): Promise<CompleteOnboardingResultDto> {
+  return apiPost<CompleteOnboardingResultDto>(API_ROUTES.SCHOOL.ONBOARDING_COMPLETE, {});
+}
+
+export function fetchSchoolUsers(
+  query?: UserFilterQueryInput,
+  signal?: AbortSignal,
+): Promise<PaginatedUsersResultDto> {
+  const params = new URLSearchParams();
+  if (query?.role && query.role !== 'ALL') params.set('role', query.role);
+  if (query?.status && query.status !== 'ALL') params.set('status', query.status);
+  if (query?.invitationStatus && query.invitationStatus !== 'ALL')
+    params.set('invitationStatus', query.invitationStatus);
+  if (query?.search && query.search.trim().length > 0) params.set('search', query.search.trim());
+  if (query?.page) params.set('page', String(query.page));
+  if (query?.limit) params.set('limit', String(query.limit));
+  if (query?.sortBy) params.set('sortBy', query.sortBy);
+  if (query?.sortOrder) params.set('sortOrder', query.sortOrder);
+
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return apiGet<PaginatedUsersResultDto>(
+    `${API_ROUTES.SCHOOL.USERS}${qs}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function fetchSchoolUserDetail(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserLifecycleDetailDto> {
+  return apiGet<UserLifecycleDetailDto>(
+    `${API_ROUTES.SCHOOL.USERS}/${encodeURIComponent(userId)}`,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function updateSchoolUserStatusRequest(
+  userId: string,
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED',
+  reason?: string,
+): Promise<UserLifecycleDetailDto> {
+  return apiPatch<UserLifecycleDetailDto>(
+    `${API_ROUTES.SCHOOL.USERS}/${encodeURIComponent(userId)}/status`,
+    { status, reason },
+  );
+}
+
+export function linkStudentGuardianRequest(
+  studentId: string,
+  input: LinkGuardianInput,
+): Promise<GuardianRelationshipDto> {
+  return apiPost<GuardianRelationshipDto>(
+    `${API_ROUTES.SCHOOL.STUDENTS}/${encodeURIComponent(studentId)}/guardians`,
+    input,
+  );
+}
+
+export function unlinkStudentGuardianRequest(
+  studentId: string,
+  guardianUserId: string,
+): Promise<{ success: boolean; unlinkedAt: string }> {
+  return apiDelete<{ success: boolean; unlinkedAt: string }>(
+    `${API_ROUTES.SCHOOL.STUDENTS}/${encodeURIComponent(studentId)}/guardians/${encodeURIComponent(guardianUserId)}`,
+  );
 }

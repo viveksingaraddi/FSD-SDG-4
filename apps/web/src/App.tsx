@@ -16,11 +16,21 @@ const SchoolsDirectoryPage = lazy(() => import('@/features/super-admin/SchoolsDi
 const SchoolInspectionPage = lazy(() => import('@/features/super-admin/SchoolInspectionPage'));
 const PlatformGovernancePage = lazy(() => import('@/features/super-admin/PlatformGovernancePage'));
 const PlatformSettingsPage = lazy(() => import('@/features/super-admin/PlatformSettingsPage'));
+const PlatformUsersPage = lazy(() => import('@/features/super-admin/PlatformUsersPage'));
 const SchoolAdminDashboardPage = lazy(() => import('@/features/admin/SchoolAdminDashboardPage'));
 const AcademicSetupPage = lazy(() => import('@/features/admin/AcademicSetupPage'));
 const StaffDirectoryPage = lazy(() => import('@/features/admin/StaffDirectoryPage'));
+const AdminTeacherProfilePage = lazy(() => import('@/features/admin/TeacherProfilePage'));
 const StudentDirectoryPage = lazy(() => import('@/features/admin/StudentDirectoryPage'));
 const SchoolSettingsPage = lazy(() => import('@/features/admin/SchoolSettingsPage'));
+const UserInvitationsPage = lazy(() => import('@/features/admin/UserInvitationsPage'));
+const UserManagementPage = lazy(() => import('@/features/admin/UserManagementPage'));
+const BulkImportPage = lazy(() =>
+  import('@/features/admin/BulkImportPage').then((m) => ({ default: m.BulkImportPage })),
+);
+const SchoolOnboardingPage = lazy(() => import('@/features/admin/SchoolOnboardingPage'));
+const AcceptInvitationPage = lazy(() => import('@/features/auth/AcceptInvitationPage'));
+
 const TeacherDashboardPage = lazy(() => import('@/features/teacher/TeacherDashboardPage'));
 const TeacherClassesPage = lazy(() => import('@/features/teacher/TeacherClassesPage'));
 const TeacherStudentsPage = lazy(() => import('@/features/teacher/TeacherStudentsPage'));
@@ -85,6 +95,7 @@ export function App() {
             <Routes>
               <Route path="/" element={<RootRedirect />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
               <Route
@@ -108,6 +119,14 @@ export function App() {
                 element={
                   <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                     <SchoolInspectionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/super-admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <PlatformUsersPage />
                   </ProtectedRoute>
                 }
               />
@@ -137,6 +156,14 @@ export function App() {
                 }
               />
               <Route
+                path="/admin/onboarding"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <SchoolOnboardingPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/admin/academic"
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
@@ -153,10 +180,42 @@ export function App() {
                 }
               />
               <Route
+                path="/admin/staff/:id"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <AdminTeacherProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/admin/students"
                 element={
                   <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
                     <StudentDirectoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/bulk-import"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <BulkImportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <UserManagementPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/invitations"
+                element={
+                  <ProtectedRoute allowedRoles={['SCHOOL_ADMIN']}>
+                    <UserInvitationsPage />
                   </ProtectedRoute>
                 }
               />

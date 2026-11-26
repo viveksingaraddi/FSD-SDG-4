@@ -64,9 +64,9 @@ export function Modal({
           onClose();
         }
       }}
-      className={`m-auto w-[calc(100%-2rem)] ${MODAL_SIZE_CLASSES[size]} rounded-[var(--radius-xl)] border border-[var(--color-border-default)] bg-[var(--color-surface-card)] p-0 text-[var(--color-text-primary)] shadow-2xl`}
+      className={`m-auto w-[calc(100%-2rem)] ${MODAL_SIZE_CLASSES[size]} rounded-[var(--radius-xl)] border border-[var(--color-border-default)] bg-white p-0 text-[var(--color-text-primary)] shadow-2xl`}
     >
-      <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-default)] px-6 py-4">
+      <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-default)] bg-white px-6 py-4">
         <div>
           <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-primary)]">
             {title}
@@ -87,10 +87,10 @@ export function Modal({
         </button>
       </div>
 
-      <div className="px-6 py-4">{children}</div>
+      <div className="bg-white px-6 py-4">{children}</div>
 
       {footer && (
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] px-6 py-3.5">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--color-border-default)] bg-slate-50 bg-[var(--color-surface-sunken)] px-6 py-3.5">
           {footer}
         </div>
       )}
@@ -198,12 +198,12 @@ export function Drawer({ open, onClose, title, side = 'right', children }: Drawe
           onClose();
         }
       }}
-      className={`${alignmentClass} my-0 h-dvh max-h-dvh w-full max-w-sm border-[var(--color-border-default)] bg-[var(--color-surface-card)] p-0 text-[var(--color-text-primary)] shadow-2xl ${
+      className={`${alignmentClass} my-0 h-dvh max-h-dvh w-full max-w-sm border-[var(--color-border-default)] bg-white p-0 text-[var(--color-text-primary)] shadow-2xl ${
         side === 'left' ? 'border-r' : 'border-l'
       }`}
     >
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-[var(--color-border-default)] px-5 py-4">
+      <div className="flex h-full flex-col bg-white">
+        <div className="flex items-center justify-between border-b border-[var(--color-border-default)] bg-white px-5 py-4">
           <h2 id={titleId} className="text-base font-semibold text-[var(--color-text-primary)]">
             {title}
           </h2>
@@ -216,7 +216,7 @@ export function Drawer({ open, onClose, title, side = 'right', children }: Drawe
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto bg-white p-5">{children}</div>
       </div>
     </dialog>
   );
@@ -291,7 +291,7 @@ export function DropdownMenu({
         <div
           id={menuId}
           role="menu"
-          className={`absolute z-[var(--z-dropdown)] mt-1.5 min-w-[13rem] rounded-[var(--radius-lg)] border border-[var(--color-border-default)] bg-[var(--color-surface-card)] py-1.5 shadow-xl ${
+          className={`absolute z-[var(--z-dropdown)] mt-1.5 min-w-[14rem] rounded-[var(--radius-lg)] border border-[var(--color-border-default)] bg-white py-1.5 shadow-2xl ${
             align === 'left' ? 'left-0' : 'right-0'
           }`}
         >

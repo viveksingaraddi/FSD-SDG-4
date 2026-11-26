@@ -11,7 +11,9 @@ export function parseAllowedOrigins(corsOriginEnv: string): string[] {
 }
 
 export function createCorsMiddleware(
-  allowedOrigins = parseAllowedOrigins(env.CORS_ORIGIN),
+  allowedOrigins = parseAllowedOrigins(
+    process.env['WEB_URL'] ? `${env.CORS_ORIGIN},${process.env['WEB_URL']}` : env.CORS_ORIGIN,
+  ),
 ): RequestHandler {
   const allowSet = new Set(allowedOrigins);
 

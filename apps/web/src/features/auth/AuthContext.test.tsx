@@ -140,4 +140,129 @@ describe('AuthContext, LoginPage, and ProtectedRoute', () => {
       expect(screen.getByText('Unauthorized View')).toBeInTheDocument();
     });
   });
+
+  it('renders activation success banner and pre-fills email when navigated from activation', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          type: 'https://httpstatuses.com/401',
+          title: 'Unauthorized',
+          status: 401,
+          detail: 'Not authenticated',
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/problem+json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/login',
+            state: { activated: true, email: 'activated.teacher@school.edu' },
+          },
+        ]}
+      >
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText(/Your account has been successfully activated/i),
+    ).toBeInTheDocument();
+
+    const emailInput = screen.getByLabelText(/institutional email/i) as HTMLInputElement;
+    expect(emailInput.value).toBe('activated.teacher@school.edu');
+  });
+
+  it('redirects each role to their dedicated portal home upon successful login', async () => {
+    const roleRoutes: Array<{
+      role: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'STUDENT' | 'PARENT';
+      targetPath: string;
+      portalText: string;
+    }> = [
+      { role: 'SUPER_ADMIN', targetPath: '/super-admin', portalText: 'Super Admin Portal' },
+      { role: 'SCHOOL_ADMIN', targetPath: '/admin', portalText: 'School Admin Portal' },
+      { role: 'STUDENT', targetPath: '/student', portalText: 'Student Portal' },
+      { role: 'PARENT', targetPath: '/parent', portalText: 'Parent Portal' },
+    ];
+
+    for (const item of roleRoutes) {
+      vi.unstubAllGlobals();
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              type: 'https://httpstatuses.com/401',
+              title: 'Unauthorized',
+              status: 401,
+              detail: 'Not authenticated',
+            }),
+            { status: 401, headers: { 'Content-Type': 'application/problem+json' } },
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              data: {
+                user: {
+                  id: `user-${item.role.toLowerCase()}`,
+                  email: `${item.role.toLowerCase()}@example.edu`,
+                  role: item.role,
+                  schoolId: item.role === 'SUPER_ADMIN' ? null : 'school-1',
+                  status: 'ACTIVE',
+                  permissions: [],
+                },
+              },
+              meta: { requestId: 'req-login', timestamp: new Date().toISOString() },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        );
+
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/login']}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path={item.targetPath}
+                element={
+                  <ProtectedRoute allowedRoles={[item.role]}>
+                    <div>{item.portalText}</div>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText(/institutional email/i), {
+        target: { value: `${item.role.toLowerCase()}@example.edu` },
+      });
+      fireEvent.change(screen.getByPlaceholderText('Enter your password'), {
+        target: { value: 'ValidPassword123!' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(item.portalText)).toBeInTheDocument();
+      });
+
+      unmount();
+    }
+  });
 });

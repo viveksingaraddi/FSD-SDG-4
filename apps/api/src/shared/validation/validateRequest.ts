@@ -61,6 +61,16 @@ export function validateRequest<
         fieldErrors.push(...zodIssuesToFieldErrors(result.error.issues, 'params'));
       } else {
         validated.params = result.data;
+        try {
+          Object.defineProperty(req, 'params', {
+            value: result.data,
+            writable: true,
+            configurable: true,
+            enumerable: true,
+          });
+        } catch {
+          req.params = result.data as typeof req.params;
+        }
       }
     }
 
@@ -70,6 +80,17 @@ export function validateRequest<
         fieldErrors.push(...zodIssuesToFieldErrors(result.error.issues, 'query'));
       } else {
         validated.query = result.data;
+        try {
+          Object.defineProperty(req, 'query', {
+            value: result.data,
+            writable: true,
+            configurable: true,
+            enumerable: true,
+          });
+        } catch {
+          // Fallback if property is not redefinable
+          (req as unknown as { query: unknown }).query = result.data;
+        }
       }
     }
 

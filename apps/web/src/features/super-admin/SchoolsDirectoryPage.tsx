@@ -15,12 +15,14 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Edit2,
   Mail,
   Plus,
   RefreshCw,
   ShieldAlert,
   Sparkles,
+  UserPlus,
   Users,
   X,
 } from 'lucide-react';
@@ -75,6 +77,13 @@ export function SchoolsDirectoryPage() {
   });
 
   // Provisioning form
+  const [provisionResult, setProvisionResult] = useState<{
+    schoolName: string;
+    adminEmail?: string | undefined;
+    invitationUrl?: string | undefined;
+  } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const {
     register: registerCreate,
     handleSubmit: handleSubmitCreate,
@@ -84,7 +93,15 @@ export function SchoolsDirectoryPage() {
     formState: { errors: createErrors },
   } = useForm<CreateSchoolInput>({
     resolver: createZodResolver(createSchoolSchema),
-    defaultValues: { name: '', code: '', subdomain: '', contactEmail: '' },
+    defaultValues: {
+      name: '',
+      code: '',
+      subdomain: '',
+      contactEmail: '',
+      adminFirstName: '',
+      adminLastName: '',
+      adminEmail: '',
+    },
   });
 
   // Edit form
@@ -111,6 +128,14 @@ export function SchoolsDirectoryPage() {
       setCreateOpen(false);
       setFormError(null);
       resetCreate();
+
+      if (created.invitationUrl) {
+        setProvisionResult({
+          schoolName: created.name,
+          adminEmail: created.adminEmail,
+          invitationUrl: created.invitationUrl,
+        });
+      }
     },
     onError: (err) => {
       setFormError(
@@ -752,7 +777,122 @@ export function SchoolsDirectoryPage() {
               />
             )}
           </FormField>
+
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3.5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-primary)]">
+              <UserPlus className="h-4 w-4 text-[var(--color-brand-primary)]" />
+              <span>Initial School Administrator (Optional)</span>
+            </div>
+            <p className="text-[11px] text-[var(--color-text-muted)]">
+              Provisions an initial administrator in inactive status and generates a single-use
+              7-day activation link with zero default passwords.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <FormField label="First Name" error={createErrors.adminFirstName?.message}>
+                {(props) => (
+                  <Input
+                    {...props}
+                    {...registerCreate('adminFirstName')}
+                    placeholder="e.g. Eleanor"
+                    hasError={Boolean(createErrors.adminFirstName)}
+                  />
+                )}
+              </FormField>
+              <FormField label="Last Name" error={createErrors.adminLastName?.message}>
+                {(props) => (
+                  <Input
+                    {...props}
+                    {...registerCreate('adminLastName')}
+                    placeholder="e.g. Vance"
+                    hasError={Boolean(createErrors.adminLastName)}
+                  />
+                )}
+              </FormField>
+            </div>
+
+            <FormField
+              label="Admin Email Address"
+              error={createErrors.adminEmail?.message}
+              hint="The initial administrator will receive activation access via this address."
+            >
+              {(props) => (
+                <Input
+                  {...props}
+                  {...registerCreate('adminEmail')}
+                  type="email"
+                  placeholder="e.g. principal@greenfield.edu"
+                  hasError={Boolean(createErrors.adminEmail)}
+                />
+              )}
+            </FormField>
+          </div>
         </form>
+      </Modal>
+
+      {/* Modal: School Provisioning & Invitation Success */}
+      <Modal
+        open={provisionResult !== null}
+        onClose={() => setProvisionResult(null)}
+        title="School Tenant & Initial Admin Provisioned"
+        description={`School "${provisionResult?.schoolName}" is ready. An initial administrator invitation was created.`}
+        footer={
+          <Button variant="primary" onClick={() => setProvisionResult(null)}>
+            Close
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
+            <div>
+              <p className="font-semibold">Administrator Account Initialized</p>
+              <p className="mt-0.5">
+                Target Email: <strong>{provisionResult?.adminEmail}</strong>
+              </p>
+            </div>
+          </div>
+
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Copy and distribute the activation link below to the school administrator. This
+            cryptographic token is single-use and will expire in 7 days.
+          </p>
+
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-sunken)] p-3">
+            <label className="block text-[11px] font-semibold uppercase text-[var(--color-text-muted)] mb-1">
+              Activation URL
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={provisionResult?.invitationUrl ?? ''}
+                className="w-full rounded border border-[var(--color-border-default)] bg-white px-2.5 py-1.5 font-mono text-xs text-[var(--color-text-primary)]"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={async () => {
+                  if (provisionResult?.invitationUrl) {
+                    await navigator.clipboard.writeText(provisionResult.invitationUrl);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }
+                }}
+                className="shrink-0 gap-1"
+              >
+                {copiedLink ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+                <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
       </Modal>
 
       {/* Modal: Edit School Profile */}
