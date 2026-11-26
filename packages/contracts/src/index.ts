@@ -86,9 +86,18 @@ export const API_ROUTES = {
   },
   // Teacher (Phase 10–12)
   TEACHER: {
+    DASHBOARD: '/api/v1/teacher/dashboard',
+    CLASSES: '/api/v1/teacher/classes',
+    STUDENTS: '/api/v1/teacher/students',
     ATTENDANCE: '/api/v1/teacher/attendance',
     ASSIGNMENTS: '/api/v1/teacher/assignments',
     GRADES: '/api/v1/teacher/grades',
+    ASSESSMENTS: '/api/v1/teacher/assessments',
+    TIMETABLE: '/api/v1/teacher/timetable',
+    ANNOUNCEMENTS: '/api/v1/teacher/announcements',
+    MESSAGES: '/api/v1/teacher/messages',
+    PROFILE: '/api/v1/teacher/profile',
+    SETTINGS: '/api/v1/teacher/settings',
     SUPPORT_FLAGS: '/api/v1/teacher/support/flags',
     SUPPORT_PLANS: '/api/v1/teacher/support/plans',
   },
@@ -770,4 +779,188 @@ export interface BulkImportJobsListResponseDto {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+// ─── Teacher Portal DTOs ────────────────────────────────────────────────────
+
+export interface TeacherSummaryDto {
+  id: string;
+  userId: string;
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  specialization: string | null;
+  schoolName: string;
+}
+
+export interface TeacherStatsDto {
+  assignedClassesCount: number;
+  totalStudentsCount: number;
+  attendanceToday: {
+    total: number;
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+    attendanceRate: number;
+  };
+  pendingAssignmentsCount: number;
+  upcomingExaminationsCount: number;
+}
+
+export interface TeacherTimetableItemDto {
+  id: string;
+  courseOfferingId: string;
+  className: string;
+  sectionName: string;
+  subjectName: string;
+  subjectCode: string;
+  startTime: string;
+  endTime: string;
+  roomNumber: string | null;
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'UPCOMING';
+}
+
+export interface TeacherWeeklyAttendanceTrendDto {
+  day: string;
+  rate: number;
+  present: number;
+  absent: number;
+}
+
+export interface TeacherAttendanceOverviewDto {
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  attendanceRate: number;
+  weeklyTrend: TeacherWeeklyAttendanceTrendDto[];
+}
+
+export interface TeacherActivityDto {
+  id: string;
+  type: 'ATTENDANCE' | 'SUBMISSION' | 'ASSESSMENT' | 'ANNOUNCEMENT';
+  title: string;
+  description: string;
+  timestamp: string;
+  badgeVariant?: 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+}
+
+export interface TeacherTaskDto {
+  id: string;
+  title: string;
+  category: 'GRADING' | 'EXAMINATION' | 'ATTENDANCE' | 'CLASS';
+  dueDate: string;
+  completed: boolean;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface TeacherDashboardDto {
+  teacher: TeacherSummaryDto;
+  stats: TeacherStatsDto;
+  timetableToday: TeacherTimetableItemDto[];
+  attendanceOverview: TeacherAttendanceOverviewDto;
+  recentActivities: TeacherActivityDto[];
+  upcomingTasks: TeacherTaskDto[];
+}
+
+export interface TeacherClassSectionDto {
+  courseOfferingId: string;
+  sectionId: string;
+  classId: string;
+  className: string;
+  sectionName: string;
+  academicYearName: string;
+  roomNumber: string | null;
+  capacity: number | null;
+  studentCount: number;
+  subjectName: string;
+  subjectCode: string;
+  isPrimaryTeacher: boolean;
+}
+
+export interface TeacherStudentDto {
+  id: string;
+  studentIdNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  currentSection: string;
+  gender: string | null;
+  dateOfBirth: string | null;
+  admissionDate: string;
+  attendanceRate: number;
+  parentName?: string | null;
+  parentEmail?: string | null;
+}
+
+export interface TeacherStudentAttendanceRosterItemDto {
+  studentId: string;
+  studentIdNumber: string;
+  firstName: string;
+  lastName: string;
+  status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
+  lateMinutes: number | null;
+  remarks: string | null;
+}
+
+export interface TeacherAttendanceRosterDto {
+  sectionId: string;
+  sectionName: string;
+  className: string;
+  attendanceDate: string;
+  students: TeacherStudentAttendanceRosterItemDto[];
+}
+
+export interface TeacherAssignmentDto {
+  id: string;
+  courseOfferingId: string;
+  title: string;
+  instructions: string;
+  maxPoints: number;
+  dueDate: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  className: string;
+  sectionName: string;
+  subjectName: string;
+  subjectCode: string;
+  totalSubmissions: number;
+  gradedSubmissions: number;
+  createdAt: string;
+}
+
+export interface TeacherAssessmentDto {
+  id: string;
+  courseOfferingId: string;
+  title: string;
+  assessmentDate: string;
+  weightPercentage: number;
+  maxMarks: number;
+  className: string;
+  sectionName: string;
+  subjectName: string;
+  subjectCode: string;
+  recordedResultsCount: number;
+  totalEnrolledCount: number;
+}
+
+export interface TeacherAnnouncementDto {
+  id: string;
+  title: string;
+  content: string;
+  authorName: string;
+  priority: 'NORMAL' | 'URGENT' | 'INFORMATIONAL';
+  publishedAt: string;
+  targetAudience: string;
+}
+
+export interface TeacherMessageDto {
+  id: string;
+  senderName: string;
+  senderRole: string;
+  subject: string;
+  preview: string;
+  timestamp: string;
+  unread: boolean;
 }

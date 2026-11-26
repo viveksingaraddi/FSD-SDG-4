@@ -46,6 +46,23 @@ describe('API environment validation', () => {
     expect(parsed.MAIL_FROM_NAME).toBe('FSD-SDG-4 Notifications');
   });
 
+  it('accepts a valid explicit configuration with comma-separated CORS origins', () => {
+    const parsed = parseEnv({
+      NODE_ENV: 'test',
+      PORT: '4000',
+      LOG_LEVEL: 'silent',
+      DATABASE_URL: 'postgresql://user:pass@localhost:5432/fsd_sdg4_test',
+      CORS_ORIGIN: 'http://localhost:5173,http://127.0.0.1:5173,https://app.fsd-sdg4.edu',
+      API_VERSION: '0.1.0',
+    });
+
+    expect(parsed.NODE_ENV).toBe('test');
+    expect(parsed.PORT).toBe(4000);
+    expect(parsed.CORS_ORIGIN).toBe(
+      'http://localhost:5173,http://127.0.0.1:5173,https://app.fsd-sdg4.edu',
+    );
+  });
+
   it('rejects an invalid NODE_ENV value', () => {
     const result = envSchema.safeParse({ NODE_ENV: 'invalid_env' });
     expect(result.success).toBe(false);
