@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
-import type { UserRole } from '@prisma/client';
+import type { UserRole } from '@fsd-sdg4/contracts';
 import { ForbiddenError, UnauthorizedError } from '../shared/errors/appError.js';
 import { AUDIT_ACTIONS, recordAuditEvent } from '../modules/audit/audit.service.js';
 import type { Permission } from '../modules/identity/permissions.js';

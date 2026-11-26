@@ -1,4 +1,5 @@
-import type { UserRole } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import type { UserRole } from '@fsd-sdg4/contracts';
 import { prisma } from '../../shared/database/index.js';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../shared/errors/appError.js';
 import {
@@ -56,14 +57,11 @@ export async function login(input: {
 }): Promise<{ rawToken: string; expiresAt: Date; user: SafeAuthUser }> {
   const normalizedEmail = input.email.trim().toLowerCase();
 
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-    include: {
-      school: {
-        select: { id: true, status: true },
-      },
-    },
-  });
+  const user = await prisma.orm.public.User.include('school', (school) =>
+    school.select('id', 'status'),
+  )
+    .where({ email: normalizedEmail })
+    .first();
 
   if (user === null) {
     await recordAuditEvent({
@@ -99,22 +97,21 @@ export async function login(input: {
   const tokenHash = hashOpaqueToken(rawToken);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
-  await prisma.$transaction([
-    prisma.session.create({
-      data: {
-        userId: user.id,
-        schoolId: user.schoolId,
-        tokenHash,
-        expiresAt,
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-      },
-    }),
-    prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    }),
-  ]);
+  await prisma.client.transaction(async (tx) => {
+    await tx.orm.public.Session.create({
+      id: randomUUID(),
+      userId: user.id,
+      schoolId: user.schoolId,
+      tokenHash,
+      expiresAt,
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+    });
+    await tx.orm.public.User.where({ id: user.id }).update({
+      lastLoginAt: new Date(),
+      updatedAt: new Date(),
+    });
+  });
 
   await recordAuditEvent({
     schoolId: user.schoolId,
@@ -138,12 +135,10 @@ export async function logout(input: {
   schoolId: string | null;
   ipAddress: string | null;
 }): Promise<void> {
-  await prisma.session.deleteMany({
-    where: {
-      id: input.sessionId,
-      userId: input.userId,
-    },
-  });
+  await prisma.orm.public.Session.where({
+    id: input.sessionId,
+    userId: input.userId,
+  }).deleteAll();
 
   await recordAuditEvent({
     schoolId: input.schoolId,
@@ -156,17 +151,9 @@ export async function logout(input: {
 }
 
 export async function getMe(userId: string): Promise<SafeAuthUser> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      schoolId: true,
-      status: true,
-      deletedAt: true,
-    },
-  });
+  const user = await prisma.orm.public.User.select('id', 'email', 'role', 'schoolId', 'status', 'deletedAt')
+    .where({ id: userId })
+    .first();
 
   if (user === null || user.status !== 'ACTIVE' || user.deletedAt !== null) {
     throw new UnauthorizedError('Authentication required.');
@@ -183,15 +170,9 @@ export async function forgotPassword(input: {
   const genericMessage =
     'If an active account matches that email address, password reset instructions have been issued.';
 
-  const user = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-    select: {
-      id: true,
-      schoolId: true,
-      status: true,
-      deletedAt: true,
-    },
-  });
+  const user = await prisma.orm.public.User.select('id', 'schoolId', 'status', 'deletedAt')
+    .where({ email: normalizedEmail })
+    .first();
 
   if (user === null || user.status !== 'ACTIVE' || user.deletedAt !== null) {
     await recordAuditEvent({
@@ -207,20 +188,18 @@ export async function forgotPassword(input: {
   const tokenHash = hashOpaqueToken(rawResetToken);
   const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
 
-  await prisma.$transaction([
+  await prisma.client.transaction(async (tx) => {
     // Invalidate any prior unused reset tokens for this user
-    prisma.passwordResetToken.updateMany({
-      where: { userId: user.id, usedAt: null },
-      data: { usedAt: new Date() },
-    }),
-    prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt,
-      },
-    }),
-  ]);
+    await tx.orm.public.PasswordResetToken.where({ userId: user.id, usedAt: null }).updateAll({
+      usedAt: new Date(),
+    });
+    await tx.orm.public.PasswordResetToken.create({
+      id: randomUUID(),
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+    });
+  });
 
   await recordAuditEvent({
     schoolId: user.schoolId,
@@ -244,18 +223,16 @@ export async function resetPassword(input: {
   ipAddress: string | null;
 }): Promise<void> {
   const tokenHash = hashOpaqueToken(input.token);
-  const record = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash },
-    include: {
-      user: {
-        select: { id: true, schoolId: true, status: true, deletedAt: true },
-      },
-    },
-  });
+  const record = await prisma.orm.public.PasswordResetToken.include('user', (user) =>
+    user.select('id', 'schoolId', 'status', 'deletedAt'),
+  )
+    .where({ tokenHash })
+    .first();
 
   const now = new Date();
   if (
     record === null ||
+    record.user === null ||
     record.usedAt !== null ||
     record.expiresAt <= now ||
     record.user.status !== 'ACTIVE' ||
@@ -266,20 +243,15 @@ export async function resetPassword(input: {
 
   const newPasswordHash = await hashPassword(input.newPassword);
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { passwordHash: newPasswordHash },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: now },
-    }),
+  await prisma.client.transaction(async (tx) => {
+    await tx.orm.public.User.where({ id: record.userId }).update({
+      passwordHash: newPasswordHash,
+      updatedAt: new Date(),
+    });
+    await tx.orm.public.PasswordResetToken.where({ id: record.id }).update({ usedAt: now });
     // Revoke all active sessions after password recovery
-    prisma.session.deleteMany({
-      where: { userId: record.userId },
-    }),
-  ]);
+    await tx.orm.public.Session.where({ userId: record.userId }).deleteAll();
+  });
 
   await recordAuditEvent({
     schoolId: record.user.schoolId,
@@ -299,16 +271,15 @@ export async function changePassword(input: {
   ipAddress: string | null;
   userAgent: string | null;
 }): Promise<{ rawToken: string; expiresAt: Date }> {
-  const user = await prisma.user.findUnique({
-    where: { id: input.userId },
-    select: {
-      id: true,
-      schoolId: true,
-      passwordHash: true,
-      status: true,
-      deletedAt: true,
-    },
-  });
+  const user = await prisma.orm.public.User.select(
+    'id',
+    'schoolId',
+    'passwordHash',
+    'status',
+    'deletedAt',
+  )
+    .where({ id: input.userId })
+    .first();
 
   if (user === null || user.status !== 'ACTIVE' || user.deletedAt !== null) {
     throw new UnauthorizedError('Authentication required.');
@@ -328,26 +299,23 @@ export async function changePassword(input: {
   const tokenHash = hashOpaqueToken(rawToken);
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash: newPasswordHash },
-    }),
+  await prisma.client.transaction(async (tx) => {
+    await tx.orm.public.User.where({ id: user.id }).update({
+      passwordHash: newPasswordHash,
+      updatedAt: new Date(),
+    });
     // Revoke all prior sessions and rotate to a fresh session for the caller
-    prisma.session.deleteMany({
-      where: { userId: user.id },
-    }),
-    prisma.session.create({
-      data: {
-        userId: user.id,
-        schoolId: user.schoolId,
-        tokenHash,
-        expiresAt,
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-      },
-    }),
-  ]);
+    await tx.orm.public.Session.where({ userId: user.id }).deleteAll();
+    await tx.orm.public.Session.create({
+      id: randomUUID(),
+      userId: user.id,
+      schoolId: user.schoolId,
+      tokenHash,
+      expiresAt,
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+    });
+  });
 
   await recordAuditEvent({
     schoolId: user.schoolId,
@@ -366,20 +334,16 @@ export async function listSessions(
   userId: string,
   currentSessionId: string,
 ): Promise<SessionSummary[]> {
-  const sessions = await prisma.session.findMany({
-    where: {
-      userId,
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      ipAddress: true,
-      userAgent: true,
-      createdAt: true,
-      expiresAt: true,
-    },
-  });
+  const sessions = await prisma.orm.public.Session.select(
+    'id',
+    'ipAddress',
+    'userAgent',
+    'createdAt',
+    'expiresAt',
+  )
+    .where((s) => s.expiresAt.gt(new Date()))
+    .orderBy((s) => s.createdAt.desc())
+    .all();
 
   return sessions.map((s) => ({
     id: s.id,
@@ -397,14 +361,14 @@ export async function revokeSession(input: {
   sessionId: string;
   ipAddress: string | null;
 }): Promise<void> {
-  const deleted = await prisma.session.deleteMany({
-    where: {
+  const deletedCount = await prisma.orm.public.Session
+    .where({
       id: input.sessionId,
       userId: input.userId,
-    },
-  });
+    })
+    .deleteAndCount();
 
-  if (deleted.count === 0) {
+  if (deletedCount === 0) {
     throw new NotFoundError('Session not found.');
   }
 

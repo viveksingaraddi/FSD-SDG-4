@@ -727,7 +727,7 @@ model SupportFlag {
   reviewedBy  User?          @relation(fields: [schoolId, reviewedById], references: [schoolId, id], onDelete: Restrict)
   supportPlan SupportPlan?   @relation(fields: [schoolId, supportPlanId], references: [schoolId, id], onDelete: Restrict)
 
-  @@index([schoolId, status, createdAt(sort: Desc)])
+  @@index([schoolId, status, createdAt])
   @@index([schoolId, studentId, status])
   @@index([schoolId, supportPlanId])
   @@map("support_flags")
@@ -791,8 +791,8 @@ model AuditLog {
   school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   actor  User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
-  @@index([schoolId, createdAt(sort: Desc)])
+  @@index([schoolId, createdAt])
   @@index([schoolId, entityType, entityId])
-  @@index([actorId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt])
   @@map("audit_logs")
 }

@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import { and } from '@prisma/orm-postgres/orm-client';
 import { prisma } from '../../shared/database/index.js';
 import { ForbiddenError, UnauthorizedError } from '../../shared/errors/appError.js';
 import { AUDIT_ACTIONS, recordAuditEvent } from '../audit/audit.service.js';
@@ -56,17 +57,17 @@ export async function assertTeacherAssignedToCourse(
   courseOfferingId: string,
   ipAddress?: string | null,
 ): Promise<void> {
-  const assignment = await prisma.courseTeacher.findFirst({
-    where: {
-      schoolId,
-      courseOfferingId,
-      teacher: {
-        userId,
-        schoolId,
-      },
-    },
-    select: { id: true },
-  });
+  const assignment = await prisma.orm.public.CourseTeacher.select('id')
+    .where((courseTeacher) =>
+      and(
+        courseTeacher.schoolId.eq(schoolId),
+        courseTeacher.courseOfferingId.eq(courseOfferingId),
+        courseTeacher.teacher.some((teacher) =>
+          and(teacher.userId.eq(userId), teacher.schoolId.eq(schoolId)),
+        ),
+      ),
+    )
+    .first();
 
   if (assignment === null) {
     await recordAuditEvent({
@@ -91,23 +92,25 @@ export async function assertTeacherAssignedToSection(
   sectionId: string,
   ipAddress?: string | null,
 ): Promise<void> {
-  const teacherProfile = await prisma.teacherProfile.findFirst({
-    where: { userId, schoolId },
-    select: { id: true },
-  });
+  const teacherProfile = await prisma.orm.public.TeacherProfile.select('id')
+    .where({ userId, schoolId })
+    .first();
 
   if (teacherProfile === null) {
     throw new ForbiddenError('Teacher profile not found in tenant.');
   }
 
-  const courseMatch = await prisma.courseTeacher.findFirst({
-    where: {
-      schoolId,
-      teacherId: teacherProfile.id,
-      courseOffering: { sectionId, schoolId },
-    },
-    select: { id: true },
-  });
+  const courseMatch = await prisma.orm.public.CourseTeacher.select('id')
+    .where((courseTeacher) =>
+      and(
+        courseTeacher.schoolId.eq(schoolId),
+        courseTeacher.teacherId.eq(teacherProfile.id),
+        courseTeacher.courseOffering.some((courseOffering) =>
+          and(courseOffering.sectionId.eq(sectionId), courseOffering.schoolId.eq(schoolId)),
+        ),
+      ),
+    )
+    .first();
 
   if (courseMatch === null) {
     await recordAuditEvent({
@@ -132,10 +135,9 @@ export async function assertStudentSelf(
   studentProfileId: string,
   ipAddress?: string | null,
 ): Promise<void> {
-  const student = await prisma.studentProfile.findFirst({
-    where: { id: studentProfileId, schoolId, userId },
-    select: { id: true },
-  });
+  const student = await prisma.orm.public.StudentProfile.select('id')
+    .where({ id: studentProfileId, schoolId, userId })
+    .first();
 
   if (student === null) {
     await recordAuditEvent({
@@ -160,15 +162,9 @@ export async function assertVerifiedGuardian(
   studentProfileId: string,
   ipAddress?: string | null,
 ): Promise<void> {
-  const link = await prisma.guardianRelationship.findFirst({
-    where: {
-      schoolId,
-      guardianUserId,
-      studentId: studentProfileId,
-      isVerified: true,
-    },
-    select: { id: true },
-  });
+  const link = await prisma.orm.public.GuardianRelationship.select('id')
+    .where({ schoolId, guardianUserId, studentId: studentProfileId, isVerified: true })
+    .first();
 
   if (link === null) {
     await recordAuditEvent({

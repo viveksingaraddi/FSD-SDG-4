@@ -1,4 +1,5 @@
-import type { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import type { JsonValue } from '@prisma/orm-postgres/contract-types';
 import { prisma } from '../../shared/database/index.js';
 import { logger } from '../../shared/logging/logger.js';
 
@@ -68,19 +69,18 @@ export interface RecordAuditEventInput {
 
 export async function recordAuditEvent(input: RecordAuditEventInput): Promise<void> {
   try {
-    const sanitizedDelta =
-      input.delta !== undefined ? (sanitizeValue(input.delta) as Prisma.InputJsonValue) : undefined;
+    const sanitizedDelta: JsonValue | undefined =
+      input.delta !== undefined ? (sanitizeValue(input.delta) as JsonValue) : undefined;
 
-    await prisma.auditLog.create({
-      data: {
-        schoolId: input.schoolId ?? null,
-        actorId: input.actorId ?? null,
-        action: input.action,
-        entityType: input.entityType,
-        entityId: input.entityId ?? NIL_AUDIT_ENTITY_ID,
-        ...(sanitizedDelta !== undefined ? { delta: sanitizedDelta } : {}),
-        ipAddress: input.ipAddress ?? null,
-      },
+    await prisma.orm.public.AuditLog.create({
+      id: randomUUID(),
+      schoolId: input.schoolId ?? null,
+      actorId: input.actorId ?? null,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId ?? NIL_AUDIT_ENTITY_ID,
+      ...(sanitizedDelta !== undefined ? { delta: sanitizedDelta } : {}),
+      ipAddress: input.ipAddress ?? null,
     });
   } catch (err) {
     logger.error({ err, action: input.action }, 'Failed to persist audit log event');

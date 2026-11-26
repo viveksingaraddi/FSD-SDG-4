@@ -7,7 +7,7 @@
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@10.34.6",
+  "packageManager": "pnpm@12.18.0+sha512.9d7882d5dc82147ecfc4e062aa34834e0ad0296710a1837a1115ae012127d36b7109e321ac1598a1dd0a65597681b1e99917e12ed0d749eae91187943363beb3",
   "scripts": {
     "dev": "pnpm --parallel --filter './apps/*' dev",
     "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
@@ -18,17 +18,25 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,css}\" --ignore-path .gitignore",
-    "typecheck": "pnpm --recursive typecheck",
+    "typecheck": "pnpm --filter './packages/*' build && pnpm --recursive typecheck",
     "clean": "pnpm --recursive clean && rimraf node_modules",
     "prepare": "echo 'Monorepo root ready'"
   },
+  "dependencies": {
+    "@prisma/composer": "0.40.0",
+    "@prisma/composer-prisma-cloud": "0.40.0",
+    "effect": "4.1.4",
+    "pg": "^8.22.0"
+  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@types/pg": "^8.20.0",
     "@typescript-eslint/eslint-plugin": "8.72.1",
     "@typescript-eslint/parser": "8.72.1",
     "eslint": "10.14.0",
     "globals": "17.14.0",
     "prettier": "3.9.10",
+    "prisma": "8.0.0-rc.35",
     "rimraf": "6.1.4",
     "typescript": "^5.8.2",
     "typescript-eslint": "8.72.1"

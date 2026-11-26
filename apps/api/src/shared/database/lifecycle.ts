@@ -1,4 +1,4 @@
-import { prisma } from '../db/prisma.js';
+import { getDbClient } from '../db/prisma.js';
 
 export interface DatabaseReadinessResult {
   ok: boolean;
@@ -6,17 +6,18 @@ export interface DatabaseReadinessResult {
 }
 
 export async function connectDatabase(): Promise<void> {
-  await prisma.$connect();
+  await getDbClient().connect();
 }
 
 export async function disconnectDatabase(): Promise<void> {
-  await prisma.$disconnect();
+  await getDbClient().close();
 }
 
 export async function checkDatabaseReadiness(): Promise<DatabaseReadinessResult> {
   const start = Date.now();
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    const client = getDbClient();
+    await client.execute(client.raw.sql`SELECT 1`.affectedCount().build());
     return {
       ok: true,
       latencyMs: Date.now() - start,

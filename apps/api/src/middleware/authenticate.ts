@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { UserRole } from '@prisma/client';
+import type { UserRole } from '@fsd-sdg4/contracts';
 import { env } from '../config/env.js';
 import { prisma } from '../shared/database/index.js';
 import { UnauthorizedError } from '../shared/errors/appError.js';
@@ -59,44 +59,44 @@ export async function authenticate(
     }
 
     const tokenHash = hashOpaqueToken(rawToken);
-    const session = await prisma.session.findUnique({
-      where: { tokenHash },
-      include: {
-        user: {
-          include: {
-            school: {
-              select: { id: true, status: true },
-            },
-          },
-        },
-      },
-    });
+    const session = await prisma.orm.public.Session.include('user', (user) =>
+      user.include('school', (school) => school.select('id', 'status')),
+    )
+      .where({ tokenHash })
+      .first();
 
     if (session === null) {
       next(new UnauthorizedError('Session is invalid or expired.'));
       return;
     }
 
+    const user = session.user;
+    if (user === null) {
+      next(new UnauthorizedError('Session is invalid or expired.'));
+      return;
+    }
+
     const now = new Date();
     const isExpired = session.expiresAt <= now;
-    const isUserInactive = session.user.status !== 'ACTIVE' || session.user.deletedAt !== null;
+    const isUserInactive = user.status !== 'ACTIVE' || user.deletedAt !== null;
     const isSchoolInvalid =
-      session.user.role !== 'SUPER_ADMIN' &&
-      (session.user.schoolId === null || session.user.school?.status !== 'ACTIVE');
+      user.role !== 'SUPER_ADMIN' && (user.schoolId === null || user.school?.status !== 'ACTIVE');
 
     if (isExpired || isUserInactive || isSchoolInvalid) {
-      await prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);
+      await prisma.orm.public.Session.where({ id: session.id })
+        .delete()
+        .catch(() => undefined);
       next(new UnauthorizedError('Session is invalid or expired.'));
       return;
     }
 
     req.auth = {
       sessionId: session.id,
-      userId: session.user.id,
-      schoolId: session.user.schoolId,
-      role: session.user.role,
-      email: session.user.email,
-      permissions: getPermissionsForRole(session.user.role),
+      userId: user.id,
+      schoolId: user.schoolId,
+      role: user.role,
+      email: user.email,
+      permissions: getPermissionsForRole(user.role),
     };
 
     next();

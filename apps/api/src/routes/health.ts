@@ -26,22 +26,8 @@ healthRouter.get([API_ROUTES.HEALTH, API_ROUTES.V1_HEALTH], (_req, res) => {
 healthRouter.get(API_ROUTES.READY, async (_req, res) => {
   const checks: ReadinessCheck[] = [];
 
-  if (env.DATABASE_URL === undefined || env.DATABASE_URL.trim().length === 0) {
-    checks.push({
-      name: 'postgresql',
-      status: 'fail',
-      message: 'DATABASE_URL is not configured.',
-    });
-
-    const payload: ReadinessCheckResponse = {
-      status: 'not_ready',
-      checks,
-      timestamp: new Date().toISOString(),
-    };
-    res.status(503).json(payload);
-    return;
-  }
-
+  // The database client comes from the Composer service dependency, not from
+  // DATABASE_URL, so readiness is decided by probing the live connection.
   const dbResult = await checkDatabaseReadiness();
   if (dbResult.ok) {
     checks.push({

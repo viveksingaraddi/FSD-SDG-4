@@ -1,4 +1,3 @@
-import type { PrismaClient } from '@prisma/client';
 import type { UserRole } from '@fsd-sdg4/contracts';
 import { uuidSchema } from '@fsd-sdg4/validation';
 import { ForbiddenError } from '../errors/appError.js';
@@ -70,6 +69,27 @@ export function buildTenantWhere<T extends Record<string, unknown>>(
   };
 }
 
+/**
+ * Structural surface the tenant-scoping extension is registered on. Kept
+ * narrow (rather than a concrete client type) so the helper works against any
+ * client that accepts query extensions.
+ */
+export interface TenantScopableClient {
+  $extends(extension: {
+    name: string;
+    query: {
+      $allModels: {
+        $allOperations: (params: {
+          model: string;
+          operation: string;
+          args: Record<string, unknown> | undefined;
+          query: (args: Record<string, unknown>) => Promise<unknown>;
+        }) => Promise<unknown>;
+      };
+    };
+  }): unknown;
+}
+
 const READ_AND_MUTATE_WHERE_OPS = new Set<string>([
   'findMany',
   'findFirst',
@@ -92,7 +112,7 @@ const SINGLE_RECORD_WHERE_OPS = new Set<string>([
  * Creates a Prisma client extension that automatically enforces `schoolId`
  * on all tenant-scoped models at the application layer.
  */
-export function createTenantScopedPrisma(client: PrismaClient, schoolId: string) {
+export function createTenantScopedPrisma(client: TenantScopableClient, schoolId: string) {
   assertTenantContext({ schoolId });
 
   return client.$extends({
@@ -101,7 +121,7 @@ export function createTenantScopedPrisma(client: PrismaClient, schoolId: string)
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           if (!TENANT_SCOPED_MODELS.has(model)) {
-            return query(args);
+            return query(args ?? {});
           }
 
           const mutableArgs = (args ?? {}) as Record<string, unknown>;

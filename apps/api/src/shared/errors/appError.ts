@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import type { FieldError } from '@fsd-sdg4/contracts';
 
 export class AppError extends Error {
@@ -76,12 +75,51 @@ export class RateLimitError extends AppError {
 }
 
 /**
+ * Prisma ORM 8 reports driver-level failures as SQL query errors: an `Error`
+ * carrying `kind: "sql_query"` and the driver-normalized `sqlState`.
+ */
+function sqlStateOf(error: unknown): string | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+  if ((error as { kind?: unknown }).kind !== 'sql_query') {
+    return undefined;
+  }
+  const sqlState = (error as { sqlState?: unknown }).sqlState;
+  return typeof sqlState === 'string' ? sqlState : undefined;
+}
+
+/** Prisma "known request" errors carry a five-character `P` code. */
+const PRISMA_ERROR_CODE = /^P\d{4}$/;
+
+function prismaErrorCode(error: unknown): string | undefined {
+  if (!(error instanceof Error)) {
+    return undefined;
+  }
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' && PRISMA_ERROR_CODE.test(code) ? code : undefined;
+}
+
+function isPrismaValidationError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return (
+    error.name === 'PrismaClientValidationError' ||
+    error.constructor?.name === 'PrismaClientValidationError'
+  );
+}
+
+/**
  * Maps known Prisma client errors to safe, operational AppError instances
  * without exposing internal table names, constraints, or SQL details.
+ * Detection is structural so it works with any client generation's error
+ * classes, including the ORM 8 driver-level errors handled below.
  */
 export function mapPrismaError(error: unknown): AppError | null {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    switch (error.code) {
+  const code = prismaErrorCode(error);
+  if (code !== undefined) {
+    switch (code) {
       case 'P2002':
         return new ConflictError('A record with the provided unique value already exists.');
       case 'P2003':
@@ -97,8 +135,20 @@ export function mapPrismaError(error: unknown): AppError | null {
     }
   }
 
-  if (error instanceof Prisma.PrismaClientValidationError) {
+  if (isPrismaValidationError(error)) {
     return new BadRequestError('Invalid data query or input structure.');
+  }
+
+  const sqlState = sqlStateOf(error);
+  if (sqlState === '23505') {
+    // unique_violation
+    return new ConflictError('A record with the provided unique value already exists.');
+  }
+  if (sqlState === '23503') {
+    // foreign_key_violation
+    return new BadRequestError(
+      'Referenced record does not exist or violates a relational constraint.',
+    );
   }
 
   return null;

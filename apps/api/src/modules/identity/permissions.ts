@@ -1,4 +1,4 @@
-import type { UserRole } from '@prisma/client';
+import type { UserRole } from '@fsd-sdg4/contracts';
 
 /**
  * Canonical role aliases mapping specification names to Prisma UserRole enum values.

@@ -1,8 +1,18 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+overrides:
+  effect: 4.1.4
+  '@effect/platform-bun': 4.1.4
+  '@effect/platform-node': 4.1.4
+  '@effect/platform-node-shared': 4.1.4
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
   esbuild: true
   prisma: true
+  argon2: false
+minimumReleaseAge: 0
+minimumReleaseAgeExclude:
+  - '@prisma/management-api-sdk@1.105.0'
+  - '@vercel/nft@1.11.15'
